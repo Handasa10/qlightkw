@@ -5,8 +5,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
-import { Lightbulb, Lamp, Sun, Building2 } from 'lucide-react';
 import { resolveImageUrl } from '@/lib/image-resolver';
+import { ArrowRight, Lightbulb } from 'lucide-react';
 
 interface Category {
   id: string;
@@ -14,143 +14,197 @@ interface Category {
   name_ar: string;
   slug: string;
   image_url: string | null;
-  description_en: string | null;
-  description_ar: string | null;
 }
-
-const categoryIcons: Record<string, React.ReactNode> = {
-  indoor: <Lamp className="h-8 w-8" />,
-  outdoor: <Sun className="h-8 w-8" />,
-  decorative: <Lightbulb className="h-8 w-8" />,
-  commercial: <Building2 className="h-8 w-8" />,
-};
-
-const CategoryWithImage = ({ category, language }: { category: Category; language: string }) => {
-  const [error, setError] = useState(false);
-  if (error) {
-    return (
-      <>
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-secondary/10" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
-          <div className="bg-primary/10 rounded-full p-4 mb-3">
-            {categoryIcons[category.slug] || <Lightbulb className="h-8 w-8" />}
-          </div>
-          <h3 className="font-semibold text-lg">
-            {language === 'ar' ? category.name_ar : category.name_en}
-          </h3>
-        </div>
-      </>
-    );
-  }
-  return (
-    <>
-      <img
-        src={resolveImageUrl(category.image_url, 'category', category.slug)}
-        alt={language === 'ar' ? category.name_ar : category.name_en}
-        onError={() => setError(true)}
-        className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-all duration-500"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
-      <div className="absolute bottom-0 left-0 right-0 p-4 text-center">
-        <h3 className="font-semibold text-lg text-foreground drop-shadow-md">
-          {language === 'ar' ? category.name_ar : category.name_en}
-        </h3>
-      </div>
-    </>
-  );
-};
 
 const FeaturedCategories = () => {
   const { t } = useTranslation();
-  const { language } = useLanguage();
+  const { language, isRTL } = useLanguage();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Hardcoded target categories with high-end premium lighting images (matching seed_full_catalog.sql and Unsplash)
+  const targetCategories = [
+    {
+      id: 'cat-1',
+      name_en: 'Spotlights',
+      name_ar: 'إضاءة سبوت لايت',
+      slug: 'led-spot-light',
+      image_url: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=600',
+    },
+    {
+      id: 'cat-2',
+      name_en: 'Downlights',
+      name_ar: 'إضاءة داون لايت',
+      slug: 'led-downlight',
+      image_url: 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&q=80&w=600',
+    },
+    {
+      id: 'cat-3',
+      name_en: 'Track Lights',
+      name_ar: 'إضاءة المسار (تراك)',
+      slug: 'magnetic-light',
+      image_url: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=600',
+    },
+    {
+      id: 'cat-4',
+      name_en: 'Outdoor Lights',
+      name_ar: 'إضاءة خارجية',
+      slug: 'outdoor-lights',
+      image_url: 'https://images.unsplash.com/photo-1508615070457-7baebe4003ab?auto=format&fit=crop&q=80&w=600',
+    },
+    {
+      id: 'cat-5',
+      name_en: 'Chandeliers',
+      name_ar: 'ثريات فاخرة',
+      slug: 'chandelier',
+      image_url: 'https://images.unsplash.com/photo-1572912353188-a5d0aeefaa68?auto=format&fit=crop&q=80&w=600',
+    },
+    {
+      id: 'cat-6',
+      name_en: 'Wall Lights',
+      name_ar: 'إضاءة جدارية',
+      slug: 'indoor-wall-light',
+      image_url: 'https://images.unsplash.com/photo-1601004890684-d8cbf643f5f2?auto=format&fit=crop&q=80&w=600',
+    },
+    {
+      id: 'cat-7',
+      name_en: 'LED Strips',
+      name_ar: 'شرائط LED',
+      slug: 'led-strip-light',
+      image_url: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&q=80&w=600',
+    },
+    {
+      id: 'cat-8',
+      name_en: 'Panel Lights',
+      name_ar: 'إضاءة بانل',
+      slug: 'led-panel-light',
+      image_url: 'https://images.unsplash.com/photo-1606103658514-6830a687ef7f?auto=format&fit=crop&q=80&w=600',
+    },
+  ];
+
   useEffect(() => {
     const fetchCategories = async () => {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .is('parent_id', null)
-        .eq('is_active', true)
-        .order('sort_order')
-        .limit(8);
+      try {
+        const slugs = targetCategories.map(c => c.slug);
+        const { data, error } = await supabase
+          .from('categories')
+          .select('id, name_en, name_ar, slug, image_url')
+          .in('slug', slugs);
 
-      if (!error && data) {
-        setCategories(data);
+        if (!error && data && data.length > 0) {
+          // Merge database entries with fallback configurations to ensure images and translation properties are perfect
+          const merged = targetCategories.map(target => {
+            const dbMatch = data.find(d => d.slug === target.slug);
+            return {
+              ...target,
+              id: dbMatch?.id || target.id,
+              name_en: dbMatch?.name_en || target.name_en,
+              name_ar: dbMatch?.name_ar || target.name_ar,
+              image_url: dbMatch?.image_url || target.image_url,
+            };
+          });
+          setCategories(merged);
+        } else {
+          setCategories(targetCategories);
+        }
+      } catch (err) {
+        setCategories(targetCategories);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchCategories();
   }, []);
 
-  // Default categories if none exist in DB
-  const defaultCategories = [
-    { id: '1', name_en: 'Indoor Lighting', name_ar: 'إضاءة داخلية', slug: 'indoor', icon: 'indoor' },
-    { id: '2', name_en: 'Outdoor Lighting', name_ar: 'إضاءة خارجية', slug: 'outdoor', icon: 'outdoor' },
-    { id: '3', name_en: 'Decorative', name_ar: 'ديكورية', slug: 'decorative', icon: 'decorative' },
-    { id: '4', name_en: 'Commercial', name_ar: 'تجارية', slug: 'commercial', icon: 'commercial' },
-    { id: '5', name_en: 'Chandeliers', name_ar: 'ثريات', slug: 'chandeliers', icon: 'decorative' },
-    { id: '6', name_en: 'Wall Lights', name_ar: 'إضاءة جدارية', slug: 'wall-lights', icon: 'indoor' },
-    { id: '7', name_en: 'LED Strips', name_ar: 'شرائط LED', slug: 'led-strips', icon: 'decorative' },
-    { id: '8', name_en: 'Smart Lighting', name_ar: 'إضاءة ذكية', slug: 'smart', icon: 'indoor' },
-  ];
-
-  const displayCategories = categories.length > 0 ? categories : defaultCategories;
-
   return (
-    <section className="py-16 md:py-24">
-      <div className="container">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {t('home.categories.title', 'Shop by Category')}
-          </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            {t('home.categories.subtitle', 'Explore our wide range of lighting solutions for every need')}
-          </p>
+    <section id="categories" className="py-20 md:py-28 bg-background relative overflow-hidden scroll-mt-20">
+      {/* Decorative background aura */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="container relative z-10">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+          <div className={isRTL ? 'text-right' : 'text-left'}>
+            <span className="text-primary font-bold text-xs uppercase tracking-widest bg-primary/10 px-3 py-1 rounded-full inline-block mb-3">
+              {isRTL ? "مجموعاتنا المنسقة" : "Our Collections"}
+            </span>
+            <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight text-foreground">
+              {isRTL ? "تسوق حسب القسم" : "Shop by Category"}
+            </h2>
+            <p className="text-muted-foreground mt-3 max-w-2xl text-sm md:text-base leading-relaxed">
+              {isRTL 
+                ? "اختر من بين مجموعتنا الواسعة من خيارات الإضاءة الفاخرة المصممة خصيصاً للمساحات السكنية والتجارية في الكويت."
+                : "Explore our wide range of premium lighting collections crafted to illuminate residential and commercial spaces across Kuwait."}
+            </p>
+          </div>
+          <Link 
+            to="/shop" 
+            className="group/btn inline-flex items-center gap-2 font-bold text-sm text-primary hover:text-primary/80 transition-colors shrink-0"
+          >
+            <span>{isRTL ? "عرض جميع المنتجات" : "View All Products"}</span>
+            <ArrowRight className={`h-4 w-4 transition-transform group-hover/btn:translate-x-1 ${isRTL ? 'rotate-185' : ''}`} />
+          </Link>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             {[...Array(8)].map((_, i) => (
-              <Skeleton key={i} className="aspect-square rounded-xl" />
+              <div key={i} className="aspect-square rounded-2xl overflow-hidden relative">
+                <Skeleton className="absolute inset-0 w-full h-full" />
+              </div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-            {displayCategories.map((category, index) => (
-              <motion.div
-                key={category.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Link
-                  to={`/shop?category=${category.slug}`}
-                  className="group relative block aspect-square overflow-hidden rounded-xl bg-gradient-to-br from-muted to-muted/50 border border-border hover:border-primary transition-all duration-300"
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            {categories.map((category, index) => {
+              const name = isRTL ? category.name_ar : category.name_en;
+              const imgUrl = resolveImageUrl(category.image_url, 'category', category.slug);
+
+              return (
+                <motion.div
+                  key={category.slug}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.6, delay: index * 0.05 }}
+                  className="group relative overflow-hidden rounded-2xl aspect-square bg-slate-900 border border-slate-200/10 dark:border-white/5 hover:border-primary/50 shadow-md hover:shadow-xl hover:shadow-primary/5 transition-all duration-500"
                 >
-                  {/* Background Image or Gradient */}
-                  {category.image_url ? (
-                    <CategoryWithImage category={category} language={language} />
-                  ) : (
-                    <>
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-secondary/10 group-hover:from-primary/20 group-hover:to-secondary/20 transition-all duration-300" />
-                      {/* Icon only shown when no image */}
-                      <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
-                        <div className="bg-primary/10 rounded-full p-4 mb-3 group-hover:bg-primary/20 group-hover:scale-110 transition-all duration-300">
-                          {categoryIcons[(category as any).icon || category.slug] || <Lightbulb className="h-8 w-8" />}
-                        </div>
-                        <h3 className="font-semibold text-lg">
-                          {language === 'ar' ? category.name_ar : category.name_en}
-                        </h3>
+                  <Link to={`/shop?category=${category.slug}`} className="absolute inset-0 block">
+                    {/* Dark overlay */}
+                    <div className="absolute inset-0 bg-slate-950/40 group-hover:bg-slate-950/30 transition-colors duration-500 z-10" />
+
+                    {/* Image */}
+                    {imgUrl ? (
+                      <img
+                        src={imgUrl}
+                        alt={name}
+                        className="absolute inset-0 w-full h-full object-cover scale-100 group-hover:scale-110 transition-transform duration-700 ease-out"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-950">
+                        <Lightbulb className="h-10 w-10 text-primary animate-pulse" />
                       </div>
-                    </>
-                  )}
-                </Link>
-              </motion.div>
-            ))}
+                    )}
+
+                    {/* Gradient background cover */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent z-15" />
+
+                    {/* Text card description */}
+                    <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 z-20 flex flex-col items-center text-center">
+                      <div className="px-4 py-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-xl max-w-full shadow-lg group-hover:bg-primary group-hover:border-primary/20 transition-all duration-300 transform group-hover:-translate-y-1">
+                        <h3 className="font-bold text-sm md:text-base text-white tracking-wide truncate">
+                          {name}
+                        </h3>
+                        <span className="text-[10px] text-primary-foreground/75 font-semibold mt-0.5 opacity-0 group-hover:opacity-100 h-0 group-hover:h-auto overflow-hidden block transition-opacity duration-300">
+                          {isRTL ? "تسوق الآن" : "Shop Now"}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                </motion.div>
+              );
+            })}
           </div>
         )}
       </div>

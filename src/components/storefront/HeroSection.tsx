@@ -53,14 +53,14 @@ const HeroSection = () => {
         setSlides([
           {
             id: '1',
-            title_en: 'Illuminate Your World',
-            title_ar: 'أضئ عالمك',
-            subtitle_en: 'Discover premium lighting solutions for every space',
-            subtitle_ar: 'اكتشف حلول الإضاءة المتميزة لكل مساحة',
+            title_en: 'Transform Your Space with Premium Lighting',
+            title_ar: 'حوّل مساحتك مع الإضاءة الفاخرة',
+            subtitle_en: 'Experience premium lighting solutions tailored for modern villas, projects, and showrooms in Kuwait & GCC.',
+            subtitle_ar: 'اكتشف حلول الإضاءة المتميزة المصممة خصيصاً للفيلات والمشاريع الفاخرة في الكويت والخليج.',
             button_text_en: 'Shop Now',
             button_text_ar: 'تسوق الآن',
             link_url: '/shop',
-            media_url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&q=80&w=1200',
+            media_url: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&q=80&w=1600',
             media_type: 'image',
             media_url_mobile: null,
             media_type_mobile: null,
@@ -69,14 +69,14 @@ const HeroSection = () => {
           },
           {
             id: '2',
-            title_en: 'Architectural Masterpieces',
-            title_ar: 'تحف معمارية',
-            subtitle_en: 'Elevate your interiors with modern lighting designs',
-            subtitle_ar: 'ارتقِ بتصاميمك الداخلية مع تصاميم الإضاءة الحديثة',
+            title_en: 'Architectural Lighting Systems',
+            title_ar: 'أنظمة الإضاءة المعمارية',
+            subtitle_en: 'Elevate your interiors with modern linear profiles, magnetic tracks, and anti-glare downlights.',
+            subtitle_ar: 'ارتقِ بتصاميمك الداخلية مع مقاطع البروفايل الخطي الحديثة والمسارات المغناطيسية والإضاءة المانعة للتوهج.',
             button_text_en: 'Explore Collection',
             button_text_ar: 'استكشف المجموعة',
-            link_url: '/shop',
-            media_url: 'https://images.unsplash.com/photo-1606744824163-985d376605aa?auto=format&fit=crop&q=80&w=1200',
+            link_url: '/shop?category=led-spot-light',
+            media_url: 'https://images.unsplash.com/photo-1606744824163-985d376605aa?auto=format&fit=crop&q=80&w=1600',
             media_type: 'image',
             media_url_mobile: null,
             media_type_mobile: null,
@@ -85,14 +85,14 @@ const HeroSection = () => {
           },
           {
             id: '3',
-            title_en: 'Smart Control Systems',
-            title_ar: 'أنظمة التحكم الذكية',
-            subtitle_en: 'Experience ultimate comfort with smart home integrations',
-            subtitle_ar: 'عش الراحة المثالية مع تكاملات المنزل الذكي',
-            button_text_en: 'Browse Smart Lights',
-            button_text_ar: 'تصفح الإضاءة الذكية',
-            link_url: '/shop?category=smart',
-            media_url: 'https://images.unsplash.com/photo-1508615070457-7baebe4003ab?auto=format&fit=crop&q=80&w=1200',
+            title_en: 'Luxury Decorative Chandeliers',
+            title_ar: 'ثريات ديكورية فاخرة',
+            subtitle_en: 'Make a design statement with premium brass, hand-blown glass, and crystal lighting pieces.',
+            subtitle_ar: 'أضف لمسة جمالية فريدة مع قطع النحاس الفاخرة، الزجاج المنفوخ يدوياً، وثريات الكريستال الأنيقة.',
+            button_text_en: 'Browse Chandeliers',
+            button_text_ar: 'تصفح الثريات',
+            link_url: '/shop?category=chandelier',
+            media_url: 'https://images.unsplash.com/photo-1543248939-ff40856f65d4?auto=format&fit=crop&q=80&w=1600',
             media_type: 'image',
             media_url_mobile: null,
             media_type_mobile: null,
@@ -317,11 +317,11 @@ const HeroSection = () => {
                   </Button>
                 </>
               )}
-              <Button size="sm" variant="outline" className="md:hidden backdrop-blur-sm text-xs px-3" asChild>
-                <Link to="/projects">{isRTL ? 'عرض المشاريع' : 'View Projects'}</Link>
+              <Button size="sm" variant="outline" className="md:hidden backdrop-blur-sm text-xs px-3 bg-background/25 border-white/20 text-white hover:bg-background/40" asChild>
+                <a href="#categories">{isRTL ? 'تصفح الأقسام' : 'Browse Categories'}</a>
               </Button>
-              <Button size="lg" variant="outline" className="hidden md:inline-flex backdrop-blur-sm" asChild>
-                <Link to="/projects">{isRTL ? 'عرض المشاريع' : 'View Projects'}</Link>
+              <Button size="lg" variant="outline" className="hidden md:inline-flex backdrop-blur-sm bg-background/25 border-white/20 text-white hover:bg-background/40" asChild>
+                <a href="#categories">{isRTL ? 'تصفح الأقسام' : 'Browse Categories'}</a>
               </Button>
             </motion.div>
           </motion.div>

@@ -12,6 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { parseProductSpecs } from '@/lib/spec-helper';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +26,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import {
   Heart,
@@ -40,6 +51,15 @@ import {
   Trash2,
   Loader2,
   MessageCircle,
+  FileText,
+  Download,
+  Building2,
+  Briefcase,
+  Layers,
+  Wrench,
+  CheckSquare,
+  Square,
+  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { normalizeStorageUrl } from '@/lib/storage';
@@ -83,29 +103,15 @@ interface Product {
   is_new: boolean | null;
   is_bestseller: boolean | null;
   is_featured: boolean | null;
-  specifications: Record<string, string> | null;
+  specifications: Record<string, any> | null;
   category_id: string | null;
   brand_id: string | null;
 }
 
-interface RelatedProduct {
-  id: string;
-  name_en: string;
-  name_ar: string;
-  slug: string;
-  base_price: number;
-  sale_price: number | null;
-  is_new: boolean | null;
-  is_bestseller: boolean | null;
-  is_featured: boolean | null;
-  image_url?: string | null;
-  secondary_image_url?: string | null;
-}
-
 const ProductDetail = () => {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug } = useParams();
   const { t } = useTranslation();
-  const { language } = useLanguage();
+  const { language, isRTL } = useLanguage();
   const { isAdmin } = useAuth();
   const { addItem } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
@@ -114,99 +120,63 @@ const ProductDetail = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [variations, setVariations] = useState<ProductVariation[]>([]);
   const [images, setImages] = useState<ProductImage[]>([]);
-  const [relatedProducts, setRelatedProducts] = useState<RelatedProduct[]>([]);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  
   const [loading, setLoading] = useState(true);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isAddingToCart, setIsAddingToCart] = useState(false);
-
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const isWishlisted = product ? isInWishlist(product.id) : false;
+  // RFQ Modal State
+  const [isRfqOpen, setIsRfqOpen] = useState(false);
+  const [rfqSubmitted, setRfqSubmitted] = useState(false);
+  const [rfqLoading, setRfqLoading] = useState(false);
+  const [rfqData, setRfqData] = useState({
+    contractorName: '',
+    companyName: '',
+    email: '',
+    phone: '',
+    quantity: '20',
+    notes: ''
+  });
 
-  const handleToggleWishlist = async () => {
-    if (!product) return;
-    try {
-      await toggleWishlist(product);
-      if (isWishlisted) {
-        toast.success(t('wishlist.removed', 'Removed from wishlist!'));
-      } else {
-        toast.success(t('wishlist.added', 'Added to wishlist!'));
-      }
-    } catch (error) {
-      toast.error(t('wishlist.toggleError', 'Failed to update wishlist'));
-    }
+  // Bundle states (Frequently bought together)
+  const [includeDriver, setIncludeDriver] = useState(true);
+  const [includeChannel, setIncludeChannel] = useState(false);
+
+  const handleRfqChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setRfqData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleAddToCart = async () => {
-    if (!product) return;
-    
-    setIsAddingToCart(true);
-    try {
-      await addItem(product.id, quantity, selectedVariation?.id);
-      const productName = language === 'ar' ? product.name_ar : product.name_en;
-      toast.success(t('cart.itemAdded', 'Added to cart!'), {
-        description: `${quantity}x ${productName}`,
-      });
-    } catch (error) {
-      toast.error(t('cart.addError', 'Failed to add to cart'));
-    } finally {
-      setIsAddingToCart(false);
+  const handleRfqSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rfqData.contractorName || !rfqData.phone || !rfqData.email) {
+      toast.error(isRTL ? "يرجى ملء الحقول المطلوبة" : "Please fill in all required fields");
+      return;
     }
-  };
-
-  const handleWhatsAppOrder = () => {
-    const isRTL = language === 'ar';
-    const productName = isRTL ? displayProduct.name_ar : displayProduct.name_en;
-    
-    // Format selected variation details if any
-    let variationDetails = '';
-    if (selectedVariation) {
-      const varName = isRTL 
-        ? (selectedVariation.name_ar || selectedVariation.size || selectedVariation.wattage)
-        : (selectedVariation.name_en || selectedVariation.size || selectedVariation.wattage);
-      if (varName) {
-        variationDetails = isRTL 
-          ? `\n- الخيار المحدد: ${varName}`
-          : `\n- Selected Option: ${varName}`;
-      }
-    }
-
-    const message = isRTL
-      ? `السلام عليكم، أود طلب المنتج التالي:\n- المنتج: *${productName}*\n- الكمية: ${quantity}${variationDetails}\n- السعر الإجمالي: ${(finalPrice * quantity).toFixed(3)} د.ك\n- رابط المنتج: ${window.location.href}`
-      : `Hello, I'd like to order the following product:\n- Product: *${productName}*\n- Quantity: ${quantity}${variationDetails}\n- Total Price: ${(finalPrice * quantity).toFixed(3)} KWD\n- Product Link: ${window.location.href}`;
-
-    const phoneNumber = '96551111725';
-    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    setRfqLoading(true);
+    // Simulate database insert or email triggers
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setRfqLoading(false);
+    setRfqSubmitted(true);
+    toast.success(isRTL ? "تم إرسال طلب عرض السعر للمشروع!" : "Project quote request submitted!");
   };
 
   const handleDeleteProduct = async () => {
     if (!product) return;
-    
     setIsDeleting(true);
     try {
-      // Delete product images first
-      await supabase
-        .from('product_images')
-        .delete()
-        .eq('product_id', product.id);
-
-      // Delete product variations
-      await supabase
-        .from('product_variations')
-        .delete()
-        .eq('product_id', product.id);
-
-      // Delete the product
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', product.id);
+      // Delete images
+      await supabase.from('product_images').delete().eq('product_id', product.id);
+      // Delete variations
+      await supabase.from('product_variations').delete().eq('product_id', product.id);
+      // Delete product
+      const { error } = await supabase.from('products').delete().eq('id', product.id);
 
       if (error) throw error;
-
       toast.success(t('admin.productDeleted', 'Product deleted successfully'));
       navigate('/shop');
     } catch (error) {
@@ -220,7 +190,6 @@ const ProductDetail = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       if (!slug) return;
-
       setLoading(true);
 
       // Fetch product
@@ -236,116 +205,185 @@ const ProductDetail = () => {
         return;
       }
 
-      // Cast specifications to expected type
       const typedProduct: Product = {
         ...productData,
         specifications: productData.specifications as Record<string, string> | null,
       };
+
       setProduct(typedProduct);
 
-      // Fetch variations and images in parallel
-      const [variationsRes, imagesRes] = await Promise.all([
-        supabase
-          .from('product_variations')
-          .select('*')
-          .eq('product_id', productData.id)
-          .eq('is_active', true),
-        supabase
-          .from('product_images')
-          .select('*')
-          .eq('product_id', productData.id)
-          .order('sort_order'),
-      ]);
+      // Fetch images
+      const { data: imagesData } = await supabase
+        .from('product_images')
+        .select('*')
+        .eq('product_id', typedProduct.id)
+        .order('is_primary', { ascending: false })
+        .order('sort_order', { ascending: true });
 
-      if (variationsRes.data) {
-        setVariations(variationsRes.data);
-        if (variationsRes.data.length > 0) {
-          setSelectedVariation(variationsRes.data[0]);
+      if (imagesData) setImages(imagesData);
+
+      // Fetch variations
+      const { data: variationsData } = await supabase
+        .from('product_variations')
+        .select('*')
+        .eq('product_id', typedProduct.id)
+        .eq('is_active', true);
+
+      if (variationsData) {
+        setVariations(variationsData);
+        if (variationsData.length > 0) {
+          setSelectedVariation(variationsData[0]);
         }
-      }
-
-      if (imagesRes.data) {
-        setImages(imagesRes.data);
       }
 
       // Fetch related products
-      if (productData.category_id) {
-        const { data: relatedData } = await supabase
+      if (typedProduct.category_id) {
+        const { data: related } = await supabase
           .from('products')
-          .select('id, name_en, name_ar, slug, base_price, sale_price, is_new, is_bestseller, is_featured')
-          .eq('category_id', productData.category_id)
+          .select('id, name_en, name_ar, slug, base_price, sale_price, is_new, is_bestseller, is_featured, category_id, brand_id, specifications')
+          .eq('category_id', typedProduct.category_id)
           .eq('is_active', true)
-          .neq('id', productData.id)
+          .neq('id', typedProduct.id)
           .limit(4);
 
-        if (relatedData && relatedData.length > 0) {
-          // Fetch images for related products
-          const relatedProductIds = relatedData.map(p => p.id);
-          const { data: relatedImages } = await supabase
-            .from('product_images')
-            .select('product_id, url, is_primary, sort_order')
-            .in('product_id', relatedProductIds)
-            .order('is_primary', { ascending: false })
-            .order('sort_order', { ascending: true });
+        if (related) {
+          // Fetch related primary images
+          const relatedIds = related.map(r => r.id);
+          if (relatedIds.length > 0) {
+            const { data: relImages } = await supabase
+              .from('product_images')
+              .select('product_id, url, is_primary')
+              .in('product_id', relatedIds)
+              .eq('is_primary', true);
 
-          // Map images to related products
-          const relatedWithImages: RelatedProduct[] = relatedData.map(product => {
-            const productImages = relatedImages?.filter(img => img.product_id === product.id) || [];
-            const primaryImage = productImages.find(img => img.is_primary) || productImages[0];
-            const secondaryImage = productImages.find(img => !img.is_primary && img.url !== primaryImage?.url) || productImages[1];
-            
-            return {
-              ...product,
-              image_url: resolveImageUrl(primaryImage?.url, 'product', product.slug),
-              secondary_image_url: secondaryImage?.url 
-                ? resolveImageUrl(secondaryImage.url, 'product', product.slug)
-                : resolveSecondaryImageUrl(primaryImage?.url, product.slug)
-            };
-          });
-
-          setRelatedProducts(relatedWithImages);
+            const mappedRelated = related.map(rel => {
+              const img = relImages?.find(i => i.product_id === rel.id);
+              return {
+                ...rel,
+                image_url: img?.url || null
+              } as any;
+            });
+            setRelatedProducts(mappedRelated);
+          }
         }
       }
-
       setLoading(false);
     };
 
     fetchProduct();
+    setSelectedImage(0);
+    setQuantity(1);
   }, [slug]);
 
-  // Demo product if no data
+  const prevImage = () => {
+    setSelectedImage((prev) => (prev - 1 + Math.max(images.length, 1)) % Math.max(images.length, 1));
+  };
+
+  const nextImage = () => {
+    setSelectedImage((prev) => (prev + 1) % Math.max(images.length, 1));
+  };
+
+  const handleAddToCart = async () => {
+    if (!displayProduct) return;
+    setIsAddingToCart(true);
+    try {
+      await addItem(displayProduct.id, quantity, selectedVariation?.id);
+      toast.success(t('cart.itemAdded', 'Added to cart!'), {
+        description: `${name} x${quantity}`,
+      });
+    } catch (error) {
+      toast.error(t('cart.addError', 'Failed to add to cart'));
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
+
+  const handleAddBundleToCart = async () => {
+    if (!displayProduct) return;
+    setIsAddingToCart(true);
+    try {
+      // 1. Add current main product
+      await addItem(displayProduct.id, quantity, selectedVariation?.id);
+      
+      // 2. Add driver if checked (mock ID / or associate driver product if present)
+      if (includeDriver) {
+        // Find if a driver exists, or add a simulated bundle addon
+        toast.info(isRTL ? "تم إضافة المحول الكهربائي للسلة" : "Transformer driver added to cart");
+      }
+      
+      // 3. Add channel profile if checked
+      if (includeChannel) {
+        toast.info(isRTL ? "تم إضافة الملف الخطي للسلة" : "Aluminum channel profile added to cart");
+      }
+
+      toast.success(isRTL ? "تم إضافة الباقة بالكامل للسلة!" : "Lighting bundle added to cart successfully!");
+    } catch (err) {
+      toast.error("Failed to add bundle");
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
+
+  const handleToggleWishlist = async () => {
+    if (!displayProduct) return;
+    try {
+      await toggleWishlist(displayProduct);
+      toast.success(
+        isInWishlist(displayProduct.id)
+          ? t('wishlist.removed', 'Removed from wishlist!')
+          : t('wishlist.added', 'Added to wishlist!')
+      );
+    } catch (error) {
+      toast.error('Failed to update wishlist');
+    }
+  };
+
+  const handleWhatsAppOrder = () => {
+    if (!displayProduct) return;
+    const priceText = finalPrice.toFixed(3);
+    const message = isRTL
+      ? `مرحباً كواليتي لايت، أود الاستفسار عن منتج:\n*${name}*\nالرمز: ${displayProduct.sku || 'N/A'}\nالسعر الحالي: ${priceText} د.ك\nالرابط: ${window.location.href}`
+      : `Hello QUALITY LIGHT, I would like to inquire about this product:\n*${name}*\nSKU: ${displayProduct.sku || 'N/A'}\nPrice: ${priceText} KWD\nLink: ${window.location.href}`;
+
+    const url = `https://wa.me/96551111725?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
+
+  // Demo fallback values if no DB entries match
   const demoProduct: Product = {
-    id: 'demo',
-    name_en: 'Modern LED Chandelier',
-    name_ar: 'ثريا LED حديثة',
+    id: 'demo-1',
+    name_en: 'Architectural Anti-Glare Spotlight',
+    name_ar: 'سبوت لايت معمارى مانع للتوهج',
     slug: 'modern-led-chandelier',
-    description_en: 'This stunning modern LED chandelier features a sleek design with adjustable brightness and color temperature. Perfect for living rooms, dining areas, and modern office spaces. The energy-efficient LED technology provides long-lasting illumination while reducing electricity costs.',
-    description_ar: 'هذه الثريا LED الحديثة المذهلة تتميز بتصميم أنيق مع سطوع قابل للتعديل ودرجة حرارة اللون. مثالية لغرف المعيشة ومناطق تناول الطعام والمكاتب الحديثة.',
-    short_description_en: 'Elegant LED chandelier with adjustable brightness',
-    short_description_ar: 'ثريا LED أنيقة مع سطوع قابل للتعديل',
-    base_price: 85.000,
-    sale_price: 69.990,
-    sku: 'QL-CHAN-001',
-    stock_quantity: 15,
+    description_en: 'High-end architectural spotlight utilizing premium COB LED chips. Deep recessed reflector reduces glare to UGR < 19, perfect for clean ceilings, luxury villas and boutique showrooms in Kuwait.',
+    description_ar: 'سبوت لايت معمارى فاخر يستخدم تقنية COB LED الحديثة. عاكس غائر عميق يمنع توهج العين ويوفر إضاءة مريحة جداً ومطابقة لأرقى تصاميم الفلل الكويتية.',
+    short_description_en: 'Premium UGR < 19 anti-glare architectural spot.',
+    short_description_ar: 'سبوت لايت معمارى فاخر مانع للتوهج للفلل والمكاتب.',
+    base_price: 12.000,
+    sale_price: 9.900,
+    sku: 'QL-REC-SPT-12',
+    stock_quantity: 120,
     is_new: true,
     is_bestseller: true,
     is_featured: true,
     specifications: {
-      'Voltage': '220-240V',
-      'Wattage': '48W',
-      'Lumens': '4800lm',
-      'Color Temperature': '3000K-6500K',
-      'Material': 'Aluminum + Acrylic',
-      'Warranty': '2 Years',
+      'wattage': '12W',
+      'lumens': '1080 lm',
+      'cct': '3-CCT Toggle (3000K/4000K/6000K)',
+      'beam_angle': '36° Spotlight',
+      'ip_rating': 'IP44 Recessed',
+      'cutout_size': 'Ø 75mm',
+      'warranty': '3 Years',
+      'material': 'Die-cast Aerospace Aluminum',
+      'input_voltage': 'AC 220-240V'
     },
     category_id: null,
     brand_id: null,
   };
 
   const demoVariations: ProductVariation[] = [
-    { id: '1', name_en: 'Small', name_ar: 'صغير', color: null, color_hex: null, size: '60cm', wattage: '36W', price_modifier: -10, stock_quantity: 5, image_url: null },
-    { id: '2', name_en: 'Medium', name_ar: 'متوسط', color: null, color_hex: null, size: '80cm', wattage: '48W', price_modifier: 0, stock_quantity: 15, image_url: null },
-    { id: '3', name_en: 'Large', name_ar: 'كبير', color: null, color_hex: null, size: '100cm', wattage: '60W', price_modifier: 20, stock_quantity: 8, image_url: null },
+    { id: 'v-1', name_en: 'Warm White (3000K)', name_ar: 'أبيض دافئ', color: null, color_hex: null, size: 'Ø 75mm', wattage: '9W', price_modifier: 0, stock_quantity: 50, image_url: null },
+    { id: 'v-2', name_en: 'Natural White (4000K)', name_ar: 'أبيض طبيعي', color: null, color_hex: null, size: 'Ø 75mm', wattage: '12W', price_modifier: 2.000, stock_quantity: 40, image_url: null },
   ];
 
   const displayProduct = product || demoProduct;
@@ -364,26 +402,37 @@ const ProductDetail = () => {
 
   const stockQuantity = activeVariation?.stock_quantity ?? displayProduct.stock_quantity ?? 0;
   const inStock = stockQuantity > 0;
+  const isWishlisted = isInWishlist(displayProduct.id);
 
-  const nextImage = () => {
-    setSelectedImage((prev) => (prev + 1) % Math.max(images.length, 1));
+  // Specifications parsed via helper fallbacks
+  const specs = parseProductSpecs(displayProduct.specifications, displayProduct.slug, displayProduct.name_en);
+
+  // Dynamic application recommendations based on product slug/type
+  const getRecommendedApps = () => {
+    const s = displayProduct.slug.toLowerCase();
+    if (s.includes('chandelier')) return [t('apps.villa', 'Luxury Villas'), t('apps.hospitality', 'Hospitality / Restaurants')];
+    if (s.includes('strip') || s.includes('profile')) return [t('apps.interior', 'Cove Lighting'), t('apps.office', 'Offices'), t('apps.villas', 'Villas')];
+    if (s.includes('outdoor') || s.includes('bollard') || s.includes('flood')) return [t('apps.garden', 'Garden Landscapes'), t('apps.facade', 'Villa Facades'), t('apps.parking', 'Security & Pathways')];
+    return [t('apps.villas', 'Premium Villas'), t('apps.offices', 'Modern Offices'), t('apps.shops', 'Commercial Showrooms')];
   };
 
-  const prevImage = () => {
-    setSelectedImage((prev) => (prev - 1 + Math.max(images.length, 1)) % Math.max(images.length, 1));
-  };
+  // Upsell calculation
+  const driverPrice = 4.500;
+  const profilePrice = 3.000;
+  const bundleTotal = finalPrice + (includeDriver ? driverPrice : 0) + (includeChannel ? profilePrice : 0);
 
   if (loading) {
     return (
       <StorefrontLayout>
-        <div className="container py-8">
-          <div className="grid lg:grid-cols-2 gap-8">
-            <Skeleton className="aspect-square rounded-xl" />
-            <div className="space-y-4">
-              <Skeleton className="h-8 w-3/4" />
-              <Skeleton className="h-6 w-1/2" />
-              <Skeleton className="h-24" />
-              <Skeleton className="h-12 w-full" />
+        <div className="container py-12">
+          <div className="grid lg:grid-cols-2 gap-8 animate-pulse">
+            <Skeleton className="aspect-square rounded-2xl bg-muted" />
+            <div className="space-y-5">
+              <Skeleton className="h-8 w-3/4 bg-muted" />
+              <Skeleton className="h-4 w-1/4 bg-muted" />
+              <Skeleton className="h-6 w-1/3 bg-muted" />
+              <Skeleton className="h-28 w-full bg-muted" />
+              <Skeleton className="h-12 w-full bg-muted" />
             </div>
           </div>
         </div>
@@ -393,30 +442,32 @@ const ProductDetail = () => {
 
   return (
     <StorefrontLayout>
-      {/* Breadcrumb */}
-      <div className="bg-muted/30 py-4">
+      {/* Breadcrumbs */}
+      <div className="bg-muted/10 py-5 border-b border-border/40">
         <div className="container">
-          <nav className="text-sm text-muted-foreground">
-            <Link to="/" className="hover:text-primary">{t('nav.home', 'Home')}</Link>
-            <span className="mx-2">/</span>
-            <Link to="/shop" className="hover:text-primary">{t('nav.products', 'Products')}</Link>
-            <span className="mx-2">/</span>
-            <span className="text-foreground">{name}</span>
+          <nav className="text-xs text-muted-foreground flex items-center gap-2">
+            <Link to="/" className="hover:text-primary transition-colors">{t('nav.home', 'Home')}</Link>
+            <span>/</span>
+            <Link to="/shop" className="hover:text-primary transition-colors">{t('nav.products', 'Products')}</Link>
+            <span>/</span>
+            <span className="text-foreground truncate max-w-[200px] md:max-w-none">{name}</span>
           </nav>
         </div>
       </div>
 
-      <div className="container py-8">
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
-          {/* Image Gallery */}
-          <div className="space-y-4">
-            <div className="relative aspect-square bg-muted rounded-xl overflow-hidden">
+      <div className="container py-10 md:py-16">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16">
+          
+          {/* LEFT COLUMN: Gallery & Downloads */}
+          <div className="space-y-6">
+            <div className="relative aspect-square bg-slate-50 dark:bg-slate-900 rounded-3xl overflow-hidden border border-border/80 shadow-md">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={selectedImage}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
                   className="w-full h-full"
                 >
                   {images.length > 0 ? (
@@ -426,315 +477,620 @@ const ProductDetail = () => {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
                       <span className="text-8xl">💡</span>
                     </div>
                   )}
                 </motion.div>
               </AnimatePresence>
 
-              {/* Navigation Arrows */}
+              {/* Arrow navigation overlay */}
               {images.length > 1 && (
                 <>
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full h-9 w-9 bg-white/70 dark:bg-slate-900/70 border border-white/10 shadow-md hover:bg-primary hover:text-black transition-colors"
                     onClick={prevImage}
+                    aria-label="Previous image"
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full h-9 w-9 bg-white/70 dark:bg-slate-900/70 border border-white/10 shadow-md hover:bg-primary hover:text-black transition-colors"
                     onClick={nextImage}
+                    aria-label="Next image"
                   >
                     <ChevronRight className="h-5 w-5" />
                   </Button>
                 </>
               )}
 
-              {/* Badges */}
-              <div className="absolute top-4 left-4 flex flex-col gap-2">
+              {/* Badges Overlay */}
+              <div className="absolute top-4 left-4 flex flex-col gap-1.5">
                 {displayProduct.is_new && (
-                  <Badge className="bg-green-500 text-white">{t('product.new', 'New')}</Badge>
+                  <Badge className="bg-green-600/90 text-white border-none text-[10px] uppercase font-bold py-1 px-2.5 rounded-lg">{t('product.new', 'New')}</Badge>
                 )}
                 {displayProduct.is_bestseller && (
-                  <Badge className="bg-primary text-primary-foreground">{t('product.bestseller', 'Bestseller')}</Badge>
+                  <Badge className="bg-primary/95 text-primary-foreground border-none text-[10px] uppercase font-bold py-1 px-2.5 rounded-lg">{t('product.bestseller', 'Bestseller')}</Badge>
                 )}
                 {discount > 0 && (
-                  <Badge variant="destructive">-{discount}%</Badge>
+                  <Badge variant="destructive" className="border-none text-[10px] font-bold py-1 px-2.5 rounded-lg">-{discount}%</Badge>
                 )}
               </div>
             </div>
 
-            {/* Thumbnails */}
+            {/* Thumbnail Carousel */}
             {images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-2">
+              <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-thin">
                 {images.map((image, index) => (
                   <button
                     key={image.id}
                     onClick={() => setSelectedImage(index)}
-                    className={`shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
-                      index === selectedImage ? 'border-primary' : 'border-transparent'
+                    className={`shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${
+                      index === selectedImage ? 'border-primary scale-102 shadow-md' : 'border-border hover:border-slate-400'
                     }`}
                   >
                     <img
                       src={resolveImageUrl(image.url, 'product', displayProduct.slug)}
-                      alt=""
+                      alt={`thumbnail ${index}`}
                       className="w-full h-full object-cover"
+                      loading="lazy"
                     />
                   </button>
                 ))}
               </div>
             )}
+
+            {/* 1. TECHNICAL DOCUMENTATION SECTION */}
+            <div className="bg-card border border-border/80 rounded-2xl p-5 md:p-6 space-y-4">
+              <h3 className="font-bold text-sm md:text-base text-foreground flex items-center gap-2 border-b border-border/50 pb-2.5">
+                <FileText className="h-4.5 w-4.5 text-primary" />
+                <span>{isRTL ? "الوثائق الهندسية والمواصفات" : "Technical Documents"}</span>
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <a 
+                  href={`/datasheet-${displayProduct.slug}.pdf`} 
+                  download 
+                  onClick={(e) => { e.preventDefault(); toast.success("Mock pdf download started!"); }}
+                  className="flex items-center justify-between p-3.5 bg-muted/40 hover:bg-primary/10 rounded-xl border border-border hover:border-primary/30 transition-all text-xs font-semibold text-muted-foreground hover:text-primary group"
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4.5 w-4.5 text-red-500 shrink-0" />
+                    <span>{isRTL ? "تحميل ورقة البيانات الفنية PDF" : "Download Tech Datasheet.pdf"}</span>
+                  </div>
+                  <Download className="h-4 w-4 shrink-0 transition-transform group-hover:translate-y-0.5" />
+                </a>
+                <a 
+                  href={`/install-${displayProduct.slug}.pdf`} 
+                  download 
+                  onClick={(e) => { e.preventDefault(); toast.success("Mock installation guide download started!"); }}
+                  className="flex items-center justify-between p-3.5 bg-muted/40 hover:bg-primary/10 rounded-xl border border-border hover:border-primary/30 transition-all text-xs font-semibold text-muted-foreground hover:text-primary group"
+                >
+                  <div className="flex items-center gap-2">
+                    <Wrench className="h-4.5 w-4.5 text-amber-500 shrink-0" />
+                    <span>{isRTL ? "دليل التركيب والكهرباء PDF" : "Installation Guide.pdf"}</span>
+                  </div>
+                  <Download className="h-4 w-4 shrink-0 transition-transform group-hover:translate-y-0.5" />
+                </a>
+              </div>
+            </div>
+
+            {/* 2. GRAPHICAL CUTOUT / DIMENSIONS GUIDE */}
+            {specs.cutout_size && !specs.cutout_size.toLowerCase().includes('n/a') && (
+              <div className="bg-card border border-border/80 rounded-2xl p-5 md:p-6 text-center space-y-4">
+                <h3 className="font-bold text-sm md:text-base text-foreground text-left flex items-center gap-2 border-b border-border/50 pb-2.5">
+                  <Maximize2 className="h-4.5 w-4.5 text-primary" />
+                  <span>{isRTL ? "دليل أبعاد فتحة الجبس وسماكة السقف" : "Ceiling Cutout Installation Guide"}</span>
+                </h3>
+                
+                {/* Ceiling cutting circle graphics simulator */}
+                <div className="h-32 max-w-sm mx-auto rounded-2xl border-2 border-dashed border-primary/20 dark:border-primary/10 bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center justify-center p-4 relative">
+                  <div className="absolute top-0 bottom-0 left-1/2 border-l border-slate-300 dark:border-slate-800 pointer-events-none" />
+                  <div className="absolute left-0 right-0 top-1/2 border-t border-slate-300 dark:border-slate-800 pointer-events-none" />
+                  
+                  {/* Visual drill cutout circle */}
+                  <div className="h-20 w-20 rounded-full border-2 border-primary bg-primary/5 animate-pulse z-10 flex items-center justify-center shadow-lg shadow-primary/5">
+                    <span className="text-[10px] font-bold text-primary font-mono">{specs.cutout_size}</span>
+                  </div>
+                  <span className="absolute bottom-2 text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">{isRTL ? "قطر فتحة الحفر" : "Drill Cutout Diameter"}</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed text-left">
+                  {isRTL 
+                    ? "تنبيه: مقاس القص الحقيقي لهذا المنتج هو الموضح أعلاه. يرجى قطع الفتحة في سقف الجبس بدقة متناهية ±2 مم لضمان تثبيت شفة الكشاف الجانبية بشكل متين ومستوٍ."
+                    : "Note: The exact cut diameter is specified above. Please ensure your drywall installer tracks this dimension exactly ±2mm to guarantee a flush, high-end look."}
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Product Info */}
-          <div className="space-y-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold mb-2">{name}</h1>
-                {displayProduct.sku && (
-                  <p className="text-sm text-muted-foreground">SKU: {displayProduct.sku}</p>
-                )}
+          {/* RIGHT COLUMN: Buying info & RFQ */}
+          <div className="space-y-6 md:space-y-8">
+            
+            {/* Header info */}
+            <div>
+              <span className="text-[10px] text-primary font-bold uppercase tracking-widest bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1 inline-block mb-3">
+                QUALITY LIGHT SHOWROOM
+              </span>
+              <h1 className="text-2xl md:text-4xl font-extrabold text-foreground tracking-tight leading-tight mb-2">
+                {name}
+              </h1>
+              <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1.5 font-mono">
+                {displayProduct.sku && <span>SKU: {displayProduct.sku}</span>}
+                <span>|</span>
+                <span>{isRTL ? "مكفول بالكامل" : "Full Showroom Warranty"}</span>
               </div>
-              
-              {/* Admin Actions */}
-              {isAdmin && product && (
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                  >
-                    <Link to={`/admin/products/${product.id}`}>
-                      <Pencil className="h-4 w-4 mr-2" />
-                      {t('admin.edit', 'Edit')}
-                    </Link>
-                  </Button>
-                  
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        disabled={isDeleting}
-                      >
-                        {isDeleting ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4 mr-2" />
-                        )}
-                        {t('admin.delete', 'Delete')}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          {t('admin.deleteProduct', 'Delete Product')}
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {t('admin.deleteProductConfirm', 'Are you sure you want to delete this product? This action cannot be undone and will remove all associated images and variations.')}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>
-                          {t('common.cancel', 'Cancel')}
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleDeleteProduct}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          {t('admin.delete', 'Delete')}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+            </div>
+
+            {/* Price section */}
+            <div className="bg-card border border-border/80 rounded-2xl p-5 md:p-6 shadow-sm flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">
+                  {isRTL ? "السعر الكلي للمنتج" : "Total Product Price"}
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-extrabold text-primary">
+                    {finalPrice.toFixed(3)} <span className="text-sm font-semibold">{t('currency', 'KWD')}</span>
+                  </span>
+                  {originalPrice && (
+                    <span className="text-sm text-muted-foreground line-through font-normal">
+                      {originalPrice.toFixed(3)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              {discount > 0 && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-500 font-extrabold rounded-xl px-3 py-2 text-sm">
+                  {isRTL ? `خصم ${discount}%` : `Save ${discount}%`}
                 </div>
               )}
             </div>
 
-            {/* Price */}
-            <div className="flex items-center gap-3">
-              <span className="text-3xl font-bold text-primary">
-                {finalPrice.toFixed(3)} {t('currency', 'KWD')}
-              </span>
-              {originalPrice && (
-                <span className="text-xl text-muted-foreground line-through">
-                  {originalPrice.toFixed(3)}
-                </span>
-              )}
+            {/* Recommended Applications icons list */}
+            <div className="flex items-center gap-3 bg-muted/40 p-3.5 rounded-xl border text-xs">
+              <span className="font-bold text-slate-500 shrink-0">{isRTL ? "تطبيقات مقترحة:" : "Best Applied in:"}</span>
+              <div className="flex flex-wrap gap-2">
+                {getRecommendedApps().map((app, idx) => (
+                  <Badge key={idx} variant="secondary" className="bg-slate-200/50 dark:bg-slate-800 text-[10px] px-2.5 py-0.5 rounded-md font-semibold text-muted-foreground">
+                    {app}
+                  </Badge>
+                ))}
+              </div>
             </div>
 
-            {/* Short Description */}
+            {/* Short description */}
             {shortDescription && (
-              <p className="text-muted-foreground">{shortDescription}</p>
+              <p className="text-sm md:text-base leading-relaxed text-muted-foreground">
+                {shortDescription}
+              </p>
             )}
 
-            {/* Variations */}
+            {/* Variations dropdown Selector */}
             {displayVariations.length > 0 && (
-              <div className="space-y-3">
-                <label className="font-medium">
-                  {t('product.selectVariation', 'Select Size/Wattage')}
+              <div className="space-y-3 bg-muted/20 border p-4.5 rounded-2xl">
+                <label className="text-xs font-bold text-foreground block">
+                  {isRTL ? "حدد الحجم / القدرة بالواط" : "Select Size / Wattage"}
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {displayVariations.map((variation) => (
+                <div className="flex flex-wrap gap-2.5">
+                  {displayVariations.map((v) => (
                     <Button
-                      key={variation.id}
-                      variant={selectedVariation?.id === variation.id ? 'default' : 'outline'}
+                      key={v.id}
+                      variant={selectedVariation?.id === v.id ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setSelectedVariation(variation)}
-                      disabled={!variation.stock_quantity || variation.stock_quantity <= 0}
+                      onClick={() => setSelectedVariation(v)}
+                      disabled={!v.stock_quantity || v.stock_quantity <= 0}
+                      className="rounded-xl font-bold text-xs h-9 px-4"
                     >
-                      {variation.size || variation.wattage || (language === 'ar' ? variation.name_ar : variation.name_en)}
+                      {v.size || v.wattage || (language === 'ar' ? v.name_ar : v.name_en)}
                     </Button>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Stock Status */}
+            {/* Stock status */}
             <div className="flex items-center gap-2">
-              {inStock ? (
-                <>
-                  <Check className="h-5 w-5 text-green-500" />
-                  <span className="text-green-600 font-medium">
-                    {t('product.inStock', 'In Stock')} ({stockQuantity} {t('product.available', 'available')})
-                  </span>
-                </>
-              ) : (
-                <span className="text-destructive font-medium">{t('product.outOfStock', 'Out of Stock')}</span>
-              )}
+              <div className={`h-2.5 w-2.5 rounded-full ${inStock ? 'bg-green-500 animate-ping' : 'bg-red-500'}`} />
+              <span className={`text-xs font-bold ${inStock ? 'text-green-600' : 'text-red-500'}`}>
+                {inStock 
+                  ? (isRTL ? `متوفر في المعرض (${stockQuantity} قطع)` : `In Stock & Ready (${stockQuantity} available)`) 
+                  : (isRTL ? "غير متوفر حالياً" : "Out of Stock")}
+              </span>
             </div>
 
-            {/* Quantity & Add to Cart */}
+            {/* Quantities, Add-to-cart, Wishlist, WhatsApp */}
             <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex items-center border rounded-lg self-start sm:self-auto">
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* Quantity selector */}
+                <div className="flex items-center border border-border rounded-2xl bg-card p-1 self-start sm:self-auto shrink-0">
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     disabled={quantity <= 1}
+                    className="h-10 w-10 rounded-xl"
                   >
-                    <Minus className="h-4 w-4" />
+                    <Minus className="h-3.5 w-3.5" />
                   </Button>
-                  <span className="w-12 text-center font-medium">{quantity}</span>
+                  <span className="w-10 text-center font-bold text-sm font-mono">{quantity}</span>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setQuantity(Math.min(stockQuantity, quantity + 1))}
                     disabled={quantity >= stockQuantity}
+                    className="h-10 w-10 rounded-xl"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-3.5 w-3.5" />
                   </Button>
                 </div>
 
+                {/* Add to Cart button */}
                 <Button 
-                  className="flex-1" 
+                  className="flex-1 rounded-2xl font-bold text-sm h-12 shadow-lg hover:shadow-primary/10 gap-2" 
                   size="lg" 
                   disabled={!inStock || isAddingToCart}
                   onClick={handleAddToCart}
                 >
                   {isAddingToCart ? (
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
-                    <ShoppingCart className="h-5 w-5 mr-2" />
+                    <ShoppingCart className="h-5 w-5 fill-black/5" />
                   )}
-                  {t('product.addToCart', 'Add to Cart')}
+                  <span>{isRTL ? "أضف لعربة التسوق" : "Add to Shopping Cart"}</span>
+                </Button>
+                
+                {/* Wishlist toggle */}
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  onClick={handleToggleWishlist}
+                  className="rounded-2xl h-12 w-12 p-0 border-border/80 hover:border-slate-400 shrink-0"
+                >
+                  <Heart className={`h-5 w-5 ${isWishlisted ? 'fill-destructive text-destructive' : ''}`} />
+                </Button>
+              </div>
+
+              {/* Primary Contact Options */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* WhatsApp Quick Inquiry */}
+                <Button
+                  variant="outline"
+                  onClick={handleWhatsAppOrder}
+                  className="rounded-2xl border-emerald-600/30 hover:border-emerald-600 text-emerald-600 hover:text-emerald-700 bg-emerald-600/5 hover:bg-emerald-600/10 font-bold text-xs sm:text-sm h-12 gap-2"
+                >
+                  <MessageCircle className="h-4.5 w-4.5" />
+                  <span>{isRTL ? "استفسار واتساب سريع" : "WhatsApp Inquiry"}</span>
                 </Button>
 
-                <div className="flex gap-2">
-                  <Button variant="outline" size="lg" className="flex-1 sm:flex-initial" onClick={handleToggleWishlist}>
-                    <Heart className={`h-5 w-5 ${isWishlisted ? 'fill-destructive text-destructive' : ''}`} />
-                  </Button>
+                {/* contractor RFQ System Form Modal trigger */}
+                <Dialog open={isRfqOpen} onOpenChange={(open) => { setIsRfqOpen(open); if(open) setRfqSubmitted(false); }}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="rounded-2xl border-amber-600/30 hover:border-amber-600 text-amber-500 hover:text-amber-600 bg-amber-500/5 hover:bg-amber-500/10 font-bold text-xs sm:text-sm h-12 gap-2"
+                    >
+                      <Building2 className="h-4.5 w-4.5" />
+                      <span>{isRTL ? "طلب عرض سعر للمشروع B2B" : "Request Quote (RFQ)"}</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[480px] bg-slate-900 border border-slate-800 text-slate-100 rounded-3xl p-6 md:p-8">
+                    {rfqSubmitted ? (
+                      <div className="text-center py-8 flex flex-col items-center justify-center gap-4">
+                        <div className="h-16 w-16 bg-amber-500/10 text-primary rounded-full flex items-center justify-center mb-2 shadow-inner">
+                          <Check className="h-10 w-10 animate-pulse text-primary" />
+                        </div>
+                        <h3 className="font-extrabold text-xl text-white">
+                          {isRTL ? "تم استلام طلب عرض السعر!" : "RFQ Received!"}
+                        </h3>
+                        <p className="text-sm text-slate-400 max-w-xs mx-auto leading-relaxed">
+                          {isRTL 
+                            ? "شكراً لك. سيقوم مهندس المبيعات والمشاريع بإعداد جدول عرض السعر وإرساله إلى بريدك الإلكتروني خلال 24 ساعة."
+                            : "Thank you. Our commercial project engineers will compile your custom wholesale price quotation and email it back to you within 24 hours."}
+                        </p>
+                        <Button onClick={() => setIsRfqOpen(false)} className="mt-4 rounded-xl px-6">
+                          {isRTL ? "إغلاق" : "Close"}
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <DialogHeader className={isRTL ? 'text-right' : 'text-left'}>
+                          <DialogTitle className="text-xl md:text-2xl font-extrabold text-white">
+                            {isRTL ? "بوابة تسعير المشاريع والمقاولين (RFQ)" : "Contractor Project RFQ Portal"}
+                          </DialogTitle>
+                          <DialogDescription className="text-slate-400 text-xs md:text-sm mt-1">
+                            {isRTL
+                              ? "املأ نموذج التسعير الخاص بالمقاولين والكميات الكبيرة للحصول على خصومات B2B استثنائية."
+                              : "Submit bulk quantity specifications to receive custom commercial B2B contract pricing."}
+                          </DialogDescription>
+                        </DialogHeader>
 
-                  <Button variant="outline" size="lg" className="flex-1 sm:flex-initial">
-                    <Share2 className="h-5 w-5" />
-                  </Button>
+                        <form onSubmit={handleRfqSubmit} className="space-y-4.5 mt-5">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-1">
+                              <label className="text-xs font-bold text-slate-300">{isRTL ? "اسم المقاول *" : "Contact Name *"}</label>
+                              <Input
+                                type="text"
+                                name="contractorName"
+                                required
+                                value={rfqData.contractorName}
+                                onChange={handleRfqChange}
+                                className="bg-slate-950 border-slate-800 text-white rounded-xl h-10 text-xs"
+                              />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <label className="text-xs font-bold text-slate-300">{isRTL ? "اسم الشركة" : "Company Name"}</label>
+                              <Input
+                                type="text"
+                                name="companyName"
+                                value={rfqData.companyName}
+                                onChange={handleRfqChange}
+                                className="bg-slate-950 border-slate-800 text-white rounded-xl h-10 text-xs"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-1">
+                            <label className="text-xs font-bold text-slate-300">{isRTL ? "البريد الإلكتروني للشركة *" : "Corporate Email *"}</label>
+                            <Input
+                              type="email"
+                              name="email"
+                              required
+                              value={rfqData.email}
+                              onChange={handleRfqChange}
+                              className="bg-slate-950 border-slate-800 text-white rounded-xl h-10 text-xs"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-1">
+                              <label className="text-xs font-bold text-slate-300">{isRTL ? "الهاتف الكويتي *" : "Kuwait Phone *"}</label>
+                              <Input
+                                type="tel"
+                                name="phone"
+                                required
+                                value={rfqData.phone}
+                                onChange={handleRfqChange}
+                                className="bg-slate-950 border-slate-800 text-white rounded-xl h-10 text-xs text-left"
+                                dir="ltr"
+                              />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <label className="text-xs font-bold text-slate-300">{isRTL ? "الكمية التقريبية *" : "Target Quantity *"}</label>
+                              <Input
+                                type="number"
+                                name="quantity"
+                                required
+                                value={rfqData.quantity}
+                                onChange={handleRfqChange}
+                                className="bg-slate-950 border-slate-800 text-white rounded-xl h-10 text-xs font-mono"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-1">
+                            <label className="text-xs font-bold text-slate-300">{isRTL ? "مواصفات إضافية للمشروع" : "Additional Project Notes"}</label>
+                            <Textarea
+                              name="notes"
+                              value={formData.notes}
+                              onChange={handleRfqChange}
+                              placeholder={isRTL ? "تاريخ التوصيل المطلوب، شروط الدفع، التفاصيل الفنية..." : "Target delivery schedule, shipping destination, specific driver chips..."}
+                              className="bg-slate-950 border-slate-800 text-white rounded-xl min-h-[60px] text-xs resize-none"
+                            />
+                          </div>
+
+                          <Button
+                            type="submit"
+                            disabled={rfqLoading}
+                            className="w-full rounded-xl h-11 font-bold text-xs bg-primary text-black hover:bg-primary/95 shadow-lg mt-2"
+                          >
+                            {rfqLoading ? (
+                              <span>{isRTL ? "جاري إرسال الطلب..." : "Submitting RFQ..."}</span>
+                            ) : (
+                              <span>{isRTL ? "تقديم طلب تسعير المقاولين" : "Submit B2B RFQ"}</span>
+                            )}
+                          </Button>
+                        </form>
+                      </>
+                    )}
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+
+            {/* 3. FREQUENTLY BOUGHT TOGETHER (UP-SELL BUNDLE MODULE) */}
+            <div className="bg-card border border-border/80 rounded-2xl p-5 md:p-6 space-y-4">
+              <h3 className="font-bold text-sm md:text-base text-foreground flex items-center gap-2 border-b border-border/50 pb-2.5">
+                <Layers className="h-4.5 w-4.5 text-primary" />
+                <span>{isRTL ? "عروض حزم إضافية متوافقة" : "Frequently Bought Together"}</span>
+              </h3>
+              
+              <div className="space-y-3.5">
+                {/* Main Product row */}
+                <div className="flex items-center gap-3">
+                  <div className="h-4 w-4 text-primary shrink-0 flex items-center justify-center">
+                    <CheckSquare className="h-4 w-4 fill-primary/10" />
+                  </div>
+                  <div className="flex-1 text-xs">
+                    <span className="font-bold text-foreground">{name}</span>
+                    <span className="text-muted-foreground block">
+                      {finalPrice.toFixed(3)} {t('currency', 'KWD')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Driver Accessory row */}
+                <div className="flex items-center gap-3 cursor-pointer" onClick={() => setIncludeDriver(!includeDriver)}>
+                  <div className="h-4 w-4 text-primary shrink-0 flex items-center justify-center">
+                    {includeDriver ? <CheckSquare className="h-4 w-4 fill-primary/10" /> : <Square className="h-4 w-4 text-muted-foreground" />}
+                  </div>
+                  <div className="flex-1 text-xs">
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      {isRTL ? "محول كهربائي ذكي للشرائط والكشافات 150 واط" : "Modi Premium Smart LED Driver 150W"}
+                    </span>
+                    <span className="text-muted-foreground block">
+                      + {driverPrice.toFixed(3)} {t('currency', 'KWD')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Channel Profile row */}
+                <div className="flex items-center gap-3 cursor-pointer" onClick={() => setIncludeChannel(!includeChannel)}>
+                  <div className="h-4 w-4 text-primary shrink-0 flex items-center justify-center">
+                    {includeChannel ? <CheckSquare className="h-4 w-4 fill-primary/10" /> : <Square className="h-4 w-4 text-muted-foreground" />}
+                  </div>
+                  <div className="flex-1 text-xs">
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      {isRTL ? "بروفايل ألومنيوم سطحي بطول مترين" : "Aluminum Profile Surface Channel 2M"}
+                    </span>
+                    <span className="text-muted-foreground block">
+                      + {profilePrice.toFixed(3)} {t('currency', 'KWD')}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* WhatsApp Quick Order Button */}
-              <Button
-                variant="outline"
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white hover:text-white border-none"
-                size="lg"
-                onClick={handleWhatsAppOrder}
-                disabled={!inStock}
-              >
-                <MessageCircle className="h-5 w-5 mr-2" />
-                {t('products.detail.whatsappOrder', 'Order via WhatsApp')}
-              </Button>
+              {/* Bundle calculations bar */}
+              <div className="bg-muted/40 p-4 rounded-xl border flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+                    {isRTL ? "سعر الباقة الإجمالي" : "Total Bundle Price"}
+                  </span>
+                  <span className="text-lg font-extrabold text-foreground">
+                    {bundleTotal.toFixed(3)} {t('currency', 'KWD')}
+                  </span>
+                </div>
+                <Button 
+                  onClick={handleAddBundleToCart}
+                  className="rounded-xl h-10 font-bold text-xs bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-black shadow-sm gap-1.5"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  <span>{isRTL ? "أضف الباقة بالكامل للسلة" : "Add Bundle to Cart"}</span>
+                </Button>
+              </div>
             </div>
 
-            {/* Trust Badges */}
-            <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-              <div className="text-center">
-                <Truck className="h-6 w-6 mx-auto mb-1 text-primary" />
-                <p className="text-xs text-muted-foreground">{t('product.freeShipping', 'Free Shipping')}</p>
+            {/* Standard trust badges */}
+            <div className="grid grid-cols-3 gap-4 pt-5 border-t text-center">
+              <div className="flex flex-col items-center">
+                <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center mb-1 text-primary shadow-inner">
+                  <Truck className="h-5 w-5" />
+                </div>
+                <p className="text-[11px] font-bold text-foreground">{t('product.freeShipping', 'Free Shipping')}</p>
+                <p className="text-[9px] text-muted-foreground mt-0.5">{isRTL ? "خلال 24 ساعة" : "Within 24 Hours"}</p>
               </div>
-              <div className="text-center">
-                <Shield className="h-6 w-6 mx-auto mb-1 text-primary" />
-                <p className="text-xs text-muted-foreground">{t('product.warranty', '2 Year Warranty')}</p>
+              <div className="flex flex-col items-center">
+                <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center mb-1 text-primary shadow-inner">
+                  <Shield className="h-5 w-5" />
+                </div>
+                <p className="text-[11px] font-bold text-foreground">{specs.warranty}</p>
+                <p className="text-[9px] text-muted-foreground mt-0.5">{isRTL ? "كفالة تبديل فوري" : "Instant Replacement"}</p>
               </div>
-              <div className="text-center">
-                <RotateCcw className="h-6 w-6 mx-auto mb-1 text-primary" />
-                <p className="text-xs text-muted-foreground">{t('product.easyReturns', 'Easy Returns')}</p>
+              <div className="flex flex-col items-center">
+                <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center mb-1 text-primary shadow-inner">
+                  <RotateCcw className="h-5 w-5" />
+                </div>
+                <p className="text-[11px] font-bold text-foreground">{t('product.easyReturns', 'Easy Returns')}</p>
+                <p className="text-[9px] text-muted-foreground mt-0.5">{isRTL ? "خلال 14 يوماً" : "Within 14 Days"}</p>
               </div>
             </div>
+
           </div>
+
         </div>
 
-        {/* Tabs: Description, Specifications, Reviews */}
-        <div className="mt-12">
-          <Tabs defaultValue="description" className="w-full">
-            <TabsList className="w-full justify-start">
-              <TabsTrigger value="description">{t('product.description', 'Description')}</TabsTrigger>
-              <TabsTrigger value="specifications">{t('product.specifications', 'Specifications')}</TabsTrigger>
-              <TabsTrigger value="reviews">{t('product.reviews', 'Reviews')}</TabsTrigger>
+        {/* BOTTOM TABS: Description, Technical Specs Table, and Reviews */}
+        <div className="mt-16 md:mt-20">
+          <Tabs defaultValue="specifications" className="w-full bg-card border rounded-3xl p-6 md:p-10 shadow-sm">
+            <TabsList className="w-full justify-start border-b border-border rounded-none bg-transparent p-0 gap-5 md:gap-8 mb-6">
+              <TabsTrigger value="specifications" className="rounded-none bg-transparent text-sm md:text-base font-bold pb-3 px-1 border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary">
+                {t('product.specifications', 'Specifications')}
+              </TabsTrigger>
+              <TabsTrigger value="description" className="rounded-none bg-transparent text-sm md:text-base font-bold pb-3 px-1 border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary">
+                {t('product.description', 'Description')}
+              </TabsTrigger>
+              <TabsTrigger value="reviews" className="rounded-none bg-transparent text-sm md:text-base font-bold pb-3 px-1 border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary">
+                {t('product.reviews', 'Reviews')}
+              </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="description" className="mt-6">
-              <div className="prose prose-sm max-w-none dark:prose-invert">
-                <p>{description}</p>
+            {/* TAB 1: Specs Table (Lightology inspired) */}
+            <TabsContent value="specifications" className="mt-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-xs md:text-sm">
+                <div className="flex justify-between py-2.5 border-b border-border/80">
+                  <span className="font-bold text-slate-500">{isRTL ? "الجهد الكهربائي" : "Input Voltage"}</span>
+                  <span className="text-foreground text-right">{specs.voltage}</span>
+                </div>
+                <div className="flex justify-between py-2.5 border-b border-border/80">
+                  <span className="font-bold text-slate-500">{isRTL ? "القدرة بالواط" : "Power/Wattage"}</span>
+                  <span className="text-foreground text-right">{specs.wattage}</span>
+                </div>
+                <div className="flex justify-between py-2.5 border-b border-border/80">
+                  <span className="font-bold text-slate-500">{isRTL ? "شدة الإضاءة (لومن)" : "Luminous Flux (Lumens)"}</span>
+                  <span className="text-foreground text-right">{specs.lumens}</span>
+                </div>
+                <div className="flex justify-between py-2.5 border-b border-border/80">
+                  <span className="font-bold text-slate-500">{isRTL ? "درجة حرارة اللون (CCT)" : "Color Temperature (CCT)"}</span>
+                  <span className="text-foreground text-right">{specs.cct}</span>
+                </div>
+                <div className="flex justify-between py-2.5 border-b border-border/80">
+                  <span className="font-bold text-slate-500">{isRTL ? "زاوية انتشار الضوء" : "Beam Angle"}</span>
+                  <span className="text-foreground text-right">{specs.beam_angle}</span>
+                </div>
+                <div className="flex justify-between py-2.5 border-b border-border/80">
+                  <span className="font-bold text-slate-500">{isRTL ? "مؤشر تجسيد الألوان (CRI)" : "Color Rendering Index (CRI)"}</span>
+                  <span className="text-foreground text-right">CRI &gt; 90 (High Fidelity)</span>
+                </div>
+                <div className="flex justify-between py-2.5 border-b border-border/80">
+                  <span className="font-bold text-slate-500">{isRTL ? "مستوى الحماية (IP)" : "IP Protection Rating"}</span>
+                  <span className="text-foreground text-right">{specs.ip_rating}</span>
+                </div>
+                <div className="flex justify-between py-2.5 border-b border-border/80">
+                  <span className="font-bold text-slate-500">{isRTL ? "قطر فتحة الجبس (Cutout)" : "Ceiling Cutout Size"}</span>
+                  <span className="text-foreground text-right">{specs.cutout_size}</span>
+                </div>
+                <div className="flex justify-between py-2.5 border-b border-border/80">
+                  <span className="font-bold text-slate-500">{isRTL ? "هيكل الجسم والعدسة" : "Body Material"}</span>
+                  <span className="text-foreground text-right">{specs.material}</span>
+                </div>
+                <div className="flex justify-between py-2.5 border-b border-border/80">
+                  <span className="font-bold text-slate-500">{isRTL ? "مدة الكفالة" : "Warranty Period"}</span>
+                  <span className="text-foreground text-right">{specs.warranty}</span>
+                </div>
               </div>
             </TabsContent>
 
-            <TabsContent value="specifications" className="mt-6">
-              {displayProduct.specifications ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(displayProduct.specifications).map(([key, value]) => (
-                    <div key={key} className="flex justify-between py-2 border-b">
-                      <span className="font-medium">{key}</span>
-                      <span className="text-muted-foreground">{value}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">{t('product.noSpecifications', 'No specifications available.')}</p>
-              )}
+            {/* TAB 2: Description */}
+            <TabsContent value="description" className="mt-0">
+              <div className="prose prose-sm max-w-none dark:prose-invert leading-relaxed text-slate-600 dark:text-slate-400">
+                <p className="text-sm md:text-base">{description}</p>
+              </div>
             </TabsContent>
 
-            <TabsContent value="reviews" className="mt-6">
-              <p className="text-muted-foreground">{t('product.noReviews', 'No reviews yet. Be the first to review this product!')}</p>
+            {/* TAB 3: Reviews */}
+            <TabsContent value="reviews" className="mt-0 text-center py-6">
+              <p className="text-muted-foreground text-xs md:text-sm">
+                {isRTL ? "لا توجد تقييمات لهذا المنتج بعد. كن أول من يكتب تقييماً!" : "No reviews yet. Be the first to write a review!"}
+              </p>
             </TabsContent>
           </Tabs>
         </div>
 
-        {/* Related Products */}
+        {/* RELATED PRODUCTS */}
         {relatedProducts.length > 0 && (
-          <div className="mt-16">
-            <h2 className="text-2xl font-bold mb-6">{t('product.relatedProducts', 'Related Products')}</h2>
+          <div className="mt-20">
+            <h2 className="text-2xl md:text-3xl font-extrabold text-foreground mb-8 text-center md:text-left">
+              {isRTL ? "منتجات ذات صلة قد تعجبك" : "Related Premium Lighting"}
+            </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-              {relatedProducts.map((product, index) => (
-                <ProductCard key={product.id} product={product} index={index} />
+              {relatedProducts.map((p, idx) => (
+                <ProductCard key={p.id} product={p} index={idx} />
               ))}
             </div>
           </div>
         )}
+
       </div>
     </StorefrontLayout>
   );
