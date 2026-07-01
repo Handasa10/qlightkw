@@ -731,7 +731,7 @@ const Checkout = () => {
                     <span>{subtotal.toFixed(3)} {t('currency', 'KWD')}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t('checkout.delivery', 'Delivery')}</span>
+                    <span className="text-muted-foreground">{t('checkout.deliveryCost', 'Delivery')}</span>
                     <span>{deliveryCost.toFixed(3)} {t('currency', 'KWD')}</span>
                   </div>
                   {discountAmount > 0 && (

@@ -4,6 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
+import { Button } from '@/components/ui/button';
 import { Lightbulb, Info, Eye, Sun, Sparkles } from 'lucide-react';
 
 const LightingGuide = () => {
