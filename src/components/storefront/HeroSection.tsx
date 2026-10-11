@@ -199,7 +199,7 @@ const HeroSection = () => {
   return (
     <section
       ref={sectionRef}
-      className="hero-stage relative h-[100svh] min-h-[640px] overflow-hidden bg-[#0b0907] text-white select-none"
+      className="hero-stage relative min-h-[100svh] overflow-hidden bg-[#0b0907] text-white select-none"
       style={{ '--light-rgb': lightRgb } as React.CSSProperties}
       onPointerMove={handlePointerMove}
       onPointerEnter={() => setIsPaused(true)}
@@ -261,8 +261,8 @@ const HeroSection = () => {
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-background to-transparent" aria-hidden="true" />
       <div className="grain pointer-events-none absolute inset-0 opacity-[0.07]" aria-hidden="true" />
 
-      {/* Content */}
-      <div className="relative z-10 flex h-full items-center">
+      {/* Content; top padding keeps it clear of the fixed header on short screens */}
+      <div className="relative z-10 flex min-h-[100svh] items-center pb-20 pt-32 md:pt-36">
         <div className="container">
           <div className={`max-w-3xl ${isRTL ? 'text-right' : 'text-left'}`}>
             <motion.div
