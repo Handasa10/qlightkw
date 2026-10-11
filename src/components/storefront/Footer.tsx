@@ -19,6 +19,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import AnimatedLogo from '@/components/AnimatedLogo';
+import FooterWordmark from './FooterWordmark';
 
 const Footer = () => {
   const { t } = useTranslation();
@@ -220,6 +221,8 @@ const Footer = () => {
 
         </div>
       </div>
+
+      <FooterWordmark />
 
       {/* 3. Payment Methods & Copyright bar */}
       <div className="border-t border-slate-900 bg-slate-950/80">
