@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.submit-contact]
 verify_jwt = false
+
+[functions.list-ai-models]
+verify_jwt = false

@@ -109,14 +109,21 @@ const GOOGLE_IMAGE_MODELS = [
   { value: 'imagen-3.0-fast-generate-001', label: 'Imagen 3.0 Fast', description: 'Faster Imagen generation' },
 ];
 
-// Google AI Text Models
+// Google AI Text Models. The live list from Google (list-ai-models) is preferred; these are
+// the fallback, led by Google's aliases that always point at the newest version.
 const GOOGLE_TEXT_MODELS = [
-  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', description: 'Fast & efficient' },
-  { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', description: 'Lightweight' },
-  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Latest flash model' },
-  { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', description: 'Most capable' },
-  { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', description: 'Balanced' },
+  { value: 'gemini-flash-latest', label: 'Gemini Flash (always latest)', description: 'Recommended: fast, updates automatically' },
+  { value: 'gemini-pro-latest', label: 'Gemini Pro (always latest)', description: 'Most capable, updates automatically' },
+  { value: 'gemini-flash-lite-latest', label: 'Gemini Flash Lite (always latest)', description: 'Lightweight and cheapest' },
 ];
+
+type ModelOption = { value: string; label: string; description: string };
+
+// Aliases first, then the live models, without duplicates
+const mergeModelLists = (base: ModelOption[], live: ModelOption[] | undefined): ModelOption[] => {
+  const seen = new Set(base.map((m) => m.value));
+  return [...base, ...(live || []).filter((m) => !seen.has(m.value))];
+};
 
 // OpenRouter model interface
 interface OpenRouterModel {
@@ -180,6 +187,22 @@ export default function SettingsPage() {
     },
     staleTime: 1000 * 60 * 60, // Cache for 1 hour
   });
+
+  // Fetch the Google models this site's API key can use, so new Gemini versions appear automatically
+  const { data: googleModels, isLoading: isLoadingGoogleModels, refetch: refetchGoogleModels } = useQuery({
+    queryKey: ['google-ai-models'],
+    queryFn: async (): Promise<{ text: ModelOption[]; image: ModelOption[] } | null> => {
+      const { data, error } = await supabase.functions.invoke('list-ai-models');
+      if (error || !data?.success) {
+        console.error('Failed to fetch Google models:', error || data?.error);
+        return null;
+      }
+      return { text: data.text, image: data.image };
+    },
+    staleTime: 1000 * 60 * 60,
+  });
+  const googleTextModels = mergeModelLists(GOOGLE_TEXT_MODELS, googleModels?.text);
+  const googleImageModels = mergeModelLists(GOOGLE_IMAGE_MODELS, googleModels?.image);
 
   // Filter models for text and image generation
   const textModels = openRouterModels?.filter(m => 
@@ -257,7 +280,7 @@ export default function SettingsPage() {
           image_provider: existingSettings.image_provider || existingSettings.ai_provider || 'google',
           chat_provider: existingSettings.chat_provider || existingSettings.ai_provider || 'google',
           google_image_model: existingSettings.google_image_model || existingSettings.image_model || 'gemini-2.5-flash-image',
-          google_text_model: existingSettings.google_text_model || existingSettings.text_model || 'gemini-2.0-flash',
+          google_text_model: existingSettings.google_text_model || existingSettings.text_model || 'gemini-flash-latest',
           openrouter_text_model: existingSettings.openrouter_text_model || '',
           openrouter_image_model: existingSettings.openrouter_image_model || '',
           auto_generate_description: existingSettings.auto_generate_description || false,
@@ -698,7 +721,7 @@ export default function SettingsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {GOOGLE_IMAGE_MODELS.map((model) => (
+                        {googleImageModels.map((model) => (
                           <SelectItem key={model.value} value={model.value}>
                             <div className="flex flex-col">
                               <span className="font-medium">{model.label}</span>
@@ -832,9 +855,15 @@ export default function SettingsPage() {
                 {/* Model Selection based on provider */}
                 {aiSettings?.chat_provider === 'google' ? (
                   <div className="space-y-2">
-                    <Label>{t('admin.settings.ai.textModel', 'Text Model')}</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>{t('admin.settings.ai.textModel', 'Text Model')}</Label>
+                      <Button variant="ghost" size="sm" onClick={() => refetchGoogleModels()} disabled={isLoadingGoogleModels}>
+                        <RefreshCw className={cn("h-3 w-3 mr-1", isLoadingGoogleModels && "animate-spin")} />
+                        <span className="text-xs">{t('admin.settings.ai.refresh', 'Refresh')}</span>
+                      </Button>
+                    </div>
                     <Select
-                      value={aiSettings?.google_text_model || 'gemini-2.0-flash'}
+                      value={aiSettings?.google_text_model || 'gemini-flash-latest'}
                       onValueChange={(value) =>
                         setAiSettings((prev) => prev ? { ...prev, google_text_model: value } : null)
                       }
@@ -843,7 +872,7 @@ export default function SettingsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {GOOGLE_TEXT_MODELS.map((model) => (
+                        {googleTextModels.map((model) => (
                           <SelectItem key={model.value} value={model.value}>
                             <div className="flex flex-col">
                               <span className="font-medium">{model.label}</span>
