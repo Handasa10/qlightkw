@@ -340,7 +340,7 @@ Focus on quality, durability, energy efficiency, and aesthetic appeal where rele
       headers: {
         "Authorization": `Bearer ${openrouterApiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://qlightkw.lovable.app",
+        "HTTP-Referer": "https://qlightkw.com",
         "X-Title": "Quality Light Kuwait",
       },
       body: JSON.stringify(requestBody),
@@ -396,7 +396,7 @@ Focus on quality, durability, energy efficiency, and aesthetic appeal where rele
       headers: {
         "Authorization": `Bearer ${openrouterApiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://qlightkw.lovable.app",
+        "HTTP-Referer": "https://qlightkw.com",
         "X-Title": "Quality Light Kuwait",
       },
       body: JSON.stringify({

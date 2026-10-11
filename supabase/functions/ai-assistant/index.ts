@@ -12,6 +12,9 @@ const corsHeaders = {
 // Get Gemini API key from environment
 const GEMINI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
 
+const MAX_MESSAGE_CHARS = 2000;
+const MAX_HISTORY_MESSAGES = 12;
+
 interface Message {
   role: 'user' | 'assistant';
   content: string;
@@ -41,11 +44,22 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { message, conversationHistory = [], userId, language = 'en' }: AssistantRequest = await req.json();
+    const { message, conversationHistory: rawHistory = [], userId, language = 'en' }: AssistantRequest = await req.json();
 
-    if (!message?.trim()) {
+    if (typeof message !== 'string' || !message.trim()) {
       throw new Error('Message is required');
     }
+    // This endpoint is public, so cap the input size to keep AI costs bounded
+    if (message.length > MAX_MESSAGE_CHARS) {
+      return new Response(
+        JSON.stringify({ error: 'Message is too long' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const conversationHistory = (Array.isArray(rawHistory) ? rawHistory : [])
+      .slice(-MAX_HISTORY_MESSAGES)
+      .filter((m) => m && typeof m.content === 'string')
+      .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_MESSAGE_CHARS) }));
 
     // Detect message language - if Arabic characters are present, respond in Arabic
     const detectedLanguage = detectMessageLanguage(message);

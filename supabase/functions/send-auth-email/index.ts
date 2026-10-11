@@ -202,30 +202,26 @@ serve(async (req) => {
     
     let emailPayload: AuthEmailPayload;
 
-    // Verify webhook signature if secret is configured
-    if (hookSecret) {
-      try {
-        // The secret should be base64 encoded. If it's not, we need to encode it.
-        let secretForVerification = hookSecret;
-        
-        // Check if the secret looks like it's already base64 encoded
-        const isBase64 = /^[A-Za-z0-9+/=]+$/.test(hookSecret) && hookSecret.length % 4 === 0;
-        
-        if (!isBase64) {
-          // Encode the secret to base64 if it's not already
-          secretForVerification = btoa(hookSecret);
-        }
-        
-        const wh = new Webhook(secretForVerification);
-        emailPayload = wh.verify(payload, headers) as AuthEmailPayload;
-      } catch (webhookError) {
-        console.warn("Webhook verification failed, trying direct parse:", webhookError);
-        // If webhook verification fails, try parsing directly (for development/testing)
-        emailPayload = JSON.parse(payload);
-      }
-    } else {
-      // For direct calls (testing)
-      emailPayload = JSON.parse(payload);
+    // Only Supabase Auth may call this hook: the request must carry a valid signature.
+    // Unsigned requests are rejected, otherwise anyone could send auth emails from our domain.
+    if (!hookSecret) {
+      console.error("SEND_EMAIL_HOOK_SECRET is not configured");
+      return new Response(JSON.stringify({ error: "Hook not configured" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+    try {
+      // Supabase shows the secret as "v1,whsec_<base64>"; the Webhook class wants the base64 part
+      const base64Secret = hookSecret.replace(/^v1,/, "").replace(/^whsec_/, "");
+      const wh = new Webhook(base64Secret);
+      emailPayload = wh.verify(payload, headers) as AuthEmailPayload;
+    } catch (webhookError) {
+      console.error("Webhook verification failed:", webhookError);
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     }
 
     const { user, email_data } = emailPayload;

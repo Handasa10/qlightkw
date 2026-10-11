@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@4.0.0";
+import { getCaller, HttpError, errorStatus, escapeHtml, type AuthContext } from "../_shared/auth.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY") as string);
 
@@ -171,7 +172,7 @@ function generateConfirmationEmail(data: OrderEmailRequest): string {
               
               <!-- CTA Button -->
               <div style="text-align: center; margin: 32px 0;">
-                <a href="https://qlightkw.lovable.app/account/orders" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;">${content.trackOrder}</a>
+                <a href="https://qlightkw.com/account/orders" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;">${content.trackOrder}</a>
               </div>
               
               <p style="margin: 24px 0 0; color: #6b7280; text-align: center; line-height: 1.6;">${content.thankYou}</p>
@@ -302,7 +303,7 @@ function generateStatusUpdateEmail(data: OrderEmailRequest): string {
               
               <!-- CTA Button -->
               <div style="text-align: center; margin: 32px 0;">
-                <a href="https://qlightkw.lovable.app/account/orders" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;">${content.viewOrder}</a>
+                <a href="https://qlightkw.com/account/orders" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;">${content.viewOrder}</a>
               </div>
             </td>
           </tr>
@@ -323,6 +324,61 @@ function generateStatusUpdateEmail(data: OrderEmailRequest): string {
   `;
 }
 
+// Loads the order from the database and builds the email data from it. Nothing the
+// caller sends ends up in the email except the type, language and (for admins) status.
+async function buildEmailData(
+  admin: AuthContext["admin"],
+  orderId: string,
+  type: OrderEmailRequest["type"],
+  language: "en" | "ar",
+  fallbackEmail: string | undefined,
+): Promise<{ data: OrderEmailRequest; ownerId: string }> {
+  const { data: order, error } = await admin
+    .from("orders")
+    .select("id, user_id, order_number, total_amount, status, shipping_address")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (error || !order) {
+    throw new HttpError(404, "Order not found");
+  }
+
+  const { data: items } = await admin
+    .from("order_items")
+    .select("product_name_en, product_name_ar, quantity, total_price")
+    .eq("order_id", orderId);
+
+  const address = (order.shipping_address || {}) as Record<string, string | undefined>;
+  const customerEmail = address.email || fallbackEmail;
+  if (!customerEmail) {
+    throw new HttpError(400, "Order has no customer email");
+  }
+  const customerName = [address.firstName, address.lastName].filter(Boolean).join(" ") || "Customer";
+
+  const data: OrderEmailRequest = {
+    type,
+    language,
+    order_id: order.id,
+    order_number: escapeHtml(order.order_number),
+    customer_email: customerEmail,
+    customer_name: escapeHtml(customerName),
+    total_amount: Number(order.total_amount) || 0,
+    status: order.status,
+    items: (items || []).map((item) => ({
+      name: escapeHtml((language === "ar" && item.product_name_ar) || item.product_name_en),
+      quantity: Number(item.quantity) || 0,
+      price: Number(item.total_price) || 0,
+    })),
+    shipping_address: address.address
+      ? {
+          address: escapeHtml(address.address),
+          city: escapeHtml(address.city),
+          area: address.area ? escapeHtml(address.area) : undefined,
+        }
+      : undefined,
+  };
+  return { data, ownerId: order.user_id };
+}
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -330,13 +386,26 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const data: OrderEmailRequest = await req.json();
-    console.log("Received order email request:", { type: data.type, order_number: data.order_number, language: data.language });
+    const { user, isAdmin, admin } = await getCaller(req);
+    const body = await req.json();
 
-    // Validate required fields
-    if (!data.customer_email || !data.order_number || !data.type) {
-      throw new Error("Missing required fields: customer_email, order_number, or type");
+    const type = body.type === "status_update" ? "status_update" : "confirmation";
+    const language = body.language === "ar" ? "ar" : "en";
+    if (typeof body.order_id !== "string" || !body.order_id) {
+      throw new HttpError(400, "Missing required field: order_id");
     }
+
+    const { data, ownerId } = await buildEmailData(admin, body.order_id, type, language, user.email);
+
+    // Customers may only request the confirmation for their own order; status updates are admin-only
+    if (!isAdmin && (type !== "confirmation" || ownerId !== user.id)) {
+      throw new HttpError(403, "Forbidden");
+    }
+    if (type === "status_update" && typeof body.status === "string" && body.status in statusTranslations) {
+      data.status = body.status;
+    }
+
+    console.log("Sending order email:", { type, order_number: data.order_number, language });
 
     let html: string;
     let subject: string;
@@ -363,7 +432,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Order email sent successfully:", emailResponse);
 
-    return new Response(JSON.stringify({ success: true, data: emailResponse }), {
+    return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
@@ -372,7 +441,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ error: error.message }),
       {
-        status: 500,
+        status: errorStatus(error),
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );
