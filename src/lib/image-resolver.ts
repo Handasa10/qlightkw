@@ -71,6 +71,18 @@ const PROJECT_IMAGES: string[] = [
   officeLighting, restaurantLighting, salonLighting, villaLivingRoom,
 ];
 
+// Each project photo matched to the kind of space it shows, by keywords in the project slug
+const PROJECT_TYPE_IMAGES: Array<[RegExp, string]> = [
+  [/salon|beauty|spa|barber/, salonLighting],
+  [/bedroom/, bedroomInstallation],
+  [/kitchen/, kitchenInstallation],
+  [/majlis|chandelier|diwaniya|hall|palace/, majlisChandelier],
+  [/restaurant|cafe|dining|mall|retail|shop/, restaurantLighting],
+  [/garden|outdoor|landscape|pool|facade/, gardenOutdoor],
+  [/office|corporate|tower|commercial|clinic/, officeLighting],
+  [/villa|living|residential|home|house/, villaLivingRoom],
+];
+
 const BLOG_IMAGES: string[] = [
   bedroomLighting, choosingRightLight, commercialLighting, energySavings,
   kitchenLighting, ledVsTraditional, outdoorLighting, perfectChandelier,
@@ -280,6 +292,8 @@ export function resolveImageUrl(
       return images[hash % images.length];
     }
     case 'project': {
+      const match = PROJECT_TYPE_IMAGES.find(([pattern]) => pattern.test(slugOrId));
+      if (match) return match[1];
       return PROJECT_IMAGES[hash % PROJECT_IMAGES.length];
     }
     case 'blog': {
