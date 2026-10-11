@@ -14,6 +14,7 @@ const GEMINI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
 
 const MAX_MESSAGE_CHARS = 2000;
 const MAX_HISTORY_MESSAGES = 12;
+const DEFAULT_MODEL = "gemini-2.5-flash";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -69,6 +70,14 @@ serve(async (req) => {
 
     // Fetch relevant context from database
     const contextData = await fetchDatabaseContext(supabase, message);
+
+    // Admins can pick the model in AI settings; default to a current Gemini model
+    const { data: settingsRow } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "ai_settings")
+      .maybeSingle();
+    const model = (settingsRow?.value as { google_text_model?: string } | null)?.google_text_model || DEFAULT_MODEL;
     
     // Build system prompt with database context - use detected language
     const systemPrompt = buildSystemPrompt(contextData, responseLanguage);
@@ -78,7 +87,7 @@ serve(async (req) => {
 
     // Call Gemini API
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -102,7 +111,10 @@ serve(async (req) => {
     if (!geminiResponse.ok) {
       const errorData = await geminiResponse.text();
       console.error('Gemini API error:', errorData);
-      throw new Error(`AI service error: ${geminiResponse.status}`);
+      // Surface Google's reason (it never contains the key) so failures can be diagnosed
+      let reason = "";
+      try { reason = JSON.parse(errorData)?.error?.message || ""; } catch { /* not JSON */ }
+      throw new Error(`AI service error: ${geminiResponse.status}${reason ? ` - ${reason}` : ""}`);
     }
 
     const geminiData = await geminiResponse.json();

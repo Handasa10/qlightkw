@@ -131,7 +131,7 @@ async function handleGoogleAI(
 
   if (type === "text") {
     // Use new format first, then legacy format, then default
-    const textModel = model || aiSettings?.google_text_model || aiSettings?.text_model || "gemini-2.0-flash";
+    const textModel = model || aiSettings?.google_text_model || aiSettings?.text_model || "gemini-2.5-flash";
     
     console.log(`Google text generation with model: ${textModel}`);
     
