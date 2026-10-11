@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { languages, changeLanguage, type Language } from '@/i18n';
+import { languages, changeLanguage, getUrlLanguage, type Language } from '@/i18n';
 
 interface LanguageContextType {
   language: Language;
@@ -14,6 +14,8 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 // Get initial language from localStorage
 const getInitialLanguage = (): Language => {
   if (typeof window !== 'undefined') {
+    const fromUrl = getUrlLanguage();
+    if (fromUrl) return fromUrl;
     const saved = localStorage.getItem('language');
     if (saved && saved in languages) {
       return saved as Language;

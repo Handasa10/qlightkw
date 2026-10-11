@@ -6,8 +6,11 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { Loader2 } from 'lucide-react';
+import { useSEO } from '@/hooks/useSEO';
 
 export default function AdminLayout() {
+  const { isRTL: seoAr } = useLanguage();
+  useSEO({ title: seoAr ? "لوحة التحكم" : "Admin", description: '', noindex: true });
   const { user, isLoading, isAdmin } = useAuth();
   const { isRTL } = useLanguage();
   const navigate = useNavigate();

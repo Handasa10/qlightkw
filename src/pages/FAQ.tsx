@@ -10,6 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Search, HelpCircle, Package, Truck, CreditCard, RefreshCw, Phone, Mail } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useSEO } from '@/hooks/useSEO';
+import { faqSchema } from '@/lib/seo';
 
 interface FAQ {
   id: string;
@@ -92,6 +94,16 @@ const FAQPage = () => {
   ];
 
   const displayFaqs = faqs.length > 0 ? faqs : demoFaqs;
+  useSEO({
+    title: isRTL ? 'الأسئلة الشائعة | الطلب والتوصيل والضمان' : 'FAQ | Ordering, Delivery & Warranty in Kuwait',
+    description: isRTL
+      ? 'إجابات عن الطلب والتوصيل داخل الكويت والدفع بالكي نت والضمان والإرجاع في كواليتي لايت.'
+      : 'Answers about ordering, delivery across Kuwait, KNET payment, warranty and returns at Quality Light.',
+    jsonLd: faqSchema(displayFaqs.map((f) => ({
+      question: (isRTL ? f.question_ar || f.question_en : f.question_en) || '',
+      answer: (isRTL ? f.answer_ar || f.answer_en : f.answer_en) || '',
+    })).filter((f) => f.question && f.answer)),
+  });
 
   const categories = [
     { id: 'ordering', icon: Package, label: isRTL ? 'الطلبات' : 'Ordering' },

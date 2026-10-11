@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { MapPin, Calendar, Building, ArrowRight } from 'lucide-react';
 import { resolveImageUrl } from '@/lib/image-resolver';
+import { useSEO } from '@/hooks/useSEO';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Project {
   id: string;
@@ -26,6 +28,11 @@ interface Project {
 }
 
 const Projects = () => {
+  const { isRTL: seoAr } = useLanguage();
+  useSEO({
+    title: seoAr ? "مشاريع الإضاءة في الكويت | فلل ومكاتب ومطاعم" : "Lighting Projects in Kuwait | Villas, Offices & Restaurants",
+    description: seoAr ? "شاهد مشاريع الإضاءة المنفذة في الكويت: فلل، ثريات مجالس، مطابخ، صالونات، مطاعم، مكاتب وحدائق." : "See our completed lighting projects across Kuwait: villas, majlis chandeliers, kitchens, salons, restaurants, offices and gardens.",
+  });
   const { t, i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const [filter, setFilter] = useState<'all' | 'featured'>('all');

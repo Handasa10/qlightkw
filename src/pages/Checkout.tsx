@@ -29,10 +29,13 @@ import {
   Loader2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSEO } from '@/hooks/useSEO';
 
 type CheckoutStep = 'shipping' | 'delivery' | 'payment' | 'confirmation';
 
 const Checkout = () => {
+  const { isRTL: seoAr } = useLanguage();
+  useSEO({ title: seoAr ? "إتمام الطلب" : "Checkout", description: '', noindex: true });
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
   const { user } = useAuth();

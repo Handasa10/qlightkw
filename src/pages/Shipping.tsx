@@ -4,8 +4,15 @@ import StorefrontLayout from '@/layouts/StorefrontLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Truck, Clock, MapPin, Package, Shield, Phone } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useSEO } from '@/hooks/useSEO';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const Shipping = () => {
+  const { isRTL: seoAr } = useLanguage();
+  useSEO({
+    title: seoAr ? "التوصيل لجميع مناطق الكويت | معلومات الشحن" : "Delivery Across Kuwait | Shipping Information",
+    description: seoAr ? "خيارات التوصيل ومواعيده وتكلفته لطلبات الإضاءة في جميع مناطق الكويت." : "Delivery options, times and costs for lighting orders across all areas of Kuwait.",
+  });
   const { i18n, t } = useTranslation();
   const isRTL = i18n.language === 'ar';
 

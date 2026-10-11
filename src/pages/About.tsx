@@ -3,8 +3,15 @@ import { motion } from 'framer-motion';
 import StorefrontLayout from '@/layouts/StorefrontLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Building, Users, Award, Target, Lightbulb, Shield, Clock, Globe } from 'lucide-react';
+import { useSEO } from '@/hooks/useSEO';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const About = () => {
+  const { isRTL: seoAr } = useLanguage();
+  useSEO({
+    title: seoAr ? "من نحن | خبراء الإضاءة في الكويت" : "About Quality Light | Lighting Experts in Kuwait",
+    description: seoAr ? "كواليتي لايت شركة إضاءة كويتية في حولي توفر إضاءة LED والإضاءة الديكورية والمعمارية للمنازل والفلل والمشاريع التجارية." : "Quality Light is a Kuwait lighting company in Hawalli supplying LED, decorative and architectural lighting for homes, villas and commercial projects.",
+  });
   const { t, i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
 

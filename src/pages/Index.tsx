@@ -13,9 +13,16 @@ import TestimonialsSection from '@/components/storefront/TestimonialsSection';
 import BlogSection from '@/components/storefront/BlogSection';
 import NewsletterSection from '@/components/storefront/NewsletterSection';
 import CTASection from '@/components/storefront/CTASection';
+import { useSEO } from '@/hooks/useSEO';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // The home page is a dark "showroom": lighting reads best against darkness
 const Index = () => {
+  const { isRTL: seoAr } = useLanguage();
+  useSEO({
+    title: seoAr ? "محل إضاءة في الكويت | إنارة LED وثريات وسبوت لايت" : "Lighting Store in Kuwait | LED Lights, Chandeliers & Spotlights",
+    description: seoAr ? "تسوق إنارة LED والثريات والسبوت لايت وشرائط LED والإضاءة المغناطيسية والخارجية في الكويت. معرضنا في حولي – شارع تونس. توصيل سريع لجميع مناطق الكويت. واتساب 51111725." : "Shop LED lights, chandeliers, spotlights, LED strips, magnetic track and outdoor lighting in Kuwait. Showroom on Tunis Street, Hawalli. Fast delivery across Kuwait. WhatsApp +965 5111 1725.",
+  });
   return (
     <StorefrontLayout showroom>
       <HeroSection />

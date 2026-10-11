@@ -15,6 +15,7 @@ import { Eye, EyeOff, Mail, Lock, User, Loader2, Sun, Moon, Languages } from 'lu
 import { z } from 'zod';
 import logo from '@/assets/logo.png';
 import AIAssistant from '@/components/AIAssistant';
+import { useSEO } from '@/hooks/useSEO';
 
 // Google icon component
 const GoogleIcon = () => (
@@ -55,6 +56,8 @@ const signupSchema = z.object({
 });
 
 export default function Auth() {
+  const { isRTL: seoAr } = useLanguage();
+  useSEO({ title: seoAr ? "تسجيل الدخول" : "Sign In", description: '', noindex: true });
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, signIn, signUp, signInWithGoogle, isLoading: authLoading } = useAuth();
