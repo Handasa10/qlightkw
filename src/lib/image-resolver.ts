@@ -249,11 +249,6 @@ export function resolveImageUrl(
   type: ImageType,
   slugOrId: string = ''
 ): string {
-  // Override: Check exact mapping overrides first so we can replace local/MinIO demo photos
-  if (type === 'product' && slugOrId && PRODUCT_SLUG_IMAGE_MAP[slugOrId]) {
-    return PRODUCT_SLUG_IMAGE_MAP[slugOrId];
-  }
-
   // If URL looks valid (not MinIO and not local demo path), return as-is
   if (
     url && 
@@ -279,6 +274,8 @@ export function resolveImageUrl(
       return images[hash % images.length];
     }
     case 'product': {
+      // Only a fallback: a working URL from the database (e.g. a real upload) always wins
+      if (slugOrId && PRODUCT_SLUG_IMAGE_MAP[slugOrId]) return PRODUCT_SLUG_IMAGE_MAP[slugOrId];
       const images = LOCAL_IMAGES.products;
       return images[hash % images.length];
     }
@@ -312,12 +309,10 @@ export function resolveSecondaryImageUrl(
   url: string | null | undefined,
   primarySlug: string = ''
 ): string {
-  // Override: Check if we have an override for this product
+  if (url && !isBrokenUrl(url) && !url.startsWith('/images/products/')) return url;
   if (primarySlug && PRODUCT_SLUG_IMAGE_MAP[primarySlug]) {
     return PRODUCT_SLUG_SECONDARY_MAP[primarySlug] || PRODUCT_SLUG_IMAGE_MAP[primarySlug];
   }
-
-  if (url && !isBrokenUrl(url) && !url.startsWith('/images/products/')) return url;
   const images = LOCAL_IMAGES.products;
   // Use a different hash offset to get a different image
   const hash = simpleHash(primarySlug + '_secondary');
