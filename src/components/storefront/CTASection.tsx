@@ -94,7 +94,7 @@ const CTASection = () => {
             
             {/* Header Content */}
             <div className={`text-center lg:text-left ${isRTL ? 'lg:text-right' : ''} max-w-2xl`}>
-              <span className="text-primary font-bold text-xs uppercase tracking-widest bg-primary/10 px-3.5 py-1.5 rounded-full inline-block mb-4 border border-primary/20">
+              <span className="eyebrow-light mb-4">
                 {isRTL ? "استشارة مجانية بالكامل" : "100% Free Consultation"}
               </span>
               <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight text-white mb-5 leading-tight">

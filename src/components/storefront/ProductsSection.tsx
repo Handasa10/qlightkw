@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProductCard from './ProductCard';
 import { ArrowRight } from 'lucide-react';
 import { resolveImageUrl, resolveSecondaryImageUrl } from '@/lib/image-resolver';
+import SectionHeading from '@/components/effects/SectionHeading';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Product {
   id: string;
@@ -25,6 +27,7 @@ interface Product {
 
 const ProductsSection = () => {
   const { t } = useTranslation();
+  const { isRTL } = useLanguage();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('featured');
@@ -95,17 +98,14 @@ const ProductsSection = () => {
   const displayProducts = products.length > 0 ? products : demoProducts;
 
   return (
-    <section className="py-16 md:py-24 bg-muted/30">
+    <section className="relative py-20 md:py-28 bg-muted/30 overflow-hidden">
       <div className="container">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
-          <div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-2">
-              {t('home.products.title', 'Our Products')}
-            </h2>
-            <p className="text-muted-foreground">
-              {t('home.products.subtitle', 'Discover quality lighting for your space')}
-            </p>
-          </div>
+          <SectionHeading
+            eyebrow={isRTL ? 'المتجر' : 'The Store'}
+            title={t('home.products.title', 'Our Products')}
+            description={t('home.products.subtitle', 'Discover quality lighting for your space')}
+          />
           <Button variant="outline" asChild>
             <Link to="/shop" className="flex items-center gap-2">
               {t('home.products.viewAll', 'View All')}
@@ -115,7 +115,7 @@ const ProductsSection = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-8">
+          <TabsList className="mb-8 h-auto rounded-full border border-border bg-card p-1 shadow-sm">
             <TabsTrigger value="featured">{t('home.products.featured', 'Featured')}</TabsTrigger>
             <TabsTrigger value="new">{t('home.products.new', 'New Arrivals')}</TabsTrigger>
             <TabsTrigger value="bestseller">{t('home.products.bestseller', 'Best Sellers')}</TabsTrigger>

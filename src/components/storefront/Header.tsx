@@ -52,6 +52,17 @@ const Header = () => {
   const navigate = useNavigate();
   const { itemCount } = useCart();
   const { wishlistCount } = useWishlist();
+  const [scrolled, setScrolled] = useState(false);
+  const isHome = location.pathname === '/';
+  // Over the dark home hero the header is transparent with light text until the page scrolls
+  const overHero = isHome && !scrolled && !isSearchOpen;
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'ar' : 'en');
@@ -108,9 +119,9 @@ const Header = () => {
   ];
 
   return (
-    <div className="w-full z-50 flex flex-col">
+    <div className={`${isHome ? 'fixed inset-x-0 top-0' : 'sticky top-0'} w-full z-50 flex flex-col`}>
       {/* 1. TOP BAR */}
-      <div className="w-full bg-[#0f172a] text-[#f8fafc] text-xs py-2 px-4 border-b border-slate-800 transition-colors">
+      <div className={`w-full text-[#f8fafc] text-xs px-4 overflow-hidden transition-all duration-300 ${scrolled ? 'max-h-0 py-0 border-b-0' : 'max-h-24 py-2 border-b'} ${overHero ? 'bg-black/30 border-white/10 backdrop-blur-sm' : 'bg-[#0f172a] border-slate-800'}`}>
         <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           {/* Contacts */}
           <div className="flex items-center gap-4 text-[11px] md:text-xs">
@@ -153,8 +164,8 @@ const Header = () => {
       </div>
 
       {/* 2. HEADER */}
-      <header className="sticky top-0 z-50 w-full glass border-b border-border shadow-sm backdrop-blur-md">
-        <div className="container flex h-20 items-center justify-between gap-4">
+      <header className={`w-full border-b transition-all duration-500 ${overHero ? 'bg-transparent border-transparent text-white' : 'glass border-border shadow-sm backdrop-blur-md'}`}>
+        <div className={`container flex items-center justify-between gap-4 transition-all duration-300 ${scrolled ? 'h-16' : 'h-20'}`}>
           {/* Logo */}
           <Link to="/" className={`flex items-center gap-2 shrink-0 ${isRTL ? 'order-last lg:order-none' : ''}`}>
             <AnimatedLogo />
@@ -166,7 +177,7 @@ const Header = () => {
               <Link
                 key={link.href}
                 to={link.href}
-                className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-primary after:transition-all hover:after:w-full"
+                className={`text-sm font-semibold ${overHero ? 'text-white/80' : 'text-muted-foreground'} hover:text-primary transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-primary after:transition-all hover:after:w-full`}
               >
                 {link.label}
               </Link>
@@ -175,7 +186,7 @@ const Header = () => {
             {/* Categories Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-1 font-semibold text-sm text-muted-foreground hover:text-primary h-auto py-1">
+                <Button variant="ghost" size="sm" className={`gap-1 font-semibold text-sm ${overHero ? 'text-white/80 hover:bg-white/10' : 'text-muted-foreground'} hover:text-primary h-auto py-1`}>
                   {isRTL ? "الأقسام" : "Categories"}
                   <ChevronDown className="h-4 w-4" />
                 </Button>
@@ -201,7 +212,7 @@ const Header = () => {
                 value={searchVal}
                 onChange={handleSearchChange}
                 placeholder={isRTL ? "ابحث عن الإضاءة (واط، لومن...)" : "Search by product, watt, lumen..."}
-                className="pl-10 pr-4 h-10 bg-muted/40 hover:bg-muted/70 focus:bg-background border-border hover:border-primary/50 focus:border-primary focus:ring-1 focus:ring-primary rounded-full transition-all text-xs"
+                className={`pl-10 pr-4 h-10 ${overHero ? 'bg-white/10 border-white/15 text-white placeholder:text-white/50 focus:text-foreground' : 'bg-muted/40 hover:bg-muted/70 border-border'} focus:bg-background hover:border-primary/50 focus:border-primary focus:ring-1 focus:ring-primary rounded-full transition-all text-xs`}
               />
             </div>
           </form>
@@ -243,7 +254,7 @@ const Header = () => {
               {resolvedTheme === 'dark' ? (
                 <Sun className="h-5 w-5 text-amber-400" />
               ) : (
-                <Moon className="h-5 w-5 text-slate-700" />
+                <Moon className={`h-5 w-5 ${overHero ? 'text-white' : 'text-slate-700'}`} />
               )}
             </Button>
 

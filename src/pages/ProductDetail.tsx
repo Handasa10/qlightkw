@@ -59,7 +59,8 @@ import {
   Wrench,
   CheckSquare,
   Square,
-  AlertCircle
+  AlertCircle,
+  Maximize2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { normalizeStorageUrl } from '@/lib/storage';
@@ -873,7 +874,7 @@ const ProductDetail = () => {
                             <label className="text-xs font-bold text-slate-300">{isRTL ? "مواصفات إضافية للمشروع" : "Additional Project Notes"}</label>
                             <Textarea
                               name="notes"
-                              value={formData.notes}
+                              value={rfqData.notes}
                               onChange={handleRfqChange}
                               placeholder={isRTL ? "تاريخ التوصيل المطلوب، شروط الدفع، التفاصيل الفنية..." : "Target delivery schedule, shipping destination, specific driver chips..."}
                               className="bg-slate-950 border-slate-800 text-white rounded-xl min-h-[60px] text-xs resize-none"

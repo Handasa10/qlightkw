@@ -80,17 +80,17 @@ const BLOG_IMAGES: string[] = [
 // Slug-to-image mappings for exact matches
 const CATEGORY_SLUG_MAP: Record<string, string> = {
   'ceiling-lights': 'https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?auto=format&fit=crop&q=80&w=600',
-  'chandeliers': 'https://images.unsplash.com/photo-1572912353188-a5d0aeefaa66?auto=format&fit=crop&q=80&w=600',
+  'chandeliers': 'https://images.unsplash.com/photo-1540932239986-30128078f3c5?auto=format&fit=crop&q=80&w=600',
   'floor-lamps': 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&q=80&w=600',
   'led-strips': 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&q=80&w=600',
-  'outdoor-lighting': 'https://images.unsplash.com/photo-1508615070457-7baebe4003ab?auto=format&fit=crop&q=80&w=600',
+  'outdoor-lighting': 'https://images.unsplash.com/photo-1505843513577-22bb7d21e455?auto=format&fit=crop&q=80&w=600',
   'pendant-lights': 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&q=80&w=600',
   'spotlights': 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=600',
-  'wall-lights': 'https://images.unsplash.com/photo-1601004890684-d8cbf643f5f2?auto=format&fit=crop&q=80&w=600',
+  'wall-lights': 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&q=80&w=600',
   'solar-lights': 'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&q=80&w=600',
   'hardware': 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&q=80&w=600',
   'extension-socket': 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=600',
-  'ventilation-fan': 'https://images.unsplash.com/photo-1613540015239-7c95a43a5136?auto=format&fit=crop&q=80&w=600',
+  'ventilation-fan': 'https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?auto=format&fit=crop&q=80&w=600',
   'household-fan': 'https://images.unsplash.com/photo-1540932239986-30128078f3c5?auto=format&fit=crop&q=80&w=600',
   'power-tools': 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&q=80&w=600',
   'modi-selections': 'https://images.unsplash.com/photo-1517999144091-3d9dca6d1e43?auto=format&fit=crop&q=80&w=600'
@@ -110,28 +110,28 @@ const PRODUCT_SLUG_IMAGE_MAP: Record<string, string> = {
   // Chandeliers — crystal, gold, empire, ring, and vintage styles
   'crystal-elegance-chandelier': 'https://images.unsplash.com/photo-1543248939-ff40856f65d4?auto=format&fit=crop&q=80&w=600',
   'gold-sputnik-chandelier': 'https://images.unsplash.com/photo-1540932239986-30128078f3c5?auto=format&fit=crop&q=80&w=600',
-  'black-empire-chandelier': 'https://images.unsplash.com/photo-1572912353188-a5d0aeefaa68?auto=format&fit=crop&q=80&w=600',
+  'black-empire-chandelier': 'https://images.unsplash.com/photo-1540932239986-30128078f3c5?auto=format&fit=crop&q=80&w=600',
   'modern-ring-chandelier': 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&q=80&w=600',
   'vintage-candle-chandelier': 'https://images.unsplash.com/photo-1571508601936-6ca847b47ae4?auto=format&fit=crop&q=80&w=600',
 
   // Ceiling Lights — flush mount, panel, crystal, smart, dome
-  'led-flush-mount-round': 'https://images.unsplash.com/photo-1617806118233-18e1db207f62?auto=format&fit=crop&q=80&w=600',
-  'square-panel-light': 'https://images.unsplash.com/photo-1606103658514-6830a687ef7f?auto=format&fit=crop&q=80&w=600',
+  'led-flush-mount-round': 'https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?auto=format&fit=crop&q=80&w=600',
+  'square-panel-light': 'https://images.unsplash.com/photo-1563461660947-507ef49e9c47?auto=format&fit=crop&q=80&w=600',
   'crystal-ceiling-light': 'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?auto=format&fit=crop&q=80&w=600',
   'smart-wifi-ceiling-light': 'https://images.unsplash.com/photo-1558211583-d26f610c1eb1?auto=format&fit=crop&q=80&w=600',
   'minimalist-dome-light': 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=600',
 
   // Wall Lights — sconce, cage, swing arm, washer, picture
-  'brass-wall-sconce': 'https://images.unsplash.com/photo-1601004890684-d8cbf643f5f2?auto=format&fit=crop&q=80&w=600',
+  'brass-wall-sconce': 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&q=80&w=600',
   'industrial-cage-light': 'https://images.unsplash.com/photo-1524484485831-a92ffc0de03f?auto=format&fit=crop&q=80&w=600',
-  'modern-swing-arm-lamp': 'https://images.unsplash.com/photo-1534224039826-c7a0dea0e66a?auto=format&fit=crop&q=80&w=600',
+  'modern-swing-arm-lamp': 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&q=80&w=600',
   'led-wall-washer': 'https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?auto=format&fit=crop&q=80&w=600',
   'picture-light-bronze': 'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&q=80&w=600',
 
   // Pendant Lights — globe, dome, geometric, cluster, rattan
   'glass-globe-pendant': 'https://images.unsplash.com/photo-1517999144091-3d9dca6d1e43?auto=format&fit=crop&q=80&w=600',
   'industrial-dome-pendant': 'https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&q=80&w=600',
-  'geometric-pendant-light': 'https://images.unsplash.com/photo-1553095083-506e22c83c24?auto=format&fit=crop&q=80&w=600',
+  'geometric-pendant-light': 'https://images.unsplash.com/photo-1524484485831-a92ffc0de03f?auto=format&fit=crop&q=80&w=600',
   'cluster-pendant-set': 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&q=80&w=600',
   'woven-rattan-pendant': 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&q=80&w=600',
 
@@ -144,13 +144,13 @@ const PRODUCT_SLUG_IMAGE_MAP: Record<string, string> = {
 
   // Floor Lamps — arc, tripod, reading, industrial, smart
   'arc-floor-lamp': 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&q=80&w=600',
-  'tripod-floor-lamp': 'https://images.unsplash.com/photo-1542728929-14ab1c6880f9?auto=format&fit=crop&q=80&w=600',
+  'tripod-floor-lamp': 'https://images.unsplash.com/photo-1517991104123-1d56a6e81ed9?auto=format&fit=crop&q=80&w=600',
   'led-reading-floor-lamp': 'https://images.unsplash.com/photo-1519710164239-da123dc03ef4?auto=format&fit=crop&q=80&w=600',
   'industrial-pipe-lamp': 'https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&q=80&w=600',
   'smart-touch-floor-lamp': 'https://images.unsplash.com/photo-1540574163026-643ea20ade25?auto=format&fit=crop&q=80&w=600',
 
   // Outdoor Lighting — bollard, solar, lantern, flood, string
-  'garden-bollard-light': 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?auto=format&fit=crop&q=80&w=600',
+  'garden-bollard-light': 'https://images.unsplash.com/photo-1505843513577-22bb7d21e455?auto=format&fit=crop&q=80&w=600',
   'solar-path-lights-set': 'https://images.unsplash.com/photo-1518640467707-6811f4a6ab73?auto=format&fit=crop&q=80&w=600',
   'wall-mounted-lantern': 'https://images.unsplash.com/photo-1505577058444-a3dab90d4253?auto=format&fit=crop&q=80&w=600',
   'flood-light-50w': 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=600',
@@ -161,31 +161,31 @@ const PRODUCT_SLUG_IMAGE_MAP: Record<string, string> = {
   'track-light-head': 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=600',
   'surface-mount-spotlight': 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80&w=600',
   'gimbal-downlight': 'https://images.unsplash.com/photo-1462826303086-329426d1aef5?auto=format&fit=crop&q=80&w=600',
-  'mini-spotlight-set': 'https://images.unsplash.com/photo-1431540015239-7c95a43a5136?auto=format&fit=crop&q=80&w=600',
+  'mini-spotlight-set': 'https://images.unsplash.com/photo-1563461660947-507ef49e9c47?auto=format&fit=crop&q=80&w=600',
 };
 
 // Secondary images for hover transitions — all unique
 const PRODUCT_SLUG_SECONDARY_MAP: Record<string, string> = {
   // Chandeliers
-  'crystal-elegance-chandelier': 'https://images.unsplash.com/photo-1572912353188-a5d0aeefaa68?auto=format&fit=crop&q=80&w=600',
+  'crystal-elegance-chandelier': 'https://images.unsplash.com/photo-1540932239986-30128078f3c5?auto=format&fit=crop&q=80&w=600',
   'gold-sputnik-chandelier': 'https://images.unsplash.com/photo-1543248939-ff40856f65d4?auto=format&fit=crop&q=80&w=600',
   'black-empire-chandelier': 'https://images.unsplash.com/photo-1540932239986-30128078f3c5?auto=format&fit=crop&q=80&w=600',
   'modern-ring-chandelier': 'https://images.unsplash.com/photo-1571508601936-6ca847b47ae4?auto=format&fit=crop&q=80&w=600',
   'vintage-candle-chandelier': 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&q=80&w=600',
   // Ceiling Lights
-  'led-flush-mount-round': 'https://images.unsplash.com/photo-1606103658514-6830a687ef7f?auto=format&fit=crop&q=80&w=600',
-  'square-panel-light': 'https://images.unsplash.com/photo-1617806118233-18e1db207f62?auto=format&fit=crop&q=80&w=600',
+  'led-flush-mount-round': 'https://images.unsplash.com/photo-1563461660947-507ef49e9c47?auto=format&fit=crop&q=80&w=600',
+  'square-panel-light': 'https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?auto=format&fit=crop&q=80&w=600',
   'crystal-ceiling-light': 'https://images.unsplash.com/photo-1558211583-d26f610c1eb1?auto=format&fit=crop&q=80&w=600',
   'smart-wifi-ceiling-light': 'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?auto=format&fit=crop&q=80&w=600',
-  'minimalist-dome-light': 'https://images.unsplash.com/photo-1617806118233-18e1db207f62?auto=format&fit=crop&q=80&w=600',
+  'minimalist-dome-light': 'https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?auto=format&fit=crop&q=80&w=600',
   // Wall Lights
   'brass-wall-sconce': 'https://images.unsplash.com/photo-1524484485831-a92ffc0de03f?auto=format&fit=crop&q=80&w=600',
-  'industrial-cage-light': 'https://images.unsplash.com/photo-1601004890684-d8cbf643f5f2?auto=format&fit=crop&q=80&w=600',
+  'industrial-cage-light': 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&q=80&w=600',
   'modern-swing-arm-lamp': 'https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?auto=format&fit=crop&q=80&w=600',
   'led-wall-washer': 'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&q=80&w=600',
-  'picture-light-bronze': 'https://images.unsplash.com/photo-1534224039826-c7a0dea0e66a?auto=format&fit=crop&q=80&w=600',
+  'picture-light-bronze': 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&q=80&w=600',
   // Pendant Lights
-  'glass-globe-pendant': 'https://images.unsplash.com/photo-1553095083-506e22c83c24?auto=format&fit=crop&q=80&w=600',
+  'glass-globe-pendant': 'https://images.unsplash.com/photo-1524484485831-a92ffc0de03f?auto=format&fit=crop&q=80&w=600',
   'industrial-dome-pendant': 'https://images.unsplash.com/photo-1517999144091-3d9dca6d1e43?auto=format&fit=crop&q=80&w=600',
   'geometric-pendant-light': 'https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&q=80&w=600',
   'cluster-pendant-set': 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&q=80&w=600',
@@ -199,12 +199,12 @@ const PRODUCT_SLUG_SECONDARY_MAP: Record<string, string> = {
   // Floor Lamps
   'arc-floor-lamp': 'https://images.unsplash.com/photo-1519710164239-da123dc03ef4?auto=format&fit=crop&q=80&w=600',
   'tripod-floor-lamp': 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&q=80&w=600',
-  'led-reading-floor-lamp': 'https://images.unsplash.com/photo-1542728929-14ab1c6880f9?auto=format&fit=crop&q=80&w=600',
+  'led-reading-floor-lamp': 'https://images.unsplash.com/photo-1517991104123-1d56a6e81ed9?auto=format&fit=crop&q=80&w=600',
   'industrial-pipe-lamp': 'https://images.unsplash.com/photo-1540574163026-643ea20ade25?auto=format&fit=crop&q=80&w=600',
   'smart-touch-floor-lamp': 'https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&q=80&w=600',
   // Outdoor Lighting
   'garden-bollard-light': 'https://images.unsplash.com/photo-1518640467707-6811f4a6ab73?auto=format&fit=crop&q=80&w=600',
-  'solar-path-lights-set': 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?auto=format&fit=crop&q=80&w=600',
+  'solar-path-lights-set': 'https://images.unsplash.com/photo-1505843513577-22bb7d21e455?auto=format&fit=crop&q=80&w=600',
   'wall-mounted-lantern': 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&q=80&w=600',
   'flood-light-50w': 'https://images.unsplash.com/photo-1505577058444-a3dab90d4253?auto=format&fit=crop&q=80&w=600',
   'string-lights-10m': 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=600',
@@ -212,7 +212,7 @@ const PRODUCT_SLUG_SECONDARY_MAP: Record<string, string> = {
   'led-recessed-downlight-12w': 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=600',
   'track-light-head': 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&q=80&w=600',
   'surface-mount-spotlight': 'https://images.unsplash.com/photo-1462826303086-329426d1aef5?auto=format&fit=crop&q=80&w=600',
-  'gimbal-downlight': 'https://images.unsplash.com/photo-1431540015239-7c95a43a5136?auto=format&fit=crop&q=80&w=600',
+  'gimbal-downlight': 'https://images.unsplash.com/photo-1563461660947-507ef49e9c47?auto=format&fit=crop&q=80&w=600',
   'mini-spotlight-set': 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80&w=600',
 };
 
@@ -293,7 +293,7 @@ export function resolveImageUrl(
       const heroBanners = [
         'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&q=80&w=1200',
         'https://images.unsplash.com/photo-1606744824163-985d376605aa?auto=format&fit=crop&q=80&w=1200',
-        'https://images.unsplash.com/photo-1508615070457-7baebe4003ab?auto=format&fit=crop&q=80&w=1200',
+        'https://images.unsplash.com/photo-1505843513577-22bb7d21e455?auto=format&fit=crop&q=80&w=1200',
         'https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?auto=format&fit=crop&q=80&w=1200'
       ];
       return heroBanners[hash % heroBanners.length];

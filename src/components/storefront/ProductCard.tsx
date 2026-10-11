@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { resolveImageUrl, resolveSecondaryImageUrl } from '@/lib/image-resolver';
+import { glowHandlers } from '@/components/effects/glow';
 
 interface Product {
   id: string;
@@ -124,7 +125,10 @@ const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(({ product, ind
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="relative w-full flex flex-col flex-1 rounded-2xl overflow-hidden bg-card border border-border/80 hover:border-primary/40 shadow-sm hover:shadow-xl transition-all duration-300">
+      <div
+        className="glow-card w-full flex flex-col flex-1 rounded-2xl overflow-hidden bg-card border border-border/80 shadow-sm hover:-translate-y-1 hover:shadow-[0_20px_50px_-20px_hsl(var(--primary)/0.45)] transition-all duration-500"
+        {...glowHandlers}
+      >
         
         {/* Wishlist Floating Button */}
         <div className="absolute top-3 right-3 z-20">
@@ -190,10 +194,10 @@ const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(({ product, ind
             />
           )}
 
-          {/* Golden glow lines overlay on hover */}
-          <div 
-            className={`absolute inset-0 pointer-events-none transition-opacity duration-500 border border-primary/20 rounded-t-2xl ${
-              isHovered ? 'opacity-100' : 'opacity-0'
+          {/* Sweep of light across the photo on hover */}
+          <div
+            className={`absolute inset-y-0 -left-1/2 w-1/2 pointer-events-none skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/35 to-transparent transition-transform duration-1000 ease-out ${
+              isHovered ? 'translate-x-[300%]' : 'translate-x-0'
             }`}
           />
         </Link>
