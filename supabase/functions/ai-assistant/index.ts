@@ -14,7 +14,7 @@ const GEMINI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
 
 const MAX_MESSAGE_CHARS = 2000;
 const MAX_HISTORY_MESSAGES = 12;
-const DEFAULT_MODEL = "gemini-2.5-flash";
+const DEFAULT_MODEL = "gemini-flash-latest";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -86,8 +86,8 @@ serve(async (req) => {
     const contents = buildGeminiContents(systemPrompt, conversationHistory, message);
 
     // Call Gemini API
-    const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+    const callGemini = (modelName: string) => fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -107,6 +107,14 @@ serve(async (req) => {
         }),
       }
     );
+
+    let geminiResponse = await callGemini(model);
+    // Google retires models over time; if the configured one is gone, fall back to the current default
+    if (geminiResponse.status === 404 && model !== DEFAULT_MODEL) {
+      console.warn(`Model ${model} unavailable, retrying with ${DEFAULT_MODEL}`);
+      await geminiResponse.body?.cancel();
+      geminiResponse = await callGemini(DEFAULT_MODEL);
+    }
 
     if (!geminiResponse.ok) {
       const errorData = await geminiResponse.text();
