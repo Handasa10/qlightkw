@@ -140,7 +140,7 @@ async function generateWithGoogle(prompt: string, aiSettings: AISettings): Promi
   }
 
   // Use new format first, then legacy format, then default
-  const textModel = aiSettings.google_text_model || aiSettings.text_model || "gemini-2.5-flash";
+  const textModel = aiSettings.google_text_model || aiSettings.text_model || "gemini-flash-latest";
   
   console.log(`Using Google model: ${textModel}`);
 
