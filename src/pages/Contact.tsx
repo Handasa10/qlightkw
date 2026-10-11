@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { MapPin, Phone, Mail, Clock, Send, Building, MessageSquare } from 'lucide-react';
 
 // Form validation schema
@@ -55,14 +56,14 @@ const Contact = () => {
       icon: MapPin,
       title: isRTL ? 'العنوان' : 'Address',
       details: [
-        isRTL ? 'حولي - شارع تونس - مقابل مجمع الرحاب' : 'Hawally - Tunis St - In front of Rihab Complex',
+        isRTL ? 'حولي - شارع تونس - مقابل مجمع الرحاب' : 'Hawalli - Tunis Street - In front of Rihab Complex',
         isRTL ? 'الكويت' : 'Kuwait',
       ],
     },
     {
       icon: Phone,
       title: isRTL ? 'الهاتف' : 'Phone',
-      details: ['+965 51111725'],
+      details: ['+965 5111 1725'],
     },
     {
       icon: Mail,
@@ -82,18 +83,31 @@ const Contact = () => {
   const onSubmit = async (data: ContactFormData) => {
     setIsSubmitting(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
+    // Honeypot field, filled only by bots
+    const website = (document.getElementById('contact-website') as HTMLInputElement | null)?.value || '';
+    const { data: result, error } = await supabase.functions.invoke('submit-contact', {
+      body: { ...data, website },
+    });
+    setIsSubmitting(false);
+
+    if (error || !result?.success) {
+      toast({
+        variant: 'destructive',
+        title: isRTL ? 'تعذر إرسال الرسالة' : 'Message not sent',
+        description: isRTL
+          ? 'حدث خطأ، يرجى المحاولة مرة أخرى أو التواصل عبر واتساب'
+          : 'Something went wrong. Please try again or contact us on WhatsApp.',
+      });
+      return;
+    }
+
     toast({
       title: isRTL ? 'تم إرسال رسالتك' : 'Message Sent',
       description: isRTL 
         ? 'سنتواصل معك في أقرب وقت ممكن'
         : 'We will get back to you as soon as possible',
     });
-    
     reset();
-    setIsSubmitting(false);
   };
 
   return (
@@ -169,6 +183,8 @@ const Contact = () => {
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                    {/* Honeypot: hidden from people, bots fill it in */}
+                    <input id="contact-website" name="website" type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" />
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="name">{isRTL ? 'الاسم' : 'Name'} *</Label>

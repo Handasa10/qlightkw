@@ -363,6 +363,46 @@
   }
 }
 
+/* Oversized marquee words: hollow outline, or filled with light */
+.marquee-outline {
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.28);
+}
+.marquee-lit {
+  background: linear-gradient(90deg, #ffd9a8, hsl(var(--primary)), #fff1dc);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 24px hsl(var(--primary) / 0.55));
+}
+
+/* Footer wordmark: letters light up in a circle around the cursor */
+.wordmark {
+  --wm-x: 50%;
+  --wm-y: 50%;
+  --wm-on: 0;
+}
+.wordmark-text {
+  font-size: clamp(2rem, 11.2vw, 11.5rem);
+  font-weight: 900;
+  line-height: 0.85;
+  letter-spacing: -0.04em;
+  text-align: center;
+  white-space: nowrap;
+}
+.wordmark-dim {
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.12);
+}
+.wordmark-lit {
+  background: radial-gradient(circle 220px at var(--wm-x) var(--wm-y), #fff3e0, hsl(var(--primary)) 35%, transparent 70%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  opacity: var(--wm-on);
+  transition: opacity 0.4s;
+}
+
 @keyframes hero-shine {
   0%, 100% { background-position: 100% 0; }
   50% { background-position: 0% 0; }
