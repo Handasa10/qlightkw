@@ -223,6 +223,155 @@
   }
 }
 
+/* ============================================
+   Light effects (hero spotlight, glow cards, reveal)
+   ============================================ */
+@layer components {
+  .hero-stage {
+    --spot-x: 60%;
+    --spot-y: 45%;
+    --spot-size: clamp(260px, 34vw, 560px);
+  }
+
+  /* The lit room only shows through a soft circle that follows the cursor */
+  .hero-lit {
+    -webkit-mask-image: radial-gradient(
+      circle var(--spot-size) at var(--spot-x) var(--spot-y),
+      #000 0%, rgba(0, 0, 0, 0.85) 35%, rgba(0, 0, 0, 0.35) 65%, transparent 100%
+    );
+    mask-image: radial-gradient(
+      circle var(--spot-size) at var(--spot-x) var(--spot-y),
+      #000 0%, rgba(0, 0, 0, 0.85) 35%, rgba(0, 0, 0, 0.35) 65%, transparent 100%
+    );
+  }
+
+  .hero-glow {
+    background: radial-gradient(
+      circle calc(var(--spot-size) * 0.55) at var(--spot-x) var(--spot-y),
+      rgba(var(--light-rgb), 0.22), transparent 70%
+    );
+    mix-blend-mode: screen;
+  }
+
+  /* A cone of light falling from above the spotlight */
+  .hero-beam {
+    background: conic-gradient(
+      from 180deg at var(--spot-x) -10%,
+      transparent 168deg,
+      rgba(var(--light-rgb), 0.10) 176deg,
+      rgba(var(--light-rgb), 0.16) 180deg,
+      rgba(var(--light-rgb), 0.10) 184deg,
+      transparent 192deg
+    );
+    filter: blur(18px);
+    mix-blend-mode: screen;
+  }
+
+  .hero-shine {
+    background-size: 250% 100%;
+    animation: hero-shine 6s ease-in-out infinite;
+  }
+
+  /* Film grain from an inline SVG noise texture */
+  .grain {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Kelvin slider: track shows the warm-to-cool range */
+  .kelvin-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #ffb46b 0%, #ffd6a5 25%, #fff1e0 50%, #f5f7ff 75%, #d6e4ff 100%);
+    outline: none;
+    cursor: pointer;
+  }
+  .kelvin-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgb(var(--light-rgb));
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 4px rgba(var(--light-rgb), 0.25), 0 0 24px rgba(var(--light-rgb), 0.9);
+    transition: transform 0.15s;
+  }
+  .kelvin-slider::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  .kelvin-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgb(var(--light-rgb));
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 4px rgba(var(--light-rgb), 0.25), 0 0 24px rgba(var(--light-rgb), 0.9);
+  }
+  .kelvin-slider:focus-visible { box-shadow: 0 0 0 3px hsl(var(--ring)); }
+
+  /* Card whose border and surface light up where the cursor is */
+  .glow-card {
+    --glow-x: 50%;
+    --glow-y: 50%;
+    --glow-opacity: 0;
+    position: relative;
+    isolation: isolate;
+  }
+  .glow-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: radial-gradient(260px circle at var(--glow-x) var(--glow-y), hsl(var(--primary)), transparent 60%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: var(--glow-opacity);
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 30;
+  }
+  .glow-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(400px circle at var(--glow-x) var(--glow-y), hsl(var(--primary) / 0.14), transparent 50%);
+    opacity: var(--glow-opacity);
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 25;
+  }
+
+  /* Thin bar at the top of the page that fills as you scroll */
+  .scroll-light {
+    background: linear-gradient(90deg, transparent, hsl(var(--primary)) 30%, #ffd9a8 70%, hsl(var(--primary)));
+    box-shadow: 0 0 12px hsl(var(--primary)), 0 0 2px #fff;
+  }
+
+  /* Glowing underline under section eyebrows */
+  .eyebrow-light {
+    @apply inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.25em] text-primary;
+  }
+  .eyebrow-light::before {
+    content: "";
+    width: 28px;
+    height: 2px;
+    border-radius: 999px;
+    background: hsl(var(--primary));
+    box-shadow: 0 0 10px hsl(var(--primary));
+  }
+}
+
+@keyframes hero-shine {
+  0%, 100% { background-position: 100% 0; }
+  50% { background-position: 0% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-shine { animation: none; }
+}
+
 /* Glow Button Styles */
 @layer components {
   .btn-glow {
