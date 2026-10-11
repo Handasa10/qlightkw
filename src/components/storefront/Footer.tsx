@@ -76,7 +76,7 @@ const Footer = () => {
             {/* Socials */}
             <div className="flex gap-2.5 mt-2">
               <a 
-                href="https://www.facebook.com/share/1AxTFahzxq" 
+                href="https://www.facebook.com/profile.php?id=61585692185759" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex items-center justify-center h-10 w-10 rounded-xl bg-slate-900 hover:bg-primary hover:text-white transition-all text-slate-400"

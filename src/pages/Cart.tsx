@@ -8,8 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Loader2 } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
+import { useSEO } from '@/hooks/useSEO';
 
 const Cart = () => {
+  const { isRTL: seoAr } = useLanguage();
+  useSEO({ title: seoAr ? "سلة التسوق" : "Shopping Cart", description: '', noindex: true });
   const { t } = useTranslation();
   const { language } = useLanguage();
   const { items, isLoading, subtotal, removeItem, updateQuantity } = useCart();

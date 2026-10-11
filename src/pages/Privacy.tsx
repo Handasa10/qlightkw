@@ -2,8 +2,15 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import StorefrontLayout from '@/layouts/StorefrontLayout';
 import { Card, CardContent } from '@/components/ui/card';
+import { useSEO } from '@/hooks/useSEO';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const Privacy = () => {
+  const { isRTL: seoAr } = useLanguage();
+  useSEO({
+    title: seoAr ? "سياسة الخصوصية" : "Privacy Policy",
+    description: seoAr ? "كيف تجمع كواليتي لايت الكويت معلوماتك الشخصية وتستخدمها وتحميها." : "How Quality Light Kuwait collects, uses and protects your personal information.",
+  });
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
 

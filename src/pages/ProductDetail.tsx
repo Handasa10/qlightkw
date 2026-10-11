@@ -65,6 +65,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { normalizeStorageUrl } from '@/lib/storage';
 import { resolveImageUrl, resolveSecondaryImageUrl } from '@/lib/image-resolver';
+import { useSEO } from '@/hooks/useSEO';
+import { productSchema, breadcrumbSchema, absoluteUrl } from '@/lib/seo';
 
 interface ProductVariation {
   id: string;
@@ -126,6 +128,35 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(null);
+  const seoName = product ? (isRTL ? product.name_ar || product.name_en : product.name_en) : '';
+  const seoPrice = product ? (product.sale_price || product.base_price) : 0;
+  const seoDescription = product
+    ? ((isRTL ? product.short_description_ar || product.description_ar : product.short_description_en || product.description_en)
+      || (isRTL ? `${seoName} بسعر ${seoPrice.toFixed(3)} د.ك مع ضمان وتوصيل سريع في الكويت.` : `${seoName} for ${seoPrice.toFixed(3)} KWD with warranty and fast delivery in Kuwait.`))
+    : '';
+  const seoImages = product ? (images.length ? images : [{ url: '' } as ProductImage]).map((img) => resolveImageUrl(img.url, 'product', product.slug)) : [];
+  useSEO({
+    title: product ? (isRTL ? `${seoName} | السعر في الكويت ${seoPrice.toFixed(3)} د.ك` : `${seoName} | Price in Kuwait ${seoPrice.toFixed(3)} KWD`) : (isRTL ? 'منتج' : 'Product'),
+    description: seoDescription,
+    image: seoImages[0],
+    type: 'product',
+    jsonLd: product ? [
+      productSchema({
+        name: seoName,
+        description: seoDescription,
+        images: seoImages,
+        sku: product.sku,
+        price: seoPrice,
+        inStock: product.stock_quantity === null || product.stock_quantity > 0,
+        url: absoluteUrl(`/product/${product.slug}`, language),
+      }),
+      breadcrumbSchema([
+        { name: isRTL ? 'الرئيسية' : 'Home', url: absoluteUrl('/', language) },
+        { name: isRTL ? 'المتجر' : 'Shop', url: absoluteUrl('/shop', language) },
+        { name: seoName, url: absoluteUrl(`/product/${product.slug}`, language) },
+      ]),
+    ] : null,
+  });
   const [quantity, setQuantity] = useState(1);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);

@@ -1,8 +1,12 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Home } from "lucide-react";
+import { useSEO } from '@/hooks/useSEO';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const NotFound = () => {
+  const { isRTL: seoAr } = useLanguage();
+  useSEO({ title: seoAr ? "الصفحة غير موجودة" : "Page Not Found", description: '', noindex: true });
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-background">
       {/* Background */}

@@ -3,8 +3,15 @@ import { motion } from 'framer-motion';
 import StorefrontLayout from '@/layouts/StorefrontLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle, XCircle, Clock, Package, RefreshCw, AlertCircle } from 'lucide-react';
+import { useSEO } from '@/hooks/useSEO';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const Returns = () => {
+  const { isRTL: seoAr } = useLanguage();
+  useSEO({
+    title: seoAr ? "سياسة الإرجاع والضمان" : "Returns & Warranty Policy",
+    description: seoAr ? "الإرجاع والاستبدال والضمان لمنتجات الإضاءة من كواليتي لايت الكويت." : "Returns, exchanges and warranty for lighting products bought from Quality Light Kuwait.",
+  });
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
 

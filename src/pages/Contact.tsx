@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { MapPin, Phone, Mail, Clock, Send, Building, MessageSquare } from 'lucide-react';
+import { useSEO } from '@/hooks/useSEO';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // Form validation schema
 const contactSchema = z.object({
@@ -27,6 +29,11 @@ const contactSchema = z.object({
 type ContactFormData = z.infer<typeof contactSchema>;
 
 const Contact = () => {
+  const { isRTL: seoAr } = useLanguage();
+  useSEO({
+    title: seoAr ? "اتصل بنا | معرضنا في حولي، الكويت" : "Contact Us | Showroom in Hawalli, Kuwait",
+    description: seoAr ? "زوروا معرض الإضاءة في حولي – شارع تونس، أو اتصلوا / واتساب 51111725. مفتوح من السبت إلى الخميس، 9 صباحاً حتى 9 مساءً." : "Visit our lighting showroom on Tunis Street, Hawalli, or call / WhatsApp +965 5111 1725. Open Saturday to Thursday, 9 AM to 9 PM.",
+  });
   const { t, i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const { toast } = useToast();

@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { Calendar, ChevronLeft, ChevronRight, BookOpen, Lightbulb, Home, Sparkles, User, ArrowLeft } from 'lucide-react';
+import { useSEO } from '@/hooks/useSEO';
+import { articleSchema, absoluteUrl } from '@/lib/seo';
 
 interface BlogPost {
   id: string;
@@ -48,6 +50,22 @@ const BlogDetail = () => {
   });
 
   // Fetch related posts
+  const seoTitle = post ? (isRTL ? post.title_ar || post.title_en : post.title_en) : (isRTL ? 'المدونة' : 'Blog');
+  const seoExcerpt = post ? ((isRTL ? post.excerpt_ar || post.excerpt_en : post.excerpt_en) || seoTitle) : '';
+  useSEO({
+    title: seoTitle,
+    description: seoExcerpt,
+    image: post?.featured_image_url,
+    type: 'article',
+    jsonLd: post ? articleSchema({
+      title: seoTitle,
+      description: seoExcerpt,
+      image: post.featured_image_url,
+      url: absoluteUrl(`/blog/${post.slug}`, isRTL ? 'ar' : 'en'),
+      published: post.published_at,
+    }) : null,
+  });
+
   const { data: relatedPosts = [] } = useQuery({
     queryKey: ['related-posts', post?.category, post?.id],
     queryFn: async () => {

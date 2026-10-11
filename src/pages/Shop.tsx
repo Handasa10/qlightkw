@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/pagination';
 import { SlidersHorizontal, Grid3X3, List, Search, X, Tag } from 'lucide-react';
 import { resolveImageUrl, resolveSecondaryImageUrl } from '@/lib/image-resolver';
+import { useSEO } from '@/hooks/useSEO';
 
 interface Product {
   id: string;
@@ -88,6 +89,23 @@ const Shop = () => {
   const [selectedIPs, setSelectedIPs] = useState<string[]>([]);
   const [selectedCCTs, setSelectedCCTs] = useState<string[]>([]);
   const [offersOnly, setOffersOnly] = useState(searchParams.get('offers') === 'true');
+  const seoCategory = categories.find((c) => c.slug === selectedCategory);
+  const seoCategoryName = seoCategory ? (isRTL ? seoCategory.name_ar || seoCategory.name_en : seoCategory.name_en) : '';
+  useSEO({
+    title: seoCategoryName
+      ? (isRTL ? `${seoCategoryName} في الكويت | تسوق أونلاين بأفضل الأسعار` : `${seoCategoryName} in Kuwait | Shop Online at the Best Prices`)
+      : (isRTL ? 'تسوق جميع منتجات الإضاءة في الكويت' : 'Shop All Lighting Products in Kuwait'),
+    description: seoCategoryName
+      ? (isRTL
+        ? `تسوق ${seoCategoryName} من كواليتي لايت: أسعار ممتازة، ضمان، وتوصيل سريع لجميع مناطق الكويت. معرضنا في حولي – شارع تونس.`
+        : `Buy ${seoCategoryName} from Quality Light: great prices, warranty and fast delivery across Kuwait. Showroom in Hawalli, Tunis Street.`)
+      : (isRTL
+        ? 'أكثر من 120 منتج إضاءة: LED، ثريات، سبوت لايت، شرائط LED، إضاءة خارجية وذكية بتوصيل سريع في الكويت.'
+        : 'Over 120 lighting products: LED, chandeliers, spotlights, LED strips, outdoor and smart lighting with fast delivery in Kuwait.'),
+    params: { category: selectedCategory || null },
+    // Search results and filtered views are thin duplicates of category pages
+    noindex: !!searchParams.get('q') || offersOnly,
+  });
 
   // Handle URL change
   useEffect(() => {

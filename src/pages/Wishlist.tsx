@@ -10,8 +10,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Heart, ShoppingCart, Trash2 } from 'lucide-react';
 import { resolveImageUrl } from '@/lib/image-resolver';
 import { toast } from 'sonner';
+import { useSEO } from '@/hooks/useSEO';
 
 const Wishlist = () => {
+  const { isRTL: seoAr } = useLanguage();
+  useSEO({ title: seoAr ? "المفضلة" : "Wishlist", description: '', noindex: true });
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
   const { items, toggleWishlist, isLoading } = useWishlist();

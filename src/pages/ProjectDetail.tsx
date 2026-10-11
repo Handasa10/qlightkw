@@ -11,6 +11,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, MapPin, Calendar, Building2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { resolveImageUrl } from '@/lib/image-resolver';
+import { useSEO } from '@/hooks/useSEO';
+import { resolveImageUrl as seoResolveImage } from '@/lib/image-resolver';
 
 interface Project {
   id: string;
@@ -45,6 +47,16 @@ const ProjectDetail = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [images, setImages] = useState<ProjectImage[]>([]);
   const [relatedProjects, setRelatedProjects] = useState<RelatedProject[]>([]);
+  const seoProjectTitle = project ? (language === 'ar' ? project.title_ar || project.title_en : project.title_en) : '';
+  useSEO({
+    title: project
+      ? (language === 'ar' ? `${seoProjectTitle} | مشاريع إضاءة في الكويت` : `${seoProjectTitle} | Lighting Project in ${project.location || 'Kuwait'}`)
+      : (language === 'ar' ? 'مشاريعنا' : 'Our Projects'),
+    description: project
+      ? ((language === 'ar' ? project.description_ar || project.description_en : project.description_en) || seoProjectTitle)
+      : '',
+    image: project ? seoResolveImage(images[0]?.url, 'project', project.slug) : undefined,
+  });
   const [loading, setLoading] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
 

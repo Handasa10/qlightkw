@@ -15,6 +15,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import StorefrontLayout from './StorefrontLayout';
+import { useSEO } from '@/hooks/useSEO';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const accountNavItems = [
   { path: '/account', icon: User, labelKey: 'account.overview' },
@@ -25,6 +27,8 @@ const accountNavItems = [
 ];
 
 export default function AccountLayout() {
+  const { isRTL: seoAr } = useLanguage();
+  useSEO({ title: seoAr ? "حسابي" : "My Account", description: '', noindex: true });
   const { t } = useTranslation();
   const location = useLocation();
   const { user, isLoading, signOut } = useAuth();

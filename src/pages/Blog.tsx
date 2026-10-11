@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { Calendar, Search, BookOpen, Lightbulb, Home, Sparkles, User } from 'lucide-react';
+import { useSEO } from '@/hooks/useSEO';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface BlogPost {
   id: string;
@@ -26,6 +28,11 @@ interface BlogPost {
 }
 
 const Blog = () => {
+  const { isRTL: seoAr } = useLanguage();
+  useSEO({
+    title: seoAr ? "نصائح وأدلة الإضاءة | مدونة كواليتي لايت" : "Lighting Tips & Guides | Quality Light Blog",
+    description: seoAr ? "أدلة الإضاءة للمنازل والأعمال في الكويت: اختيار LED، درجة حرارة اللون، الثريات، الإضاءة الخارجية والذكية." : "Lighting guides for Kuwait homes and businesses: choosing LED, color temperature, chandeliers, outdoor and smart lighting.",
+  });
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const [searchQuery, setSearchQuery] = useState('');

@@ -2,8 +2,15 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import StorefrontLayout from '@/layouts/StorefrontLayout';
 import { Card, CardContent } from '@/components/ui/card';
+import { useSEO } from '@/hooks/useSEO';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const Terms = () => {
+  const { isRTL: seoAr } = useLanguage();
+  useSEO({
+    title: seoAr ? "الشروط والأحكام" : "Terms & Conditions",
+    description: seoAr ? "الشروط والأحكام للتسوق من كواليتي لايت الكويت." : "Terms and conditions for shopping at Quality Light Kuwait.",
+  });
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
 
