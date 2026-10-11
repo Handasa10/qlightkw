@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              from: 'Quality Light <noreply@qlightkw.lovable.app>',
+              from: 'Quality Light <info@qlightkw.com>',
               to: ['admin@qualitylight.kw'], // Configure admin email
               subject: `Blog Post Published: ${post.title_en}`,
               html: `
@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
                       Originally scheduled for: ${new Date(post.scheduled_at).toLocaleString()}
                     </p>
                   </div>
-                  <a href="https://qlightkw.lovable.app/blog/${post.slug}" 
+                  <a href="https://qlightkw.com/blog/${post.slug}" 
                      style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
                     View Post
                   </a>

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { encode as encodeBase64 } from "https://deno.land/std@0.168.0/encoding/base64.ts";
+import { requireAdmin, errorStatus } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,7 +18,7 @@ const MINIO_PUBLIC_URL = `${MINIO_ENDPOINT}/${MINIO_BUCKET}`;
 // may return an HTML challenge page to non-browser clients.
 // Sending a reasonable UA/Accept often avoids that.
 const DEFAULT_UA =
-  "Mozilla/5.0 (compatible; QLightStorageMigration/1.0; +https://qlightkw.lovable.app)";
+  "Mozilla/5.0 (compatible; QLightStorageMigration/1.0; +https://qlightkw.com)";
 const DEFAULT_ACCEPT = "*/*";
 
 // Helper to create AWS Signature v4
@@ -301,6 +302,8 @@ serve(async (req) => {
   }
 
   try {
+    await requireAdmin(req);
+
     const accessKey = Deno.env.get("MINIO_ACCESS_KEY");
     const secretKey = Deno.env.get("MINIO_SECRET_KEY");
 
@@ -321,10 +324,8 @@ serve(async (req) => {
     if (req.method === "POST") {
       try {
         const text = await req.text();
-        console.log("Raw body:", text.substring(0, 500));
         if (text) {
           body = JSON.parse(text);
-          console.log("Parsed body:", JSON.stringify(body));
           // If action is in body, use it
           if (body.action) {
             action = body.action;
@@ -473,7 +474,7 @@ serve(async (req) => {
     const message = error instanceof Error ? error.message : "Unknown error";
     return new Response(
       JSON.stringify({ success: false, error: message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: errorStatus(error), headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

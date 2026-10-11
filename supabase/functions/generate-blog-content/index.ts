@@ -3,6 +3,7 @@
 // Supports both Google AI and OpenRouter based on settings
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { requireAdmin, errorStatus } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -52,6 +53,9 @@ serve(async (req) => {
   }
 
   try {
+    // Only admins may generate content (this calls paid AI APIs)
+    await requireAdmin(req);
+
     // Get authorization header
     const authHeader = req.headers.get("Authorization");
     
@@ -123,7 +127,7 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : 'An error occurred';
     return new Response(
       JSON.stringify({ success: false, error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: errorStatus(error), headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
@@ -136,7 +140,7 @@ async function generateWithGoogle(prompt: string, aiSettings: AISettings): Promi
   }
 
   // Use new format first, then legacy format, then default
-  const textModel = aiSettings.google_text_model || aiSettings.text_model || "gemini-2.0-flash";
+  const textModel = aiSettings.google_text_model || aiSettings.text_model || "gemini-2.5-flash";
   
   console.log(`Using Google model: ${textModel}`);
 
@@ -185,7 +189,7 @@ async function generateWithOpenRouter(prompt: string, aiSettings: AISettings): P
     headers: {
       "Authorization": `Bearer ${openrouterApiKey}`,
       "Content-Type": "application/json",
-      "HTTP-Referer": "https://qlightkw.lovable.app",
+      "HTTP-Referer": "https://qlightkw.com",
       "X-Title": "Quality Light Kuwait",
     },
     body: JSON.stringify({

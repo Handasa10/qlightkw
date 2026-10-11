@@ -12,6 +12,10 @@ const corsHeaders = {
 // Get Gemini API key from environment
 const GEMINI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
 
+const MAX_MESSAGE_CHARS = 2000;
+const MAX_HISTORY_MESSAGES = 12;
+const DEFAULT_MODEL = "gemini-2.5-flash";
+
 interface Message {
   role: 'user' | 'assistant';
   content: string;
@@ -41,11 +45,22 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { message, conversationHistory = [], userId, language = 'en' }: AssistantRequest = await req.json();
+    const { message, conversationHistory: rawHistory = [], userId, language = 'en' }: AssistantRequest = await req.json();
 
-    if (!message?.trim()) {
+    if (typeof message !== 'string' || !message.trim()) {
       throw new Error('Message is required');
     }
+    // This endpoint is public, so cap the input size to keep AI costs bounded
+    if (message.length > MAX_MESSAGE_CHARS) {
+      return new Response(
+        JSON.stringify({ error: 'Message is too long' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const conversationHistory = (Array.isArray(rawHistory) ? rawHistory : [])
+      .slice(-MAX_HISTORY_MESSAGES)
+      .filter((m) => m && typeof m.content === 'string')
+      .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_MESSAGE_CHARS) }));
 
     // Detect message language - if Arabic characters are present, respond in Arabic
     const detectedLanguage = detectMessageLanguage(message);
@@ -55,6 +70,14 @@ serve(async (req) => {
 
     // Fetch relevant context from database
     const contextData = await fetchDatabaseContext(supabase, message);
+
+    // Admins can pick the model in AI settings; default to a current Gemini model
+    const { data: settingsRow } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "ai_settings")
+      .maybeSingle();
+    const model = (settingsRow?.value as { google_text_model?: string } | null)?.google_text_model || DEFAULT_MODEL;
     
     // Build system prompt with database context - use detected language
     const systemPrompt = buildSystemPrompt(contextData, responseLanguage);
@@ -64,7 +87,7 @@ serve(async (req) => {
 
     // Call Gemini API
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -88,7 +111,10 @@ serve(async (req) => {
     if (!geminiResponse.ok) {
       const errorData = await geminiResponse.text();
       console.error('Gemini API error:', errorData);
-      throw new Error(`AI service error: ${geminiResponse.status}`);
+      // Surface Google's reason (it never contains the key) so failures can be diagnosed
+      let reason = "";
+      try { reason = JSON.parse(errorData)?.error?.message || ""; } catch { /* not JSON */ }
+      throw new Error(`AI service error: ${geminiResponse.status}${reason ? ` - ${reason}` : ""}`);
     }
 
     const geminiData = await geminiResponse.json();

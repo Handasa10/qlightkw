@@ -131,7 +131,7 @@ async function handleGoogleAI(
 
   if (type === "text") {
     // Use new format first, then legacy format, then default
-    const textModel = model || aiSettings?.google_text_model || aiSettings?.text_model || "gemini-2.0-flash";
+    const textModel = model || aiSettings?.google_text_model || aiSettings?.text_model || "gemini-2.5-flash";
     
     console.log(`Google text generation with model: ${textModel}`);
     
@@ -340,7 +340,7 @@ Focus on quality, durability, energy efficiency, and aesthetic appeal where rele
       headers: {
         "Authorization": `Bearer ${openrouterApiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://qlightkw.lovable.app",
+        "HTTP-Referer": "https://qlightkw.com",
         "X-Title": "Quality Light Kuwait",
       },
       body: JSON.stringify(requestBody),
@@ -396,7 +396,7 @@ Focus on quality, durability, energy efficiency, and aesthetic appeal where rele
       headers: {
         "Authorization": `Bearer ${openrouterApiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://qlightkw.lovable.app",
+        "HTTP-Referer": "https://qlightkw.com",
         "X-Title": "Quality Light Kuwait",
       },
       body: JSON.stringify({

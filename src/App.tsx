@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,65 +17,65 @@ import "@/i18n"; // Initialize i18n
 
 // Pages
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
-import Shop from "./pages/Shop";
-import Cart from "./pages/Cart";
-import Wishlist from "./pages/Wishlist";
-import ProductDetail from "./pages/ProductDetail";
-import ProjectDetail from "./pages/ProjectDetail";
-import Checkout from "./pages/Checkout";
-import About from "./pages/About";
-import Projects from "./pages/Projects";
-import Contact from "./pages/Contact";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
-import Returns from "./pages/Returns";
-import Shipping from "./pages/Shipping";
-import FAQ from "./pages/FAQ";
-import Blog from "./pages/Blog";
-import BlogDetail from "./pages/BlogDetail";
+const Auth = lazy(() => import("./pages/Auth"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Shop = lazy(() => import("./pages/Shop"));
+const Cart = lazy(() => import("./pages/Cart"));
+const Wishlist = lazy(() => import("./pages/Wishlist"));
+const ProductDetail = lazy(() => import("./pages/ProductDetail"));
+const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
+const Checkout = lazy(() => import("./pages/Checkout"));
+const About = lazy(() => import("./pages/About"));
+const Projects = lazy(() => import("./pages/Projects"));
+const Contact = lazy(() => import("./pages/Contact"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Returns = lazy(() => import("./pages/Returns"));
+const Shipping = lazy(() => import("./pages/Shipping"));
+const FAQ = lazy(() => import("./pages/FAQ"));
+const Blog = lazy(() => import("./pages/Blog"));
+const BlogDetail = lazy(() => import("./pages/BlogDetail"));
 
 // Account Layout & Pages
-import AccountLayout from "./layouts/AccountLayout";
-import AccountOverview from "./pages/account/Overview";
-import AccountOrders from "./pages/account/Orders";
-import AccountOrderDetail from "./pages/account/OrderDetail";
-import AccountAddresses from "./pages/account/Addresses";
-import AccountSettings from "./pages/account/Settings";
-import AccountWishlist from "./pages/account/Wishlist";
+const AccountLayout = lazy(() => import("./layouts/AccountLayout"));
+const AccountOverview = lazy(() => import("./pages/account/Overview"));
+const AccountOrders = lazy(() => import("./pages/account/Orders"));
+const AccountOrderDetail = lazy(() => import("./pages/account/OrderDetail"));
+const AccountAddresses = lazy(() => import("./pages/account/Addresses"));
+const AccountSettings = lazy(() => import("./pages/account/Settings"));
+const AccountWishlist = lazy(() => import("./pages/account/Wishlist"));
 
 // Admin Layout & Pages
-import AdminLayout from "./layouts/AdminLayout";
-import AdminDashboard from "./pages/admin/Dashboard";
-import AdminAnalytics from "./pages/admin/Analytics";
-import ProductsPage from "./pages/admin/Products";
-import CategoriesPage from "./pages/admin/Categories";
-import BrandsPage from "./pages/admin/Brands";
-import OrdersPage from "./pages/admin/Orders";
-import UsersPage from "./pages/admin/Users";
-import AdminCoupons from "./pages/admin/Coupons";
-import AdminSystemLogs from "./pages/admin/SystemLogs";
-import AdminEmailInbox from "./pages/admin/EmailInbox";
-import AdminObservability from "./pages/admin/Observability";
-import AdminVisitors from "./pages/admin/Visitors";
-import AdminImageGallery from "./pages/admin/ImageGallery";
-import AdminImageValidator from "./pages/admin/ImageValidator";
-import AdminImageCacher from "./pages/admin/ImageCacher";
-import AdminInventoryAlerts from "./pages/admin/InventoryAlerts";
-import AdminBanners from "./pages/admin/Banners";
-import AdminMessages from "./pages/admin/Messages";
-import AdminTags from "./pages/admin/Tags";
-import AdminDocumentation from "./pages/admin/Documentation";
-import SettingsPage from "./pages/admin/Settings";
-import AdminProjects from "./pages/admin/AdminProjects";
-import AdminTestimonials from "./pages/admin/AdminTestimonials";
-import ProductFormPage from "./pages/admin/ProductForm";
-import AdminBlogPosts from "./pages/admin/BlogPosts";
-import AdminBlogDrafts from "./pages/admin/BlogDrafts";
-import AdminNewsletterSubscribers from "./pages/admin/NewsletterSubscribers";
-import AdminThemeBuilder from "./pages/admin/ThemeBuilder";
-import AdminStorageMigration from "./pages/admin/StorageMigration";
+const AdminLayout = lazy(() => import("./layouts/AdminLayout"));
+const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
+const AdminAnalytics = lazy(() => import("./pages/admin/Analytics"));
+const ProductsPage = lazy(() => import("./pages/admin/Products"));
+const CategoriesPage = lazy(() => import("./pages/admin/Categories"));
+const BrandsPage = lazy(() => import("./pages/admin/Brands"));
+const OrdersPage = lazy(() => import("./pages/admin/Orders"));
+const UsersPage = lazy(() => import("./pages/admin/Users"));
+const AdminCoupons = lazy(() => import("./pages/admin/Coupons"));
+const AdminSystemLogs = lazy(() => import("./pages/admin/SystemLogs"));
+const AdminEmailInbox = lazy(() => import("./pages/admin/EmailInbox"));
+const AdminObservability = lazy(() => import("./pages/admin/Observability"));
+const AdminVisitors = lazy(() => import("./pages/admin/Visitors"));
+const AdminImageGallery = lazy(() => import("./pages/admin/ImageGallery"));
+const AdminImageValidator = lazy(() => import("./pages/admin/ImageValidator"));
+const AdminImageCacher = lazy(() => import("./pages/admin/ImageCacher"));
+const AdminInventoryAlerts = lazy(() => import("./pages/admin/InventoryAlerts"));
+const AdminBanners = lazy(() => import("./pages/admin/Banners"));
+const AdminMessages = lazy(() => import("./pages/admin/Messages"));
+const AdminTags = lazy(() => import("./pages/admin/Tags"));
+const AdminDocumentation = lazy(() => import("./pages/admin/Documentation"));
+const SettingsPage = lazy(() => import("./pages/admin/Settings"));
+const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
+const AdminTestimonials = lazy(() => import("./pages/admin/AdminTestimonials"));
+const ProductFormPage = lazy(() => import("./pages/admin/ProductForm"));
+const AdminBlogPosts = lazy(() => import("./pages/admin/BlogPosts"));
+const AdminBlogDrafts = lazy(() => import("./pages/admin/BlogDrafts"));
+const AdminNewsletterSubscribers = lazy(() => import("./pages/admin/NewsletterSubscribers"));
+const AdminThemeBuilder = lazy(() => import("./pages/admin/ThemeBuilder"));
+const AdminStorageMigration = lazy(() => import("./pages/admin/StorageMigration"));
 
 const queryClient = new QueryClient();
 
@@ -89,6 +89,7 @@ const AnimatedRoutes = () => {
   return (
     <AnimatePresence mode="wait">
       <PageTransition key={location.pathname}>
+        <Suspense fallback={<div className="min-h-screen bg-background" />}>
         <Routes location={location}>
           {/* Public routes */}
           <Route path="/" element={<Index />} />
@@ -158,22 +159,37 @@ const AnimatedRoutes = () => {
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
       </PageTransition>
     </AnimatePresence>
   );
 };
 
+const SPLASH_SEEN_KEY = "qlight-splash-seen";
+
+// Show the splash once per browser session; returning to the tab or reloading skips it
+const shouldShowSplash = () => {
+  try {
+    if (sessionStorage.getItem(SPLASH_SEEN_KEY)) return false;
+    sessionStorage.setItem(SPLASH_SEEN_KEY, "1");
+  } catch {
+    // Storage unavailable (private mode etc.) - just show it
+  }
+  return true;
+};
+
 const App = () => {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(shouldShowSplash);
 
   useEffect(() => {
-    // Fallback timeout in case animation doesn't complete
+    if (!showSplash) return;
+    // The site renders underneath, so the splash only needs to be a brief brand moment
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 3500);
-    
+    }, 1200);
+
     return () => clearTimeout(timer);
-  }, []);
+  }, [showSplash]);
 
   const handleSplashComplete = () => {
     setShowSplash(false);
@@ -194,11 +210,9 @@ const App = () => {
                       <SplashScreen onComplete={handleSplashComplete} />
                     )}
                   </AnimatePresence>
-                  {!showSplash && (
-                    <BrowserRouter>
-                      <AnimatedRoutes />
-                    </BrowserRouter>
-                  )}
+                  <BrowserRouter>
+                    <AnimatedRoutes />
+                  </BrowserRouter>
                 </TooltipProvider>
               </WishlistProvider>
             </CartProvider>
