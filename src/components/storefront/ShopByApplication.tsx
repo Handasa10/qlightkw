@@ -55,7 +55,7 @@ const ShopByApplication = () => {
       nameEn: 'Landscape & Garden',
       nameAr: 'الحدائق والمساحات الخارجية',
       tagQuery: 'outdoor',
-      imageUrl: 'https://images.unsplash.com/photo-1508615070457-7baebe4003ab?auto=format&fit=crop&q=80&w=800',
+      imageUrl: 'https://images.unsplash.com/photo-1505843513577-22bb7d21e455?auto=format&fit=crop&q=80&w=800',
       icon: <Palmtree className="h-6 w-6" />,
       descriptionEn: 'Weatherproof bollards, floodlights, and solar pathway markers for landscapes.',
       descriptionAr: 'أعمدة حدائق مقاومة للعوامل الجوية، كشافات إضاءة، وإضاءات شمسية للممرات.'
@@ -81,7 +81,7 @@ const ShopByApplication = () => {
       <div className="container relative z-10">
         {/* Title */}
         <div className="text-center mb-16">
-          <span className="text-primary font-bold text-xs uppercase tracking-widest bg-primary/10 px-3 py-1 rounded-full inline-block mb-3">
+          <span className="eyebrow-light mb-3">
             {isRTL ? "تسوق حسب طبيعة مشروعك" : "Curated By Use-Case"}
           </span>
           <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight text-foreground">

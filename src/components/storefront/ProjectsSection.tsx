@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { ArrowRight, MapPin } from 'lucide-react';
 import { resolveImageUrl } from '@/lib/image-resolver';
+import SectionHeading from '@/components/effects/SectionHeading';
 
 interface Project {
   id: string;
@@ -21,7 +22,7 @@ interface Project {
 
 const ProjectsSection = () => {
   const { t } = useTranslation();
-  const { language } = useLanguage();
+  const { language, isRTL } = useLanguage();
   const [projects, setProjects] = useState<Project[]>([]);
 
   useEffect(() => {
@@ -96,14 +97,11 @@ const ProjectsSection = () => {
     <section className="py-16 md:py-24 bg-muted/30">
       <div className="container">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12 gap-4">
-          <div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-2">
-              {t('home.projects.title', 'Featured Projects')}
-            </h2>
-            <p className="text-muted-foreground">
-              {t('home.projects.subtitle', 'See our lighting solutions in action')}
-            </p>
-          </div>
+          <SectionHeading
+            eyebrow={isRTL ? 'أعمالنا' : 'Portfolio'}
+            title={t('home.projects.title', 'Featured Projects')}
+            description={t('home.projects.subtitle', 'See our lighting solutions in action')}
+          />
           <Button variant="outline" asChild>
             <Link to="/projects" className="flex items-center gap-2">
               {t('home.projects.viewAll', 'View All Projects')}

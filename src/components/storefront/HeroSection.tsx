@@ -281,6 +281,7 @@ const HeroSection = () => {
             <AnimatePresence mode="wait">
               <motion.h1
                 key={`title-${slide.id}-${i18n.language}`}
+                dir="auto"
                 className="text-[2.6rem] font-extrabold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl xl:text-[5.25rem]"
                 exit={{ opacity: 0, y: -20, filter: 'blur(8px)', transition: { duration: 0.35 } }}
               >
@@ -311,6 +312,7 @@ const HeroSection = () => {
               {subtitle && (
                 <motion.p
                   key={`sub-${slide.id}-${i18n.language}`}
+                  dir="auto"
                   className="mt-6 max-w-xl text-base leading-relaxed text-white/70 md:text-lg"
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -357,8 +359,8 @@ const HeroSection = () => {
                   <Thermometer className="h-3.5 w-3.5" />
                   {isRTL ? 'درجة حرارة اللون' : 'Color Temperature'}
                 </span>
-                <span className="font-mono font-bold tabular-nums" style={{ color: `rgb(${lightRgb})` }}>
-                  {kelvin}K · {kelvinLabel(kelvin, isRTL)}
+                <span className="font-bold" style={{ color: `rgb(${lightRgb})` }}>
+                  <span className="font-mono tabular-nums" dir="ltr">{kelvin}K</span> · {kelvinLabel(kelvin, isRTL)}
                 </span>
               </div>
               <input

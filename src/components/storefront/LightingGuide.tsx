@@ -53,7 +53,7 @@ const LightingGuide = () => {
         
         {/* Title Block */}
         <div className="text-center mb-16">
-          <span className="text-primary font-bold text-xs uppercase tracking-widest bg-primary/10 px-3 py-1 rounded-full inline-block mb-3">
+          <span className="eyebrow-light mb-3">
             {isRTL ? "دليل كواليتي لايت التعليمي" : "Educational Lighting Guide"}
           </span>
           <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight text-foreground">

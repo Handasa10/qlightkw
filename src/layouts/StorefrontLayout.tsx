@@ -3,6 +3,7 @@ import Footer from '@/components/storefront/Footer';
 import AIAssistant from '@/components/AIAssistant';
 import WhatsAppWidget from '@/components/storefront/WhatsAppWidget';
 import AdminToolbar from '@/components/storefront/AdminToolbar';
+import ScrollProgress from '@/components/effects/ScrollProgress';
 
 interface StorefrontLayoutProps {
   children: React.ReactNode;
@@ -11,6 +12,7 @@ interface StorefrontLayoutProps {
 const StorefrontLayout = ({ children }: StorefrontLayoutProps) => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <ScrollProgress />
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />

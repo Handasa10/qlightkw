@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { resolveImageUrl } from '@/lib/image-resolver';
 import { ArrowRight, Lightbulb } from 'lucide-react';
+import SectionHeading from '@/components/effects/SectionHeading';
+import { glowHandlers } from '@/components/effects/glow';
 
 interface Category {
   id: string;
@@ -17,7 +18,6 @@ interface Category {
 }
 
 const FeaturedCategories = () => {
-  const { t } = useTranslation();
   const { language, isRTL } = useLanguage();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,21 +50,21 @@ const FeaturedCategories = () => {
       name_en: 'Outdoor Lights',
       name_ar: 'إضاءة خارجية',
       slug: 'outdoor-lights',
-      image_url: 'https://images.unsplash.com/photo-1508615070457-7baebe4003ab?auto=format&fit=crop&q=80&w=600',
+      image_url: 'https://images.unsplash.com/photo-1505843513577-22bb7d21e455?auto=format&fit=crop&q=80&w=600',
     },
     {
       id: 'cat-5',
       name_en: 'Chandeliers',
       name_ar: 'ثريات فاخرة',
       slug: 'chandelier',
-      image_url: 'https://images.unsplash.com/photo-1572912353188-a5d0aeefaa68?auto=format&fit=crop&q=80&w=600',
+      image_url: 'https://images.unsplash.com/photo-1540932239986-30128078f3c5?auto=format&fit=crop&q=80&w=600',
     },
     {
       id: 'cat-6',
       name_en: 'Wall Lights',
       name_ar: 'إضاءة جدارية',
       slug: 'indoor-wall-light',
-      image_url: 'https://images.unsplash.com/photo-1601004890684-d8cbf643f5f2?auto=format&fit=crop&q=80&w=600',
+      image_url: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&q=80&w=600',
     },
     {
       id: 'cat-7',
@@ -78,7 +78,7 @@ const FeaturedCategories = () => {
       name_en: 'Panel Lights',
       name_ar: 'إضاءة بانل',
       slug: 'led-panel-light',
-      image_url: 'https://images.unsplash.com/photo-1606103658514-6830a687ef7f?auto=format&fit=crop&q=80&w=600',
+      image_url: 'https://images.unsplash.com/photo-1563461660947-507ef49e9c47?auto=format&fit=crop&q=80&w=600',
     },
   ];
 
@@ -118,44 +118,35 @@ const FeaturedCategories = () => {
   }, []);
 
   return (
-    <section id="categories" className="py-20 md:py-28 bg-background relative overflow-hidden scroll-mt-20">
-      {/* Decorative background aura */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+    <section id="categories" className="relative scroll-mt-20 overflow-hidden bg-background py-20 md:py-28">
+      <div className="pointer-events-none absolute left-1/2 top-0 h-[500px] w-[900px] -translate-x-1/2 rounded-full bg-primary/[0.07] blur-3xl" />
 
       <div className="container relative z-10">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
-          <div className={isRTL ? 'text-right' : 'text-left'}>
-            <span className="text-primary font-bold text-xs uppercase tracking-widest bg-primary/10 px-3 py-1 rounded-full inline-block mb-3">
-              {isRTL ? "مجموعاتنا المنسقة" : "Our Collections"}
-            </span>
-            <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight text-foreground">
-              {isRTL ? "تسوق حسب القسم" : "Shop by Category"}
-            </h2>
-            <p className="text-muted-foreground mt-3 max-w-2xl text-sm md:text-base leading-relaxed">
-              {isRTL 
-                ? "اختر من بين مجموعتنا الواسعة من خيارات الإضاءة الفاخرة المصممة خصيصاً للمساحات السكنية والتجارية في الكويت."
-                : "Explore our wide range of premium lighting collections crafted to illuminate residential and commercial spaces across Kuwait."}
-            </p>
-          </div>
-          <Link 
-            to="/shop" 
-            className="group/btn inline-flex items-center gap-2 font-bold text-sm text-primary hover:text-primary/80 transition-colors shrink-0"
+        <div className="mb-12 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <SectionHeading
+            eyebrow={isRTL ? 'مجموعاتنا المنسقة' : 'Our Collections'}
+            title={isRTL ? 'تسوق حسب القسم' : 'Shop by Category'}
+            description={isRTL
+              ? 'مرّر فوق أي قسم لتشغيل الضوء. مجموعة واسعة من الإضاءة الفاخرة للمساحات السكنية والتجارية في الكويت.'
+              : 'Hover over a collection to switch it on. Premium lighting for residential and commercial spaces across Kuwait.'}
+          />
+          <Link
+            to="/shop"
+            className="group/btn inline-flex shrink-0 items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-bold text-foreground transition-colors hover:border-primary hover:text-primary"
           >
-            <span>{isRTL ? "عرض جميع المنتجات" : "View All Products"}</span>
-            <ArrowRight className={`h-4 w-4 transition-transform group-hover/btn:translate-x-1 ${isRTL ? 'rotate-185' : ''}`} />
+            <span>{isRTL ? 'عرض جميع المنتجات' : 'View All Products'}</span>
+            <ArrowRight className={`h-4 w-4 transition-transform ${isRTL ? 'rotate-180 group-hover/btn:-translate-x-1' : 'group-hover/btn:translate-x-1'}`} />
           </Link>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid auto-rows-[160px] grid-cols-2 gap-4 md:auto-rows-[200px] md:gap-5 lg:grid-cols-4">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="aspect-square rounded-2xl overflow-hidden relative">
-                <Skeleton className="absolute inset-0 w-full h-full" />
-              </div>
+              <Skeleton key={i} className={`rounded-3xl ${BENTO_LAYOUT[i] || ''}`} />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid auto-rows-[160px] grid-cols-2 gap-4 md:auto-rows-[200px] md:gap-5 lg:grid-cols-4">
             {categories.map((category, index) => {
               const name = isRTL ? category.name_ar : category.name_en;
               const imgUrl = resolveImageUrl(category.image_url, 'category', category.slug);
@@ -163,43 +154,47 @@ const FeaturedCategories = () => {
               return (
                 <motion.div
                   key={category.slug}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-50px" }}
-                  transition={{ duration: 0.6, delay: index * 0.05 }}
-                  className="group relative overflow-hidden rounded-2xl aspect-square bg-slate-900 border border-slate-200/10 dark:border-white/5 hover:border-primary/50 shadow-md hover:shadow-xl hover:shadow-primary/5 transition-all duration-500"
+                  initial={{ opacity: 0, y: 30, scale: 0.97 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: true, margin: '-50px' }}
+                  transition={{ duration: 0.7, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                  className={`glow-card group overflow-hidden rounded-3xl bg-[#0b0907] shadow-lg ${BENTO_LAYOUT[index] || ''}`}
+                  {...glowHandlers}
                 >
                   <Link to={`/shop?category=${category.slug}`} className="absolute inset-0 block">
-                    {/* Dark overlay */}
-                    <div className="absolute inset-0 bg-slate-950/40 group-hover:bg-slate-950/30 transition-colors duration-500 z-10" />
-
-                    {/* Image */}
                     {imgUrl ? (
                       <img
                         src={imgUrl}
                         alt={name}
-                        className="absolute inset-0 w-full h-full object-cover scale-100 group-hover:scale-110 transition-transform duration-700 ease-out"
+                        className="absolute inset-0 h-full w-full object-cover brightness-[0.45] saturate-[0.6] transition-all duration-700 ease-out group-hover:scale-105 group-hover:brightness-100 group-hover:saturate-100"
                         loading="lazy"
                       />
                     ) : (
-                      <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-950">
-                        <Lightbulb className="h-10 w-10 text-primary animate-pulse" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-950">
+                        <Lightbulb className="h-10 w-10 text-primary" />
                       </div>
                     )}
 
-                    {/* Gradient background cover */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent z-15" />
+                    {/* Warm light that pools in from the top when the card is "switched on" */}
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_-10%,rgba(255,190,120,0.45),transparent_60%)] opacity-0 mix-blend-screen transition-opacity duration-700 group-hover:opacity-100" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
 
-                    {/* Text card description */}
-                    <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 z-20 flex flex-col items-center text-center">
-                      <div className="px-4 py-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-xl max-w-full shadow-lg group-hover:bg-primary group-hover:border-primary/20 transition-all duration-300 transform group-hover:-translate-y-1">
-                        <h3 className="font-bold text-sm md:text-base text-white tracking-wide truncate">
-                          {name}
-                        </h3>
-                        <span className="text-[10px] text-primary-foreground/75 font-semibold mt-0.5 opacity-0 group-hover:opacity-100 h-0 group-hover:h-auto overflow-hidden block transition-opacity duration-300">
-                          {isRTL ? "تسوق الآن" : "Shop Now"}
-                        </span>
-                      </div>
+                    {/* Light switch indicator */}
+                    <div className="absolute end-4 top-4 z-20 flex h-6 w-11 items-center rounded-full border border-white/20 bg-black/40 p-0.5 backdrop-blur-md transition-colors duration-500 group-hover:border-primary/60 group-hover:bg-primary/30">
+                      <span className="h-[18px] w-[18px] rounded-full bg-white/50 transition-all duration-500 group-hover:translate-x-5 group-hover:bg-white group-hover:shadow-[0_0_12px_rgba(255,200,140,1)] rtl:group-hover:-translate-x-5" />
+                    </div>
+
+                    <div className="absolute inset-x-0 bottom-0 z-20 p-5 md:p-6">
+                      <span className="mb-1 block font-mono text-[10px] text-white/50">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <h3 className={`font-extrabold tracking-tight text-white ${index === 0 ? 'text-2xl md:text-4xl' : 'text-base md:text-xl'}`}>
+                        {name}
+                      </h3>
+                      <span className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-primary opacity-0 transition-all duration-500 group-hover:opacity-100">
+                        {isRTL ? 'تسوق الآن' : 'Shop now'}
+                        <ArrowRight className={`h-3.5 w-3.5 ${isRTL ? 'rotate-180' : ''}`} />
+                      </span>
                     </div>
                   </Link>
                 </motion.div>
@@ -211,5 +206,19 @@ const FeaturedCategories = () => {
     </section>
   );
 };
+
+// Bento grid, filled without gaps:
+//   desktop (4 cols)  0 0 1 2 / 0 0 3 4 / 5 6 6 7
+//   mobile  (2 cols)  0 0 / 0 0 / 1 2 / 3 4 / 5 6 / 7 7
+const BENTO_LAYOUT = [
+  'col-span-2 row-span-2',
+  '',
+  '',
+  '',
+  '',
+  '',
+  'lg:col-span-2',
+  'col-span-2 lg:col-span-1',
+];
 
 export default FeaturedCategories;
