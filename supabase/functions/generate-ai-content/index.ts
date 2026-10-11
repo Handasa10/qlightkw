@@ -94,10 +94,16 @@ serve(async (req) => {
 
     console.log(`Using AI provider: ${provider}, type: ${type}, referenceImages: ${referenceImages?.length || 0}, aspectRatio: ${aspectRatio || '1:1'}`);
 
-    if (provider === "openrouter") {
-      return await handleOpenRouter(type, prompt, productName, category, model, aiSettings, referenceImages, aspectRatio);
-    } else {
+    try {
+      if (provider === "openrouter") {
+        return await handleOpenRouter(type, prompt, productName, category, model, aiSettings, referenceImages, aspectRatio);
+      }
       return await handleGoogleAI(type, prompt, productName, category, model, aiSettings, referenceImages, aspectRatio);
+    } catch (providerError) {
+      // Configured models get retired or run out of free quota; fall back to Google's current model for text
+      if (type !== "text") throw providerError;
+      console.warn("Text generation failed, falling back to " + FALLBACK_TEXT_MODEL + ":", providerError);
+      return await handleGoogleAI(type, prompt, productName, category, FALLBACK_TEXT_MODEL, aiSettings, referenceImages, aspectRatio);
     }
 
   } catch (error: unknown) {
@@ -112,6 +118,9 @@ serve(async (req) => {
     );
   }
 });
+
+// Google alias that always points at the current Flash model
+const FALLBACK_TEXT_MODEL = "gemini-flash-latest";
 
 // Handle Google AI (Gemini/Imagen) requests
 async function handleGoogleAI(
@@ -165,7 +174,9 @@ Focus on quality, durability, energy efficiency, and aesthetic appeal where rele
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Gemini API error:", errorText);
-      throw new Error(`Gemini API error: ${response.status}`);
+      let reason = "";
+      try { reason = JSON.parse(errorText)?.error?.message || ""; } catch { /* not JSON */ }
+      throw new Error(`Gemini API error: ${response.status}${reason ? ` - ${reason}` : ""}`);
     }
 
     const result = await response.json();

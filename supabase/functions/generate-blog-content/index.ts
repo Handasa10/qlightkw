@@ -99,10 +99,14 @@ serve(async (req) => {
 
     let rawContent: string;
 
-    if (chatProvider === "openrouter") {
-      rawContent = await generateWithOpenRouter(prompt, aiSettings);
-    } else {
-      rawContent = await generateWithGoogle(prompt, aiSettings);
+    try {
+      rawContent = chatProvider === "openrouter"
+        ? await generateWithOpenRouter(prompt, aiSettings)
+        : await generateWithGoogle(prompt, aiSettings);
+    } catch (providerError) {
+      // Configured models get retired or run out of free quota; fall back to Google's current model
+      console.warn("Blog generation failed, falling back to gemini-flash-latest:", providerError);
+      rawContent = await generateWithGoogle(prompt, { ...aiSettings, google_text_model: "gemini-flash-latest", text_model: undefined });
     }
 
     if (!rawContent) {
