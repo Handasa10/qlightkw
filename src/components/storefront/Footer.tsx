@@ -180,11 +180,11 @@ const Footer = () => {
                 <div className="flex flex-col gap-1">
                   <span>
                     {isRTL 
-                      ? "الكويت - الشويخ الصناعية - شارع الغزالي" 
-                      : "Shuwaikh Industrial, Al-Ghazali St, Kuwait"}
+                      ? "الكويت - حولي - شارع تونس" 
+                      : "Hawalli - Tunis Street, Kuwait"}
                   </span>
                   <a 
-                    href="https://maps.google.com/?q=Shuwaikh+Industrial,Kuwait" 
+                    href="https://maps.google.com/?q=Tunis+Street,+Hawalli,+Kuwait" 
                     target="_blank" 
                     rel="noopener noreferrer" 
                     className="text-xs text-primary flex items-center gap-1 hover:underline mt-0.5"
@@ -196,8 +196,8 @@ const Footer = () => {
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-5 w-5 shrink-0 text-primary" />
-                <a href="tel:+96522004567" className="hover:text-primary transition-colors" dir="ltr">
-                  +965 2200 4567
+                <a href="tel:+96551111725" className="hover:text-primary transition-colors" dir="ltr">
+                  +965 5111 1725
                 </a>
               </li>
               <li className="flex items-start gap-3">

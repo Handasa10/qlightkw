@@ -125,9 +125,9 @@ const Header = () => {
         <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           {/* Contacts */}
           <div className="flex items-center gap-4 text-[11px] md:text-xs">
-            <a href="tel:+96522004567" className="flex items-center gap-1.5 hover:text-primary transition-colors">
+            <a href="tel:+96551111725" className="flex items-center gap-1.5 hover:text-primary transition-colors">
               <Phone className="h-3.5 w-3.5 text-primary" />
-              <span dir="ltr">+965 2200 4567</span>
+              <span dir="ltr">+965 5111 1725</span>
             </a>
             <a 
               href="https://wa.me/96551111725" 
@@ -139,13 +139,13 @@ const Header = () => {
               <span>WhatsApp</span>
             </a>
             <a 
-              href="https://maps.google.com/?q=Shuwaikh+Industrial,Kuwait" 
+              href="https://maps.google.com/?q=Tunis+Street,+Hawalli,+Kuwait" 
               target="_blank" 
               rel="noopener noreferrer" 
               className="hidden md:flex items-center gap-1.5 hover:text-primary transition-colors"
             >
               <MapPin className="h-3.5 w-3.5 text-primary" />
-              <span>{isRTL ? "الشويخ الصناعية، الكويت" : "Shuwaikh Industrial, Kuwait"}</span>
+              <span>{isRTL ? "حولي - شارع تونس" : "Hawalli - Tunis Street"}</span>
             </a>
           </div>
 
