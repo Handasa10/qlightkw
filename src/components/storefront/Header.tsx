@@ -72,11 +72,11 @@ const Header = () => {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   };
 
-  // Promo ticker phrases
-  const promos = [
-    isRTL ? "توصيل مجاني في الكويت للطلبات الأكثر من 50 د.ك" : "Free delivery in Kuwait for orders over 50 KWD",
-    isRTL ? "خصم يصل إلى 40٪ على الثريات الفاخرة" : "Up to 40% off on Premium Chandeliers",
-    isRTL ? "استشارة مجانية لهندسة الإضاءة والمقاولين" : "Free lighting consultations for projects & contractors"
+  // Promo ticker phrases (with an optional link to the offer)
+  const promos: Array<{ text: string; href?: string }> = [
+    { text: isRTL ? "توصيل مجاني في الكويت للطلبات الأكثر من 50 د.ك" : "Free delivery in Kuwait for orders over 50 KWD" },
+    { text: isRTL ? "خصم 40٪ على الثريات الحديثة" : "40% off Modern Chandeliers", href: '/shop?category=chandelier' },
+    { text: isRTL ? "استشارة مجانية لهندسة الإضاءة والمقاولين" : "Free lighting consultations for projects & contractors" }
   ];
 
   useEffect(() => {
@@ -151,7 +151,11 @@ const Header = () => {
 
           {/* Promo Slider Ticker */}
           <div className="text-[11px] md:text-xs font-medium text-amber-400/90 text-center animate-pulse min-h-[16px]">
-            {promos[promoIndex]}
+            {promos[promoIndex].href ? (
+              <Link to={promos[promoIndex].href!} className="underline-offset-2 hover:underline">{promos[promoIndex].text}</Link>
+            ) : (
+              promos[promoIndex].text
+            )}
           </div>
 
           {/* User Links / Actions */}
