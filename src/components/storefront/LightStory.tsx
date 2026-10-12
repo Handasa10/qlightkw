@@ -34,7 +34,7 @@ const LAYERS = [
     key: 'accent',
     en: { title: 'Accent light', text: 'The drama. Chandeliers, pendants and wall lights that give a space its character.' },
     ar: { title: 'الإضاءة الجمالية', text: 'لمسة الإبهار. الثريات والمعلّقات والإضاءة الجدارية التي تمنح المكان شخصيته.' },
-    link: '/shop?category=chandelier',
+    link: '/shop?category=pendant-lighting',
     lux: 500,
   },
 ];

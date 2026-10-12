@@ -12,6 +12,7 @@ import {
   Settings,
   FolderKanban,
   MessageSquareQuote,
+  Star,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -69,6 +70,7 @@ const contentNavItems = [
   { title: 'banners', url: '/admin/banners', icon: ImagePlay },
   { title: 'projects', url: '/admin/projects', icon: FolderKanban },
   { title: 'testimonials', url: '/admin/testimonials', icon: MessageSquareQuote },
+  { title: 'reviews', url: '/admin/reviews', icon: Star },
   { title: 'messages', url: '/admin/messages', icon: Mail },
   { title: 'newsletter', url: '/admin/newsletter', icon: Newspaper },
 ];

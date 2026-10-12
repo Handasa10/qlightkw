@@ -34,7 +34,8 @@ function entry(path: string, lastmod: string | null, changefreq: string, priorit
   const ar = xmlEscape(withLang(path, "ar"));
   const alternates = `<xhtml:link rel="alternate" hreflang="en" href="${en}"/><xhtml:link rel="alternate" hreflang="ar" href="${ar}"/><xhtml:link rel="alternate" hreflang="x-default" href="${en}"/>`;
   const meta = `${lastmod ? `<lastmod>${lastmod.slice(0, 10)}</lastmod>` : ""}<changefreq>${changefreq}</changefreq><priority>${priority.toFixed(1)}</priority>`;
-  return [en, ar].map((loc) => `<url><loc>${loc}</loc>${alternates}${meta}</url>`).join("\n");
+  // Sitemap schema order: loc, lastmod, changefreq, priority, then extension elements
+  return [en, ar].map((loc) => `<url><loc>${loc}</loc>${meta}${alternates}</url>`).join("\n");
 }
 
 Deno.serve(async () => {

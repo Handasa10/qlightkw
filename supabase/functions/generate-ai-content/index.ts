@@ -1,5 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.93.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,7 +31,7 @@ interface AISettings {
   text_model?: string;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -100,10 +99,18 @@ serve(async (req) => {
       }
       return await handleGoogleAI(type, prompt, productName, category, model, aiSettings, referenceImages, aspectRatio);
     } catch (providerError) {
-      // Configured models get retired or run out of free quota; fall back to Google's current model for text
+      // Configured models get retired or run out of free quota; fall back to Google's current models for text
       if (type !== "text") throw providerError;
-      console.warn("Text generation failed, falling back to " + FALLBACK_TEXT_MODEL + ":", providerError);
-      return await handleGoogleAI(type, prompt, productName, category, FALLBACK_TEXT_MODEL, aiSettings, referenceImages, aspectRatio);
+      let lastError: unknown = providerError;
+      for (const fallbackModel of FALLBACK_TEXT_MODELS) {
+        try {
+          console.warn(`Text generation failed (${lastError instanceof Error ? lastError.message : lastError}), trying ${fallbackModel}`);
+          return await handleGoogleAI(type, prompt, productName, category, fallbackModel, aiSettings, referenceImages, aspectRatio);
+        } catch (fallbackError) {
+          lastError = fallbackError;
+        }
+      }
+      throw lastError;
     }
 
   } catch (error: unknown) {
@@ -119,8 +126,8 @@ serve(async (req) => {
   }
 });
 
-// Google alias that always points at the current Flash model
-const FALLBACK_TEXT_MODEL = "gemini-flash-latest";
+// Google aliases that always point at the current Flash models
+const FALLBACK_TEXT_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"];
 
 // Handle Google AI (Gemini/Imagen) requests
 async function handleGoogleAI(
@@ -165,7 +172,7 @@ Focus on quality, durability, energy efficiency, and aesthetic appeal where rele
           ],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 1024,
+            maxOutputTokens: 8192,
           },
         }),
       }
@@ -180,7 +187,13 @@ Focus on quality, durability, energy efficiency, and aesthetic appeal where rele
     }
 
     const result = await response.json();
-    const generatedText = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const generatedText = (result.candidates?.[0]?.content?.parts || [])
+      .filter((p: { text?: string; thought?: boolean }) => p.text && !p.thought)
+      .map((p: { text: string }) => p.text)
+      .join("");
+    if (!generatedText.trim()) {
+      throw new Error(`${textModel} returned no text (finish reason: ${result.candidates?.[0]?.finishReason || "unknown"})`);
+    }
 
     return new Response(
       JSON.stringify({ success: true, text: generatedText }),

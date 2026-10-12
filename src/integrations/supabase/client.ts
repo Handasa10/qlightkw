@@ -15,3 +15,20 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   }
 });
+// Edge functions report failures as JSON ({ error: "..." }) with a non-2xx status, but
+// supabase-js only surfaces "Edge Function returned a non-2xx status code". Read the body so
+// every caller (and every toast) shows the real reason.
+const invokeFunction = supabase.functions.invoke.bind(supabase.functions);
+supabase.functions.invoke = (async (...args: Parameters<typeof invokeFunction>) => {
+  const result = await invokeFunction(...args);
+  const context = (result.error as { context?: Response } | null)?.context;
+  if (result.error && context && typeof context.json === 'function') {
+    try {
+      const body = await context.clone().json();
+      if (body?.error) result.error.message = String(body.error);
+    } catch {
+      // Body wasn't JSON; keep the generic message
+    }
+  }
+  return result;
+}) as typeof supabase.functions.invoke;

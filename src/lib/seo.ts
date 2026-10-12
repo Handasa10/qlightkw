@@ -46,7 +46,11 @@ export function productSchema(p: {
   inStock: boolean;
   url: string;
   category?: string | null;
+  // Approved customer reviews only; Google ignores (and penalises) made-up ratings
+  reviews?: Array<{ rating: number; body: string; author_name: string; created_at: string }>;
 }) {
+  const reviews = p.reviews || [];
+  const average = reviews.length ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -56,7 +60,20 @@ export function productSchema(p: {
     sku: p.sku || undefined,
     category: p.category || undefined,
     brand: p.brand ? { '@type': 'Brand', name: p.brand } : undefined,
-    offers: {
+    aggregateRating: reviews.length
+      ? { '@type': 'AggregateRating', ratingValue: average.toFixed(1), reviewCount: reviews.length, bestRating: 5, worstRating: 1 }
+      : undefined,
+    review: reviews.length
+      ? reviews.slice(0, 10).map((r) => ({
+          '@type': 'Review',
+          reviewRating: { '@type': 'Rating', ratingValue: r.rating, bestRating: 5, worstRating: 1 },
+          author: { '@type': 'Person', name: r.author_name },
+          datePublished: r.created_at.slice(0, 10),
+          reviewBody: r.body,
+        }))
+      : undefined,
+    // Price-on-request items have no public price, so no Offer
+    offers: !(p.price > 0) ? undefined : {
       '@type': 'Offer',
       url: p.url,
       priceCurrency: 'KWD',
