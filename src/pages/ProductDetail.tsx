@@ -426,7 +426,8 @@ const ProductDetail = () => {
   ];
 
   const displayProduct = product || demoProduct;
-  const displayVariations = variations.length > 0 ? variations : demoVariations;
+  // Demo variations belong to the demo product only; real products show just their own
+  const displayVariations = product ? variations : demoVariations;
   const activeVariation = selectedVariation || displayVariations[0];
 
   const name = language === 'ar' ? displayProduct.name_ar : displayProduct.name_en;
@@ -461,14 +462,15 @@ const ProductDetail = () => {
     [isRTL ? "رمز المنتج" : "Item Code", displayProduct.sku || ''],
   ] as Array<[string, string]>).filter(([, value]) => value);
 
-  // Dynamic application recommendations based on product slug/type
+  // Application hints only where the product type makes them meaningful (none for wiring items)
   const getRecommendedApps = () => {
     const s = displayProduct.slug.toLowerCase();
     if (s.includes('chandelier')) return [t('apps.villa', 'Luxury Villas'), t('apps.hospitality', 'Hospitality / Restaurants')];
     if (s.includes('strip') || s.includes('profile')) return [t('apps.interior', 'Cove Lighting'), t('apps.office', 'Offices'), t('apps.villas', 'Villas')];
     if (s.includes('outdoor') || s.includes('bollard') || s.includes('flood')) return [t('apps.garden', 'Garden Landscapes'), t('apps.facade', 'Villa Facades'), t('apps.parking', 'Security & Pathways')];
-    return [t('apps.villas', 'Premium Villas'), t('apps.offices', 'Modern Offices'), t('apps.shops', 'Commercial Showrooms')];
+    return [];
   };
+  const recommendedApps = getRecommendedApps();
 
   // Upsell calculation
   const driverPrice = 4.500;
@@ -639,8 +641,6 @@ const ProductDetail = () => {
               </h1>
               <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1.5 font-mono">
                 {displayProduct.sku && <span>SKU: {displayProduct.sku}</span>}
-                <span>|</span>
-                <span>{isRTL ? "مكفول بالكامل" : "Full Showroom Warranty"}</span>
               </div>
             </div>
 
@@ -673,16 +673,18 @@ const ProductDetail = () => {
             </div>
 
             {/* Recommended Applications icons list */}
+            {recommendedApps.length > 0 && (
             <div className="flex items-center gap-3 bg-muted/40 p-3.5 rounded-xl border text-xs">
               <span className="font-bold text-slate-500 shrink-0">{isRTL ? "تطبيقات مقترحة:" : "Best Applied in:"}</span>
               <div className="flex flex-wrap gap-2">
-                {getRecommendedApps().map((app, idx) => (
+                {recommendedApps.map((app, idx) => (
                   <Badge key={idx} variant="secondary" className="bg-slate-200/50 dark:bg-slate-800 text-[10px] px-2.5 py-0.5 rounded-md font-semibold text-muted-foreground">
                     {app}
                   </Badge>
                 ))}
               </div>
             </div>
+            )}
 
             {/* Short description */}
             {shortDescription && (
@@ -719,7 +721,7 @@ const ProductDetail = () => {
               <div className={`h-2.5 w-2.5 rounded-full ${inStock ? 'bg-green-500 animate-ping' : 'bg-red-500'}`} />
               <span className={`text-xs font-bold ${inStock ? 'text-green-600' : 'text-red-500'}`}>
                 {inStock 
-                  ? (isRTL ? `متوفر في المعرض (${stockQuantity} قطع)` : `In Stock & Ready (${stockQuantity} available)`) 
+                  ? (isRTL ? 'متوفر للطلب' : 'Available to order')
                   : (isRTL ? "غير متوفر حالياً" : "Out of Stock")}
               </span>
             </div>
