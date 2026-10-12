@@ -23,62 +23,63 @@ const FeaturedCategories = () => {
   const [loading, setLoading] = useState(true);
 
   // Hardcoded target categories with high-end premium lighting images (matching seed_full_catalog.sql and Unsplash)
+  // Featured collections (the ones with the most products in the catalog)
   const targetCategories = [
     {
       id: 'cat-1',
       name_en: 'Spotlights',
       name_ar: 'إضاءة سبوت لايت',
       slug: 'led-spot-light',
-      image_url: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=600',
+      image_url: 'https://images.unsplash.com/photo-1636891852883-862c06a10c90?auto=format&fit=crop&q=80&w=600',
     },
     {
       id: 'cat-2',
-      name_en: 'Downlights',
-      name_ar: 'إضاءة داون لايت',
-      slug: 'led-downlight',
-      image_url: 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&q=80&w=600',
+      name_en: 'Magnetic Track Lights',
+      name_ar: 'إضاءة مغناطيسية',
+      slug: 'magnetic-light',
+      image_url: 'https://images.unsplash.com/photo-1526116638181-d787e552d669?auto=format&fit=crop&q=80&w=600',
     },
     {
       id: 'cat-3',
-      name_en: 'Track Lights',
-      name_ar: 'إضاءة المسار (تراك)',
-      slug: 'magnetic-light',
-      image_url: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=600',
-    },
-    {
-      id: 'cat-4',
-      name_en: 'Outdoor Lights',
-      name_ar: 'إضاءة خارجية',
-      slug: 'outdoor-lights',
-      image_url: 'https://images.unsplash.com/photo-1505843513577-22bb7d21e455?auto=format&fit=crop&q=80&w=600',
-    },
-    {
-      id: 'cat-5',
-      name_en: 'Chandeliers',
-      name_ar: 'ثريات فاخرة',
-      slug: 'chandelier',
-      image_url: 'https://images.unsplash.com/photo-1540932239986-30128078f3c5?auto=format&fit=crop&q=80&w=600',
-    },
-    {
-      id: 'cat-6',
-      name_en: 'Wall Lights',
-      name_ar: 'إضاءة جدارية',
-      slug: 'indoor-wall-light',
-      image_url: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&q=80&w=600',
-    },
-    {
-      id: 'cat-7',
       name_en: 'LED Strips',
       name_ar: 'شرائط LED',
       slug: 'led-strip-light',
-      image_url: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&q=80&w=600',
+      image_url: 'https://images.unsplash.com/photo-1618403323851-ac3d38029495?auto=format&fit=crop&q=80&w=600',
     },
     {
-      id: 'cat-8',
+      id: 'cat-4',
       name_en: 'Panel Lights',
       name_ar: 'إضاءة بانل',
       slug: 'led-panel-light',
-      image_url: 'https://images.unsplash.com/photo-1563461660947-507ef49e9c47?auto=format&fit=crop&q=80&w=600',
+      image_url: 'https://images.unsplash.com/photo-1641159930908-e9eb9ccdc002?auto=format&fit=crop&q=80&w=600',
+    },
+    {
+      id: 'cat-5',
+      name_en: 'Switches & Sockets',
+      name_ar: 'مفاتيح وأفياش',
+      slug: 'switches-sockets',
+      image_url: 'https://images.unsplash.com/photo-1698768144235-b5dbe3043bb2?auto=format&fit=crop&q=80&w=600',
+    },
+    {
+      id: 'cat-6',
+      name_en: 'Breakers & Boards',
+      name_ar: 'قواطع ولوحات توزيع',
+      slug: 'breakers-distribution',
+      image_url: 'https://images.unsplash.com/photo-1544724569-5f546fd6f2b5?auto=format&fit=crop&q=80&w=600',
+    },
+    {
+      id: 'cat-7',
+      name_en: 'Cables & Wires',
+      name_ar: 'كابلات وأسلاك',
+      slug: 'cables-wires',
+      image_url: 'https://images.unsplash.com/photo-1599256871679-6a154745680b?auto=format&fit=crop&q=80&w=600',
+    },
+    {
+      id: 'cat-8',
+      name_en: 'Ceiling Lighting',
+      name_ar: 'إضاءة السقف',
+      slug: 'ceiling-general-lighting',
+      image_url: 'https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?auto=format&fit=crop&q=80&w=600',
     },
   ];
 

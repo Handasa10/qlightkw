@@ -138,7 +138,11 @@ const ProductDetail = () => {
     : '';
   const seoImages = product ? (images.length ? images : [{ url: '' } as ProductImage]).map((img) => resolveImageUrl(img.url, 'product', product.slug)) : [];
   useSEO({
-    title: product ? (isRTL ? `${seoName} | السعر في الكويت ${seoPrice.toFixed(3)} د.ك` : `${seoName} | Price in Kuwait ${seoPrice.toFixed(3)} KWD`) : (isRTL ? 'منتج' : 'Product'),
+    title: product
+      ? (seoPrice > 0
+        ? (isRTL ? `${seoName} | السعر في الكويت ${seoPrice.toFixed(3)} د.ك` : `${seoName} | Price in Kuwait ${seoPrice.toFixed(3)} KWD`)
+        : (isRTL ? `${seoName} | كواليتي لايت الكويت` : `${seoName} | Buy in Kuwait`))
+      : (isRTL ? 'منتج' : 'Product'),
     description: seoDescription,
     image: seoImages[0],
     type: 'product',
@@ -375,7 +379,7 @@ const ProductDetail = () => {
 
   const handleWhatsAppOrder = () => {
     if (!displayProduct) return;
-    const priceText = finalPrice.toFixed(3);
+    const priceText = onRequest ? (isRTL ? 'أرجو إرسال السعر' : 'please send the price') : finalPrice.toFixed(3);
     const message = isRTL
       ? `مرحباً كواليتي لايت، أود الاستفسار عن منتج:\n*${name}*\nالرمز: ${displayProduct.sku || 'N/A'}\nالسعر الحالي: ${priceText} د.ك\nالرابط: ${window.location.href}`
       : `Hello QUALITY LIGHT, I would like to inquire about this product:\n*${name}*\nSKU: ${displayProduct.sku || 'N/A'}\nPrice: ${priceText} KWD\nLink: ${window.location.href}`;
@@ -432,6 +436,8 @@ const ProductDetail = () => {
   const basePrice = displayProduct.sale_price || displayProduct.base_price;
   const priceModifier = activeVariation?.price_modifier || 0;
   const finalPrice = basePrice + priceModifier;
+  // Items without a price in the inventory are sold on request via WhatsApp
+  const onRequest = !(finalPrice > 0);
   const originalPrice = displayProduct.sale_price ? displayProduct.base_price + priceModifier : null;
   const discount = originalPrice ? Math.round(((originalPrice - finalPrice) / originalPrice) * 100) : 0;
 
@@ -441,6 +447,19 @@ const ProductDetail = () => {
 
   // Specifications parsed via helper fallbacks
   const specs = parseProductSpecs(displayProduct.specifications, displayProduct.slug, displayProduct.name_en);
+
+  const specRows = ([
+    [isRTL ? "الجهد الكهربائي" : "Input Voltage", specs.voltage],
+    [isRTL ? "القدرة بالواط" : "Power/Wattage", specs.wattage],
+    [isRTL ? "شدة الإضاءة (لومن)" : "Luminous Flux (Lumens)", specs.lumens],
+    [isRTL ? "درجة حرارة اللون (CCT)" : "Color Temperature (CCT)", specs.cct],
+    [isRTL ? "زاوية انتشار الضوء" : "Beam Angle", specs.beam_angle],
+    [isRTL ? "مستوى الحماية (IP)" : "IP Protection Rating", specs.ip_rating],
+    [isRTL ? "قطر فتحة الجبس (Cutout)" : "Ceiling Cutout Size", specs.cutout_size],
+    [isRTL ? "هيكل الجسم والعدسة" : "Body Material", specs.material],
+    [isRTL ? "مدة الكفالة" : "Warranty Period", specs.warranty],
+    [isRTL ? "رمز المنتج" : "Item Code", displayProduct.sku || ''],
+  ] as Array<[string, string]>).filter(([, value]) => value);
 
   // Dynamic application recommendations based on product slug/type
   const getRecommendedApps = () => {
@@ -579,40 +598,6 @@ const ProductDetail = () => {
               </div>
             )}
 
-            {/* 1. TECHNICAL DOCUMENTATION SECTION */}
-            <div className="bg-card border border-border/80 rounded-2xl p-5 md:p-6 space-y-4">
-              <h3 className="font-bold text-sm md:text-base text-foreground flex items-center gap-2 border-b border-border/50 pb-2.5">
-                <FileText className="h-4.5 w-4.5 text-primary" />
-                <span>{isRTL ? "الوثائق الهندسية والمواصفات" : "Technical Documents"}</span>
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <a 
-                  href={`/datasheet-${displayProduct.slug}.pdf`} 
-                  download 
-                  onClick={(e) => { e.preventDefault(); toast.success("Mock pdf download started!"); }}
-                  className="flex items-center justify-between p-3.5 bg-muted/40 hover:bg-primary/10 rounded-xl border border-border hover:border-primary/30 transition-all text-xs font-semibold text-muted-foreground hover:text-primary group"
-                >
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4.5 w-4.5 text-red-500 shrink-0" />
-                    <span>{isRTL ? "تحميل ورقة البيانات الفنية PDF" : "Download Tech Datasheet.pdf"}</span>
-                  </div>
-                  <Download className="h-4 w-4 shrink-0 transition-transform group-hover:translate-y-0.5" />
-                </a>
-                <a 
-                  href={`/install-${displayProduct.slug}.pdf`} 
-                  download 
-                  onClick={(e) => { e.preventDefault(); toast.success("Mock installation guide download started!"); }}
-                  className="flex items-center justify-between p-3.5 bg-muted/40 hover:bg-primary/10 rounded-xl border border-border hover:border-primary/30 transition-all text-xs font-semibold text-muted-foreground hover:text-primary group"
-                >
-                  <div className="flex items-center gap-2">
-                    <Wrench className="h-4.5 w-4.5 text-amber-500 shrink-0" />
-                    <span>{isRTL ? "دليل التركيب والكهرباء PDF" : "Installation Guide.pdf"}</span>
-                  </div>
-                  <Download className="h-4 w-4 shrink-0 transition-transform group-hover:translate-y-0.5" />
-                </a>
-              </div>
-            </div>
-
             {/* 2. GRAPHICAL CUTOUT / DIMENSIONS GUIDE */}
             {specs.cutout_size && !specs.cutout_size.toLowerCase().includes('n/a') && (
               <div className="bg-card border border-border/80 rounded-2xl p-5 md:p-6 text-center space-y-4">
@@ -666,10 +651,14 @@ const ProductDetail = () => {
                   {isRTL ? "السعر الكلي للمنتج" : "Total Product Price"}
                 </span>
                 <div className="flex items-baseline gap-2">
+                  {onRequest ? (
+                    <span className="text-2xl font-extrabold text-emerald-600">{isRTL ? 'السعر عند الطلب' : 'Price on request'}</span>
+                  ) : (
                   <span className="text-3xl font-extrabold text-primary">
                     {finalPrice.toFixed(3)} <span className="text-sm font-semibold">{t('currency', 'KWD')}</span>
                   </span>
-                  {originalPrice && (
+                  )}
+                  {!onRequest && originalPrice && (
                     <span className="text-sm text-muted-foreground line-through font-normal">
                       {originalPrice.toFixed(3)}
                     </span>
@@ -761,19 +750,19 @@ const ProductDetail = () => {
                   </Button>
                 </div>
 
-                {/* Add to Cart button */}
+                {/* Add to Cart button (price-on-request items are ordered through WhatsApp) */}
                 <Button 
-                  className="flex-1 rounded-2xl font-bold text-sm h-12 shadow-lg hover:shadow-primary/10 gap-2" 
+                  className={`flex-1 rounded-2xl font-bold text-sm h-12 shadow-lg hover:shadow-primary/10 gap-2 ${onRequest ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`} 
                   size="lg" 
-                  disabled={!inStock || isAddingToCart}
-                  onClick={handleAddToCart}
+                  disabled={!onRequest && (!inStock || isAddingToCart)}
+                  onClick={onRequest ? handleWhatsAppOrder : handleAddToCart}
                 >
                   {isAddingToCart ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
                     <ShoppingCart className="h-5 w-5 fill-black/5" />
                   )}
-                  <span>{isRTL ? "أضف لعربة التسوق" : "Add to Shopping Cart"}</span>
+                  <span>{onRequest ? (isRTL ? 'اطلب السعر عبر واتساب' : 'Ask for price on WhatsApp') : (isRTL ? "أضف لعربة التسوق" : "Add to Shopping Cart")}</span>
                 </Button>
                 
                 {/* Wishlist toggle */}
@@ -934,93 +923,21 @@ const ProductDetail = () => {
               </div>
             </div>
 
-            {/* 3. FREQUENTLY BOUGHT TOGETHER (UP-SELL BUNDLE MODULE) */}
-            <div className="bg-card border border-border/80 rounded-2xl p-5 md:p-6 space-y-4">
-              <h3 className="font-bold text-sm md:text-base text-foreground flex items-center gap-2 border-b border-border/50 pb-2.5">
-                <Layers className="h-4.5 w-4.5 text-primary" />
-                <span>{isRTL ? "عروض حزم إضافية متوافقة" : "Frequently Bought Together"}</span>
-              </h3>
-              
-              <div className="space-y-3.5">
-                {/* Main Product row */}
-                <div className="flex items-center gap-3">
-                  <div className="h-4 w-4 text-primary shrink-0 flex items-center justify-center">
-                    <CheckSquare className="h-4 w-4 fill-primary/10" />
-                  </div>
-                  <div className="flex-1 text-xs">
-                    <span className="font-bold text-foreground">{name}</span>
-                    <span className="text-muted-foreground block">
-                      {finalPrice.toFixed(3)} {t('currency', 'KWD')}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Driver Accessory row */}
-                <div className="flex items-center gap-3 cursor-pointer" onClick={() => setIncludeDriver(!includeDriver)}>
-                  <div className="h-4 w-4 text-primary shrink-0 flex items-center justify-center">
-                    {includeDriver ? <CheckSquare className="h-4 w-4 fill-primary/10" /> : <Square className="h-4 w-4 text-muted-foreground" />}
-                  </div>
-                  <div className="flex-1 text-xs">
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">
-                      {isRTL ? "محول كهربائي ذكي للشرائط والكشافات 150 واط" : "Modi Premium Smart LED Driver 150W"}
-                    </span>
-                    <span className="text-muted-foreground block">
-                      + {driverPrice.toFixed(3)} {t('currency', 'KWD')}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Channel Profile row */}
-                <div className="flex items-center gap-3 cursor-pointer" onClick={() => setIncludeChannel(!includeChannel)}>
-                  <div className="h-4 w-4 text-primary shrink-0 flex items-center justify-center">
-                    {includeChannel ? <CheckSquare className="h-4 w-4 fill-primary/10" /> : <Square className="h-4 w-4 text-muted-foreground" />}
-                  </div>
-                  <div className="flex-1 text-xs">
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">
-                      {isRTL ? "بروفايل ألومنيوم سطحي بطول مترين" : "Aluminum Profile Surface Channel 2M"}
-                    </span>
-                    <span className="text-muted-foreground block">
-                      + {profilePrice.toFixed(3)} {t('currency', 'KWD')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bundle calculations bar */}
-              <div className="bg-muted/40 p-4 rounded-xl border flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
-                    {isRTL ? "سعر الباقة الإجمالي" : "Total Bundle Price"}
-                  </span>
-                  <span className="text-lg font-extrabold text-foreground">
-                    {bundleTotal.toFixed(3)} {t('currency', 'KWD')}
-                  </span>
-                </div>
-                <Button 
-                  onClick={handleAddBundleToCart}
-                  className="rounded-xl h-10 font-bold text-xs bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-black shadow-sm gap-1.5"
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                  <span>{isRTL ? "أضف الباقة بالكامل للسلة" : "Add Bundle to Cart"}</span>
-                </Button>
-              </div>
-            </div>
-
             {/* Standard trust badges */}
             <div className="grid grid-cols-3 gap-4 pt-5 border-t text-center">
               <div className="flex flex-col items-center">
                 <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center mb-1 text-primary shadow-inner">
                   <Truck className="h-5 w-5" />
                 </div>
-                <p className="text-[11px] font-bold text-foreground">{t('product.freeShipping', 'Free Shipping')}</p>
-                <p className="text-[9px] text-muted-foreground mt-0.5">{isRTL ? "خلال 24 ساعة" : "Within 24 Hours"}</p>
+                <p className="text-[11px] font-bold text-foreground">{isRTL ? 'توصيل لكل الكويت' : 'Delivery Across Kuwait'}</p>
+                <p className="text-[9px] text-muted-foreground mt-0.5">{isRTL ? 'مع خيار التوصيل في نفس اليوم' : 'Same-day option available'}</p>
               </div>
               <div className="flex flex-col items-center">
                 <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center mb-1 text-primary shadow-inner">
                   <Shield className="h-5 w-5" />
                 </div>
-                <p className="text-[11px] font-bold text-foreground">{specs.warranty}</p>
-                <p className="text-[9px] text-muted-foreground mt-0.5">{isRTL ? "كفالة تبديل فوري" : "Instant Replacement"}</p>
+                <p className="text-[11px] font-bold text-foreground">{isRTL ? 'معرضنا في حولي' : 'Showroom in Hawalli'}</p>
+                <p className="text-[9px] text-muted-foreground mt-0.5">{isRTL ? 'شارع تونس' : 'Tunis Street'}</p>
               </div>
               <div className="flex flex-col items-center">
                 <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center mb-1 text-primary shadow-inner">
@@ -1050,50 +967,22 @@ const ProductDetail = () => {
               </TabsTrigger>
             </TabsList>
 
-            {/* TAB 1: Specs Table (Lightology inspired) */}
+            {/* TAB 1: Specs Table: only values we actually know for this product */}
             <TabsContent value="specifications" className="mt-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-xs md:text-sm">
-                <div className="flex justify-between py-2.5 border-b border-border/80">
-                  <span className="font-bold text-slate-500">{isRTL ? "الجهد الكهربائي" : "Input Voltage"}</span>
-                  <span className="text-foreground text-right">{specs.voltage}</span>
+              {specRows.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-xs md:text-sm">
+                  {specRows.map(([label, value]) => (
+                    <div key={label} className="flex justify-between py-2.5 border-b border-border/80">
+                      <span className="font-bold text-slate-500">{label}</span>
+                      <span className="text-foreground text-right">{value}</span>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex justify-between py-2.5 border-b border-border/80">
-                  <span className="font-bold text-slate-500">{isRTL ? "القدرة بالواط" : "Power/Wattage"}</span>
-                  <span className="text-foreground text-right">{specs.wattage}</span>
-                </div>
-                <div className="flex justify-between py-2.5 border-b border-border/80">
-                  <span className="font-bold text-slate-500">{isRTL ? "شدة الإضاءة (لومن)" : "Luminous Flux (Lumens)"}</span>
-                  <span className="text-foreground text-right">{specs.lumens}</span>
-                </div>
-                <div className="flex justify-between py-2.5 border-b border-border/80">
-                  <span className="font-bold text-slate-500">{isRTL ? "درجة حرارة اللون (CCT)" : "Color Temperature (CCT)"}</span>
-                  <span className="text-foreground text-right">{specs.cct}</span>
-                </div>
-                <div className="flex justify-between py-2.5 border-b border-border/80">
-                  <span className="font-bold text-slate-500">{isRTL ? "زاوية انتشار الضوء" : "Beam Angle"}</span>
-                  <span className="text-foreground text-right">{specs.beam_angle}</span>
-                </div>
-                <div className="flex justify-between py-2.5 border-b border-border/80">
-                  <span className="font-bold text-slate-500">{isRTL ? "مؤشر تجسيد الألوان (CRI)" : "Color Rendering Index (CRI)"}</span>
-                  <span className="text-foreground text-right">CRI &gt; 90 (High Fidelity)</span>
-                </div>
-                <div className="flex justify-between py-2.5 border-b border-border/80">
-                  <span className="font-bold text-slate-500">{isRTL ? "مستوى الحماية (IP)" : "IP Protection Rating"}</span>
-                  <span className="text-foreground text-right">{specs.ip_rating}</span>
-                </div>
-                <div className="flex justify-between py-2.5 border-b border-border/80">
-                  <span className="font-bold text-slate-500">{isRTL ? "قطر فتحة الجبس (Cutout)" : "Ceiling Cutout Size"}</span>
-                  <span className="text-foreground text-right">{specs.cutout_size}</span>
-                </div>
-                <div className="flex justify-between py-2.5 border-b border-border/80">
-                  <span className="font-bold text-slate-500">{isRTL ? "هيكل الجسم والعدسة" : "Body Material"}</span>
-                  <span className="text-foreground text-right">{specs.material}</span>
-                </div>
-                <div className="flex justify-between py-2.5 border-b border-border/80">
-                  <span className="font-bold text-slate-500">{isRTL ? "مدة الكفالة" : "Warranty Period"}</span>
-                  <span className="text-foreground text-right">{specs.warranty}</span>
-                </div>
-              </div>
+              ) : (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  {isRTL ? 'للمواصفات الفنية التفصيلية، تواصل معنا عبر واتساب.' : 'For detailed technical specifications, contact us on WhatsApp.'}
+                </p>
+              )}
             </TabsContent>
 
             {/* TAB 2: Description */}

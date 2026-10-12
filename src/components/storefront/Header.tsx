@@ -109,13 +109,13 @@ const Header = () => {
 
   const categories = [
     { slug: 'led-spot-light', labelEn: 'Spotlights', labelAr: 'إضاءة سبوت لايت' },
-    { slug: 'led-downlight', labelEn: 'Downlights', labelAr: 'إضاءة داون لايت' },
-    { slug: 'magnetic-light', labelEn: 'Track Lights', labelAr: 'إضاءة المسار (تراك)' },
-    { slug: 'outdoor-lights', labelEn: 'Outdoor Lights', labelAr: 'إضاءة خارجية' },
-    { slug: 'chandelier', labelEn: 'Chandeliers', labelAr: 'ثريات فاخرة' },
-    { slug: 'indoor-wall-light', labelEn: 'Wall Lights', labelAr: 'إضاءة جدارية' },
+    { slug: 'magnetic-light', labelEn: 'Magnetic Track Lights', labelAr: 'إضاءة مغناطيسية' },
     { slug: 'led-strip-light', labelEn: 'LED Strips', labelAr: 'شرائط LED' },
     { slug: 'led-panel-light', labelEn: 'Panel Lights', labelAr: 'إضاءة بانل' },
+    { slug: 'switches-sockets', labelEn: 'Switches & Sockets', labelAr: 'مفاتيح وأفياش' },
+    { slug: 'breakers-distribution', labelEn: 'Breakers & Boards', labelAr: 'قواطع ولوحات توزيع' },
+    { slug: 'cables-wires', labelEn: 'Cables & Wires', labelAr: 'كابلات وأسلاك' },
+    { slug: 'ceiling-general-lighting', labelEn: 'Ceiling Lighting', labelAr: 'إضاءة السقف' },
   ];
 
   return (

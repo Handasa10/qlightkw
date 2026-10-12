@@ -72,7 +72,8 @@ export function productSchema(p: {
           reviewBody: r.body,
         }))
       : undefined,
-    offers: {
+    // Price-on-request items have no public price, so no Offer
+    offers: !(p.price > 0) ? undefined : {
       '@type': 'Offer',
       url: p.url,
       priceCurrency: 'KWD',

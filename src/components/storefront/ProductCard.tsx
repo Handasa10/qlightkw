@@ -57,13 +57,23 @@ const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(({ product, ind
 
   const name = language === 'ar' ? product.name_ar : product.name_en;
   const price = product.sale_price || product.base_price;
+  // Items without a price in the inventory are sold on request via WhatsApp
+  const onRequest = !(price > 0);
   const originalPrice = product.sale_price ? product.base_price : null;
   const discount = originalPrice 
     ? Math.round(((originalPrice - price) / originalPrice) * 100) 
     : 0;
 
-  // Retrieve technical specifications using helper fallbacks
+  // Only real specifications (stored, or stated in the product name)
   const specs = parseProductSpecs(product.specifications, product.slug, product.name_en);
+  const specItems = [
+    { key: 'wattage', icon: Zap, title: 'Wattage', value: specs.wattage },
+    { key: 'lumens', icon: Lightbulb, title: 'Lumens', value: specs.lumens },
+    { key: 'cct', icon: Sun, title: 'Color Temperature', value: specs.cct.split(' ')[0] },
+    { key: 'ip', icon: Shield, title: 'IP Protection Rating', value: specs.ip_rating },
+    { key: 'cutout', icon: Maximize2, title: 'Cutout Diameter', value: specs.cutout_size.toLowerCase().includes('n/a') ? '' : specs.cutout_size },
+    { key: 'warranty', icon: Award, title: 'Warranty', value: specs.warranty },
+  ].filter((item) => item.value);
 
   // Check if there's a different secondary image
   const hasSecondaryImage = product.secondary_image_url && product.secondary_image_url !== product.image_url;
@@ -109,8 +119,8 @@ const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(({ product, ind
     e.stopPropagation();
     
     const message = isRTL
-      ? `السلام عليكم، أود الاستفسار عن منتج: *${name}*\nالسعر: ${price.toFixed(3)} د.ك\nالرابط: ${window.location.origin}/product/${product.slug}`
-      : `Hello, I would like to inquire about the product: *${name}*\nPrice: ${price.toFixed(3)} KWD\nLink: ${window.location.origin}/product/${product.slug}`;
+      ? `السلام عليكم، أود الاستفسار عن منتج: *${name}*\n${onRequest ? 'أرجو إرسال السعر' : `السعر: ${price.toFixed(3)} د.ك`}\nالرابط: ${window.location.origin}/product/${product.slug}`
+      : `Hello, I would like to inquire about the product: *${name}*\n${onRequest ? 'Please send me the price' : `Price: ${price.toFixed(3)} KWD`}\nLink: ${window.location.origin}/product/${product.slug}`;
 
     const phoneNumber = '96551111725';
     const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
@@ -215,55 +225,36 @@ const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(({ product, ind
             
             {/* Price section */}
             <div className="flex items-baseline gap-2 mt-1.5">
+              {onRequest ? (
+                <span className="text-sm font-bold text-emerald-600">{isRTL ? 'السعر عند الطلب' : 'Price on request'}</span>
+              ) : (
               <span className="text-base font-extrabold text-primary">
                 {price.toFixed(3)} <span className="text-[10px] font-normal">{t('currency', 'KWD')}</span>
               </span>
-              {originalPrice && (
+              )}
+              {!onRequest && originalPrice && (
                 <span className="text-xs text-muted-foreground line-through font-normal">
                   {originalPrice.toFixed(3)}
                 </span>
               )}
             </div>
 
-            {/* TECHNICAL SPECIFICATIONS GRID (CRITICAL REQUIREMENT) */}
-            <div className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border/50 pt-3 mt-3 text-[10px] text-muted-foreground">
-              {/* Wattage */}
-              <div className="flex items-center gap-1.5 min-w-0" title="Wattage">
-                <Zap className="h-3.5 w-3.5 text-amber-500/80 shrink-0" />
-                <span className="truncate font-medium">{specs.wattage}</span>
+            {/* Technical specifications (only those we actually know) */}
+            {specItems.length > 0 && (
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border/50 pt-3 mt-3 text-[10px] text-muted-foreground">
+                {specItems.map(({ key, icon: Icon, title, value }) => (
+                  <div key={key} className="flex items-center gap-1.5 min-w-0" title={title}>
+                    <Icon className="h-3.5 w-3.5 text-amber-500/80 shrink-0" />
+                    <span className="truncate font-medium">{value}</span>
+                  </div>
+                ))}
               </div>
-              {/* Lumens */}
-              <div className="flex items-center gap-1.5 min-w-0" title="Lumens">
-                <Lightbulb className="h-3.5 w-3.5 text-amber-500/80 shrink-0" />
-                <span className="truncate font-medium">{specs.lumens}</span>
-              </div>
-              {/* Color Temp (CCT) */}
-              <div className="flex items-center gap-1.5 min-w-0" title="Color Temperature">
-                <Sun className="h-3.5 w-3.5 text-amber-500/80 shrink-0" />
-                <span className="truncate font-medium">{specs.cct.split(' ')[0]}</span>
-              </div>
-              {/* IP Rating */}
-              <div className="flex items-center gap-1.5 min-w-0" title="IP Protection Rating">
-                <Shield className="h-3.5 w-3.5 text-amber-500/80 shrink-0" />
-                <span className="truncate font-medium">{specs.ip_rating}</span>
-              </div>
-              {/* Cutout Size (only shown if applicable) */}
-              {specs.cutout_size && !specs.cutout_size.toLowerCase().includes('n/a') && (
-                <div className="flex items-center gap-1.5 min-w-0" title="Cutout Diameter">
-                  <Maximize2 className="h-3.5 w-3.5 text-amber-500/80 shrink-0" />
-                  <span className="truncate font-medium">{specs.cutout_size}</span>
-                </div>
-              )}
-              {/* Warranty */}
-              <div className="flex items-center gap-1.5 min-w-0" title="Warranty">
-                <Award className="h-3.5 w-3.5 text-amber-500/80 shrink-0" />
-                <span className="truncate font-medium">{specs.warranty}</span>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Action CTAs (Add to Cart & WhatsApp Inquiry) - ALWAYS VISIBLE for Mobile Optimization */}
           <div className="flex flex-col gap-2 pt-1 border-t border-border/30">
+            {!onRequest && (
             <Button
               size="sm"
               onClick={handleAddToCart}
@@ -279,6 +270,7 @@ const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(({ product, ind
                 </>
               )}
             </Button>
+            )}
             <Button
               size="sm"
               variant="outline"
@@ -286,7 +278,7 @@ const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(({ product, ind
               className="w-full h-9 rounded-xl font-bold text-xs border-emerald-600/30 hover:border-emerald-600 text-emerald-600 bg-emerald-600/5 hover:bg-emerald-600/10 gap-1.5"
             >
               <MessageCircle className="h-3.5 w-3.5" />
-              <span>{isRTL ? "استفسار واتساب" : "WhatsApp Inquiry"}</span>
+              <span>{onRequest ? (isRTL ? 'اطلب السعر عبر واتساب' : 'Ask for price on WhatsApp') : (isRTL ? "استفسار واتساب" : "WhatsApp Inquiry")}</span>
             </Button>
           </div>
 
