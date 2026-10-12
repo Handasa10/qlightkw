@@ -124,42 +124,47 @@ const Shop = () => {
     const loadStoreData = async () => {
       setLoading(true);
       try {
-        const [categoriesRes, brandsRes, productsRes] = await Promise.all([
+        // Supabase returns at most 1000 rows per request, so load the catalog page by page.
+        // Photos come embedded with each product (a long "id in (...)" list breaks past ~1000 ids).
+        const PAGE = 1000;
+        const loadProducts = async () => {
+          const rows: any[] = [];
+          for (let from = 0; ; from += PAGE) {
+            const { data, error } = await supabase
+              .from('products')
+              .select('id, name_en, name_ar, slug, base_price, sale_price, is_new, is_bestseller, is_featured, category_id, brand_id, specifications, product_images(url, is_primary, sort_order)')
+              .eq('is_active', true)
+              .order('id')
+              .range(from, from + PAGE - 1);
+            if (error) throw error;
+            rows.push(...(data || []));
+            if (!data || data.length < PAGE) break;
+          }
+          return rows;
+        };
+
+        const [categoriesRes, brandsRes, productRows] = await Promise.all([
           supabase.from('categories').select('id, name_en, name_ar, slug').eq('is_active', true),
           supabase.from('brands').select('id, name, name_ar').eq('is_active', true),
-          supabase.from('products').select('id, name_en, name_ar, slug, base_price, sale_price, is_new, is_bestseller, is_featured, category_id, brand_id, specifications').eq('is_active', true)
+          loadProducts(),
         ]);
 
         if (categoriesRes.data) setCategories(categoriesRes.data);
         if (brandsRes.data) setBrands(brandsRes.data);
-        
-        if (productsRes.data) {
-          // Fetch product images
-          const pIds = productsRes.data.map(p => p.id);
-          if (pIds.length > 0) {
-            const { data: images } = await supabase
-              .from('product_images')
-              .select('product_id, url, is_primary, sort_order')
-              .in('product_id', pIds)
-              .order('is_primary', { ascending: false })
-              .order('sort_order', { ascending: true });
 
-            const productsWithImages = productsRes.data.map(product => {
-              const productImages = images?.filter(img => img.product_id === product.id) || [];
-              const primaryImage = productImages.find(img => img.is_primary) || productImages[0];
-              const secondaryImage = productImages.find(img => !img.is_primary && img.url !== primaryImage?.url) || productImages[1];
-              
-              return {
-                ...product,
-                image_url: resolveImageUrl(primaryImage?.url, 'product', product.slug),
-                secondary_image_url: resolveSecondaryImageUrl(secondaryImage?.url, product.slug)
-              };
-            });
-            setAllProducts(productsWithImages);
-          } else {
-            setAllProducts([]);
-          }
-        }
+        const productsWithImages = productRows.map(({ product_images, ...product }) => {
+          const productImages = [...(product_images || [])].sort(
+            (a: any, b: any) => Number(!!b.is_primary) - Number(!!a.is_primary) || (a.sort_order ?? 0) - (b.sort_order ?? 0)
+          );
+          const primaryImage = productImages[0];
+          const secondaryImage = productImages.find((img: any) => img.url !== primaryImage?.url);
+          return {
+            ...product,
+            image_url: resolveImageUrl(primaryImage?.url, 'product', product.slug),
+            secondary_image_url: resolveSecondaryImageUrl(secondaryImage?.url, product.slug),
+          };
+        });
+        setAllProducts(productsWithImages);
       } catch (err) {
         console.error("Error loading store catalog:", err);
       } finally {

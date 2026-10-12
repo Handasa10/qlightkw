@@ -82,56 +82,49 @@ export default function ProductsPage() {
   const { data: products, isLoading } = useQuery({
     queryKey: ['admin-products', searchQuery],
     queryFn: async (): Promise<Product[]> => {
-      let query = supabase
-        .from('products')
-        .select(`
-          id,
-          sku,
-          name_en,
-          name_ar,
-          slug,
-          base_price,
-          sale_price,
-          stock_quantity,
-          is_featured,
-          is_new,
-          is_active,
-          created_at,
-          categories:category_id (name_en),
-          brands:brand_id (name)
-        `)
-        .order('created_at', { ascending: false });
+      // Load page by page (Supabase caps responses at 1000 rows); photos are embedded per product
+      const PAGE = 1000;
+      const rows: any[] = [];
+      for (let from = 0; ; from += PAGE) {
+        let query = supabase
+          .from('products')
+          .select(`
+            id,
+            sku,
+            name_en,
+            name_ar,
+            slug,
+            base_price,
+            sale_price,
+            stock_quantity,
+            is_featured,
+            is_new,
+            is_active,
+            created_at,
+            categories:category_id (name_en),
+            brands:brand_id (name),
+            product_images (url, is_primary, sort_order)
+          `)
+          .order('created_at', { ascending: false })
+          .order('id')
+          .range(from, from + PAGE - 1);
 
-      // Apply search filter
-      if (searchQuery) {
-        query = query.or(`name_en.ilike.%${searchQuery}%,name_ar.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`);
+        if (searchQuery) {
+          query = query.or(`name_en.ilike.%${searchQuery}%,name_ar.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        rows.push(...(data || []));
+        if (!data || data.length < PAGE) break;
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      
-      // Fetch primary images for all products
-      const productIds = (data || []).map((p: any) => p.id);
-      if (productIds.length > 0) {
-        const { data: images } = await supabase
-          .from('product_images')
-          .select('product_id, url, is_primary')
-          .in('product_id', productIds)
-          .order('is_primary', { ascending: false })
-          .order('sort_order', { ascending: true });
-        
-        // Map images to products - prioritize primary image
-        return (data || []).map((product: any) => {
-          const productImages = images?.filter(img => img.product_id === product.id) || [];
-          const primaryImage = productImages.find(img => img.is_primary) || productImages[0];
-          return {
-            ...product,
-            primary_image_url: primaryImage?.url || null
-          };
-        }) as Product[];
-      }
-      
-      return (data as unknown as Product[]) || [];
+      return rows.map(({ product_images, ...product }: any) => {
+        const images = [...(product_images || [])].sort(
+          (a: any, b: any) => Number(!!b.is_primary) - Number(!!a.is_primary) || (a.sort_order ?? 0) - (b.sort_order ?? 0)
+        );
+        return { ...product, primary_image_url: images[0]?.url || null };
+      }) as Product[];
     },
   });
 
