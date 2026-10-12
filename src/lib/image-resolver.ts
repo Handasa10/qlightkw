@@ -324,11 +324,10 @@ export function resolveSecondaryImageUrl(
   primarySlug: string = ''
 ): string {
   if (url && !isBrokenUrl(url) && !url.startsWith('/images/products/')) return url;
-  if (primarySlug && PRODUCT_SLUG_IMAGE_MAP[primarySlug]) {
-    return PRODUCT_SLUG_SECONDARY_MAP[primarySlug] || PRODUCT_SLUG_IMAGE_MAP[primarySlug];
+  if (primarySlug && PRODUCT_SLUG_SECONDARY_MAP[primarySlug]) {
+    return PRODUCT_SLUG_SECONDARY_MAP[primarySlug];
   }
-  const images = LOCAL_IMAGES.products;
-  // Use a different hash offset to get a different image
-  const hash = simpleHash(primarySlug + '_secondary');
-  return images[hash % images.length];
+  // No real second photo: return nothing so cards skip the hover swap instead of
+  // flashing an unrelated stock image
+  return '';
 }
