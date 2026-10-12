@@ -67,6 +67,7 @@ import { normalizeStorageUrl } from '@/lib/storage';
 import { resolveImageUrl, resolveSecondaryImageUrl } from '@/lib/image-resolver';
 import { useSEO } from '@/hooks/useSEO';
 import { productSchema, breadcrumbSchema, absoluteUrl } from '@/lib/seo';
+import ProductReviews, { useProductReviews } from '@/components/storefront/ProductReviews';
 
 interface ProductVariation {
   id: string;
@@ -128,6 +129,7 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(null);
+  const { data: productReviews = [] } = useProductReviews(product?.id);
   const seoName = product ? (isRTL ? product.name_ar || product.name_en : product.name_en) : '';
   const seoPrice = product ? (product.sale_price || product.base_price) : 0;
   const seoDescription = product
@@ -149,6 +151,7 @@ const ProductDetail = () => {
         price: seoPrice,
         inStock: product.stock_quantity === null || product.stock_quantity > 0,
         url: absoluteUrl(`/product/${product.slug}`, language),
+        reviews: productReviews,
       }),
       breadcrumbSchema([
         { name: isRTL ? 'الرئيسية' : 'Home', url: absoluteUrl('/', language) },
@@ -1043,7 +1046,7 @@ const ProductDetail = () => {
                 {t('product.description', 'Description')}
               </TabsTrigger>
               <TabsTrigger value="reviews" className="rounded-none bg-transparent text-sm md:text-base font-bold pb-3 px-1 border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary">
-                {t('product.reviews', 'Reviews')}
+                {t('product.reviews', 'Reviews')}{productReviews.length > 0 ? ` (${productReviews.length})` : ''}
               </TabsTrigger>
             </TabsList>
 
@@ -1101,10 +1104,8 @@ const ProductDetail = () => {
             </TabsContent>
 
             {/* TAB 3: Reviews */}
-            <TabsContent value="reviews" className="mt-0 text-center py-6">
-              <p className="text-muted-foreground text-xs md:text-sm">
-                {isRTL ? "لا توجد تقييمات لهذا المنتج بعد. كن أول من يكتب تقييماً!" : "No reviews yet. Be the first to write a review!"}
-              </p>
+            <TabsContent value="reviews" className="mt-0 py-6">
+              {product && <ProductReviews productId={product.id} />}
             </TabsContent>
           </Tabs>
         </div>

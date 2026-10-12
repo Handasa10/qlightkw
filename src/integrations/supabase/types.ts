@@ -1037,6 +1037,62 @@ export type Database = {
           },
         ]
       }
+      product_reviews: {
+        Row: {
+          id: string
+          product_id: string
+          user_id: string
+          order_id: string | null
+          rating: number
+          title: string | null
+          body: string
+          author_name: string
+          language: string
+          status: string
+          admin_reply: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          product_id: string
+          user_id: string
+          order_id?: string | null
+          rating: number
+          title?: string | null
+          body: string
+          author_name: string
+          language?: string
+          status?: string
+          admin_reply?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          product_id?: string
+          user_id?: string
+          order_id?: string | null
+          rating?: number
+          title?: string | null
+          body?: string
+          author_name?: string
+          language?: string
+          status?: string
+          admin_reply?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_tags: {
         Row: {
           created_at: string | null
@@ -1725,6 +1781,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      can_review_product: { Args: { _product_id: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
