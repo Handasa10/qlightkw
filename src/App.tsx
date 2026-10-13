@@ -74,6 +74,7 @@ const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
 const AdminTestimonials = lazy(() => import("./pages/admin/AdminTestimonials"));
 const AdminReviews = lazy(() => import("./pages/admin/AdminReviews"));
 const AdminQuotes = lazy(() => import("./pages/admin/AdminQuotes"));
+const AdminPhotoBot = lazy(() => import("./pages/admin/AdminPhotoBot"));
 const ProductFormPage = lazy(() => import("./pages/admin/ProductForm"));
 const AdminBlogPosts = lazy(() => import("./pages/admin/BlogPosts"));
 const AdminBlogDrafts = lazy(() => import("./pages/admin/BlogDrafts"));
@@ -159,6 +160,7 @@ const AnimatedRoutes = () => {
             <Route path="testimonials" element={<AdminTestimonials />} />
             <Route path="reviews" element={<AdminReviews />} />
             <Route path="quotes" element={<AdminQuotes />} />
+            <Route path="photo-bot" element={<AdminPhotoBot />} />
             <Route path="newsletter" element={<AdminNewsletterSubscribers />} />
             <Route path="theme-builder" element={<AdminThemeBuilder />} />
             <Route path="storage-migration" element={<AdminStorageMigration />} />
