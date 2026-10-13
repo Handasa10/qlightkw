@@ -12,8 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { parseProductSpecs } from '@/lib/spec-helper';
 import {
   AlertDialog,
@@ -26,14 +24,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import {
   Heart,
@@ -41,7 +31,6 @@ import {
   Share2,
   Minus,
   Plus,
-  Check,
   Truck,
   Shield,
   RotateCcw,
@@ -168,41 +157,9 @@ const ProductDetail = () => {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // RFQ Modal State
-  const [isRfqOpen, setIsRfqOpen] = useState(false);
-  const [rfqSubmitted, setRfqSubmitted] = useState(false);
-  const [rfqLoading, setRfqLoading] = useState(false);
-  const [rfqData, setRfqData] = useState({
-    contractorName: '',
-    companyName: '',
-    email: '',
-    phone: '',
-    quantity: '20',
-    notes: ''
-  });
-
   // Bundle states (Frequently bought together)
   const [includeDriver, setIncludeDriver] = useState(true);
   const [includeChannel, setIncludeChannel] = useState(false);
-
-  const handleRfqChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setRfqData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleRfqSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!rfqData.contractorName || !rfqData.phone || !rfqData.email) {
-      toast.error(isRTL ? "يرجى ملء الحقول المطلوبة" : "Please fill in all required fields");
-      return;
-    }
-    setRfqLoading(true);
-    // Simulate database insert or email triggers
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setRfqLoading(false);
-    setRfqSubmitted(true);
-    toast.success(isRTL ? "تم إرسال طلب عرض السعر للمشروع!" : "Project quote request submitted!");
-  };
 
   const handleDeleteProduct = async () => {
     if (!product) return;
@@ -790,138 +747,17 @@ const ProductDetail = () => {
                   <span>{isRTL ? "استفسار واتساب سريع" : "WhatsApp Inquiry"}</span>
                 </Button>
 
-                {/* contractor RFQ System Form Modal trigger */}
-                <Dialog open={isRfqOpen} onOpenChange={(open) => { setIsRfqOpen(open); if(open) setRfqSubmitted(false); }}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="rounded-2xl border-amber-600/30 hover:border-amber-600 text-amber-500 hover:text-amber-600 bg-amber-500/5 hover:bg-amber-500/10 font-bold text-xs sm:text-sm h-12 gap-2"
-                    >
-                      <Building2 className="h-4.5 w-4.5" />
-                      <span>{isRTL ? "طلب عرض سعر للمشروع B2B" : "Request Quote (RFQ)"}</span>
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[480px] bg-slate-900 border border-slate-800 text-slate-100 rounded-3xl p-6 md:p-8">
-                    {rfqSubmitted ? (
-                      <div className="text-center py-8 flex flex-col items-center justify-center gap-4">
-                        <div className="h-16 w-16 bg-amber-500/10 text-primary rounded-full flex items-center justify-center mb-2 shadow-inner">
-                          <Check className="h-10 w-10 animate-pulse text-primary" />
-                        </div>
-                        <h3 className="font-extrabold text-xl text-white">
-                          {isRTL ? "تم استلام طلب عرض السعر!" : "RFQ Received!"}
-                        </h3>
-                        <p className="text-sm text-slate-400 max-w-xs mx-auto leading-relaxed">
-                          {isRTL 
-                            ? "شكراً لك. سيقوم مهندس المبيعات والمشاريع بإعداد جدول عرض السعر وإرساله إلى بريدك الإلكتروني خلال 24 ساعة."
-                            : "Thank you. Our commercial project engineers will compile your custom wholesale price quotation and email it back to you within 24 hours."}
-                        </p>
-                        <Button onClick={() => setIsRfqOpen(false)} className="mt-4 rounded-xl px-6">
-                          {isRTL ? "إغلاق" : "Close"}
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <DialogHeader className={isRTL ? 'text-right' : 'text-left'}>
-                          <DialogTitle className="text-xl md:text-2xl font-extrabold text-white">
-                            {isRTL ? "بوابة تسعير المشاريع والمقاولين (RFQ)" : "Contractor Project RFQ Portal"}
-                          </DialogTitle>
-                          <DialogDescription className="text-slate-400 text-xs md:text-sm mt-1">
-                            {isRTL
-                              ? "املأ نموذج التسعير الخاص بالمقاولين والكميات الكبيرة للحصول على خصومات B2B استثنائية."
-                              : "Submit bulk quantity specifications to receive custom commercial B2B contract pricing."}
-                          </DialogDescription>
-                        </DialogHeader>
-
-                        <form onSubmit={handleRfqSubmit} className="space-y-4.5 mt-5">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="flex flex-col gap-1">
-                              <label className="text-xs font-bold text-slate-300">{isRTL ? "اسم المقاول *" : "Contact Name *"}</label>
-                              <Input
-                                type="text"
-                                name="contractorName"
-                                required
-                                value={rfqData.contractorName}
-                                onChange={handleRfqChange}
-                                className="bg-slate-950 border-slate-800 text-white rounded-xl h-10 text-xs"
-                              />
-                            </div>
-                            <div className="flex flex-col gap-1">
-                              <label className="text-xs font-bold text-slate-300">{isRTL ? "اسم الشركة" : "Company Name"}</label>
-                              <Input
-                                type="text"
-                                name="companyName"
-                                value={rfqData.companyName}
-                                onChange={handleRfqChange}
-                                className="bg-slate-950 border-slate-800 text-white rounded-xl h-10 text-xs"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col gap-1">
-                            <label className="text-xs font-bold text-slate-300">{isRTL ? "البريد الإلكتروني للشركة *" : "Corporate Email *"}</label>
-                            <Input
-                              type="email"
-                              name="email"
-                              required
-                              value={rfqData.email}
-                              onChange={handleRfqChange}
-                              className="bg-slate-950 border-slate-800 text-white rounded-xl h-10 text-xs"
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="flex flex-col gap-1">
-                              <label className="text-xs font-bold text-slate-300">{isRTL ? "الهاتف الكويتي *" : "Kuwait Phone *"}</label>
-                              <Input
-                                type="tel"
-                                name="phone"
-                                required
-                                value={rfqData.phone}
-                                onChange={handleRfqChange}
-                                className="bg-slate-950 border-slate-800 text-white rounded-xl h-10 text-xs text-left"
-                                dir="ltr"
-                              />
-                            </div>
-                            <div className="flex flex-col gap-1">
-                              <label className="text-xs font-bold text-slate-300">{isRTL ? "الكمية التقريبية *" : "Target Quantity *"}</label>
-                              <Input
-                                type="number"
-                                name="quantity"
-                                required
-                                value={rfqData.quantity}
-                                onChange={handleRfqChange}
-                                className="bg-slate-950 border-slate-800 text-white rounded-xl h-10 text-xs font-mono"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col gap-1">
-                            <label className="text-xs font-bold text-slate-300">{isRTL ? "مواصفات إضافية للمشروع" : "Additional Project Notes"}</label>
-                            <Textarea
-                              name="notes"
-                              value={rfqData.notes}
-                              onChange={handleRfqChange}
-                              placeholder={isRTL ? "تاريخ التوصيل المطلوب، شروط الدفع، التفاصيل الفنية..." : "Target delivery schedule, shipping destination, specific driver chips..."}
-                              className="bg-slate-950 border-slate-800 text-white rounded-xl min-h-[60px] text-xs resize-none"
-                            />
-                          </div>
-
-                          <Button
-                            type="submit"
-                            disabled={rfqLoading}
-                            className="w-full rounded-xl h-11 font-bold text-xs bg-primary text-black hover:bg-primary/95 shadow-lg mt-2"
-                          >
-                            {rfqLoading ? (
-                              <span>{isRTL ? "جاري إرسال الطلب..." : "Submitting RFQ..."}</span>
-                            ) : (
-                              <span>{isRTL ? "تقديم طلب تسعير المقاولين" : "Submit B2B RFQ"}</span>
-                            )}
-                          </Button>
-                        </form>
-                      </>
-                    )}
-                  </DialogContent>
-                </Dialog>
+                {/* Real quotation flow: opens the instant quote page with this product */}
+                <Button
+                  asChild
+                  variant="outline"
+                  className="rounded-2xl border-amber-600/30 hover:border-amber-600 text-amber-500 hover:text-amber-600 bg-amber-500/5 hover:bg-amber-500/10 font-bold text-xs sm:text-sm h-12 gap-2"
+                >
+                  <Link to={`/quote?sku=${encodeURIComponent(displayProduct.sku || "")}&qty=${quantity}`}>
+                    <Building2 className="h-4.5 w-4.5" />
+                    <span>{isRTL ? "اطلب عرض سعر رسمي" : "Request a quotation"}</span>
+                  </Link>
+                </Button>
               </div>
             </div>
 

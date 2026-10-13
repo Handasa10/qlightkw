@@ -102,6 +102,7 @@ const Header = () => {
     { href: '/', label: isRTL ? 'الرئيسية' : 'Home' },
     { href: '/shop', label: isRTL ? 'المتجر' : 'Shop' },
     { href: '/shop?offers=true', label: isRTL ? 'العروض' : 'Offers' },
+    { href: '/quote', label: isRTL ? 'عرض سعر' : 'Get a Quote' },
     { href: '/projects', label: isRTL ? 'المشاريع' : 'Projects' },
     { href: '/about', label: isRTL ? 'من نحن' : 'About Us' },
     { href: '/contact', label: isRTL ? 'اتصل بنا' : 'Contact' },
@@ -156,8 +157,8 @@ const Header = () => {
 
           {/* User Links / Actions */}
           <div className="hidden sm:flex items-center gap-3 text-[11px] md:text-xs">
-            <Link to="/shop?focus=contractor" className="hover:text-primary transition-colors font-medium border-b border-transparent hover:border-primary">
-              {isRTL ? "بوابة المقاولين" : "Contractor Portal"}
+            <Link to="/quote" className="hover:text-primary transition-colors font-medium border-b border-transparent hover:border-primary">
+              {isRTL ? "عرض سعر فوري للمقاولين" : "Instant Quote for Contractors"}
             </Link>
           </div>
         </div>

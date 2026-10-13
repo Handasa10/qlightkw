@@ -60,6 +60,7 @@ const mainNavItems = [
   { title: 'brands', url: '/admin/brands', icon: Tags },
   { title: 'tags', url: '/admin/tags', icon: Ticket },
   { title: 'orders', url: '/admin/orders', icon: ShoppingCart },
+  { title: 'quotes', url: '/admin/quotes', icon: FileText },
   { title: 'coupons', url: '/admin/coupons', icon: Tags },
   { title: 'users', url: '/admin/users', icon: Users },
 ];

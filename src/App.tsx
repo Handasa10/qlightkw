@@ -23,6 +23,8 @@ const Shop = lazy(() => import("./pages/Shop"));
 const Cart = lazy(() => import("./pages/Cart"));
 const Wishlist = lazy(() => import("./pages/Wishlist"));
 const ProductDetail = lazy(() => import("./pages/ProductDetail"));
+const Quote = lazy(() => import("./pages/Quote"));
+const QuoteView = lazy(() => import("./pages/QuoteView"));
 const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const About = lazy(() => import("./pages/About"));
@@ -71,6 +73,7 @@ const SettingsPage = lazy(() => import("./pages/admin/Settings"));
 const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
 const AdminTestimonials = lazy(() => import("./pages/admin/AdminTestimonials"));
 const AdminReviews = lazy(() => import("./pages/admin/AdminReviews"));
+const AdminQuotes = lazy(() => import("./pages/admin/AdminQuotes"));
 const ProductFormPage = lazy(() => import("./pages/admin/ProductForm"));
 const AdminBlogPosts = lazy(() => import("./pages/admin/BlogPosts"));
 const AdminBlogDrafts = lazy(() => import("./pages/admin/BlogDrafts"));
@@ -97,6 +100,8 @@ const AnimatedRoutes = () => {
           <Route path="/auth" element={<Auth />} />
           <Route path="/shop" element={<Shop />} />
           <Route path="/product/:slug" element={<ProductDetail />} />
+          <Route path="/quote" element={<Quote />} />
+          <Route path="/quote/:id" element={<QuoteView />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/checkout" element={<Checkout />} />
@@ -153,6 +158,7 @@ const AnimatedRoutes = () => {
             <Route path="projects" element={<AdminProjects />} />
             <Route path="testimonials" element={<AdminTestimonials />} />
             <Route path="reviews" element={<AdminReviews />} />
+            <Route path="quotes" element={<AdminQuotes />} />
             <Route path="newsletter" element={<AdminNewsletterSubscribers />} />
             <Route path="theme-builder" element={<AdminThemeBuilder />} />
             <Route path="storage-migration" element={<AdminStorageMigration />} />
