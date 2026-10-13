@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.smart-quote]
 verify_jwt = false
+
+[functions.photo-bot]
+verify_jwt = false

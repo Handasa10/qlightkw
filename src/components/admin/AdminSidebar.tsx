@@ -31,6 +31,7 @@ import {
   Newspaper,
   FilePenLine,
   Palette,
+  Camera,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -77,6 +78,7 @@ const contentNavItems = [
 ];
 
 const mediaNavItems = [
+  { title: 'photoBot', url: '/admin/photo-bot', icon: Camera },
   { title: 'images', url: '/admin/images', icon: Image },
   { title: 'imageValidator', url: '/admin/image-validator', icon: ImageOff },
   { title: 'imageCacher', url: '/admin/image-cacher', icon: CloudDownload },
