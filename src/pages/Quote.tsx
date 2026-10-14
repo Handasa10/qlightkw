@@ -292,6 +292,7 @@ export default function Quote() {
                             <button key={alt.sku} type="button" onClick={() => update(l.key, { match: alt, alternatives: [l.match, ...l.alternatives.filter((a) => a.sku !== alt.sku)].filter(Boolean) as QuoteProduct[] })}
                               className="rounded-full border px-2 py-0.5 text-[11px] hover:border-primary hover:text-primary">
                               {isRTL ? alt.name_ar : alt.name_en}
+                              <span className="ms-1 font-mono text-muted-foreground">{alt.price > 0 ? fmt(alt.price) : (isRTL ? 'يُؤكد' : 'TBC')}</span>
                             </button>
                           ))}
                           <ProductPicker isRTL={isRTL} onPick={(p) => update(l.key, { match: p })}>
@@ -302,12 +303,22 @@ export default function Quote() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 md:w-72 md:justify-end">
+                    <div className="flex items-center gap-3 md:w-96 md:justify-end">
+                      {/* Unit price, so the customer sees what each item costs */}
+                      <div className="w-28 text-end">
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{isRTL ? 'سعر الوحدة' : 'Unit price'}</p>
+                        <p className="font-mono text-sm">
+                          {l.match && l.match.price > 0 ? fmt(l.match.price) : <span className="text-emerald-600">{isRTL ? 'يُؤكد' : 'To confirm'}</span>}
+                        </p>
+                      </div>
                       <Input type="number" min={1} value={l.quantity} aria-label={isRTL ? 'الكمية' : 'Quantity'}
-                        onChange={(e) => update(l.key, { quantity: Math.max(1, Math.round(Number(e.target.value) || 1)) })} className="w-24" />
-                      <span className="w-28 text-end font-mono text-sm">
-                        {l.match && l.match.price > 0 ? `${fmt(l.match.price * l.quantity)} KWD` : <span className="text-emerald-600">{isRTL ? 'يُؤكد' : 'To confirm'}</span>}
-                      </span>
+                        onChange={(e) => update(l.key, { quantity: Math.max(1, Math.round(Number(e.target.value) || 1)) })} className="w-20" />
+                      <div className="w-28 text-end">
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{isRTL ? 'المجموع' : 'Total'}</p>
+                        <p className="font-mono text-sm font-semibold">
+                          {l.match && l.match.price > 0 ? `${fmt(l.match.price * l.quantity)} KWD` : <span className="font-normal text-emerald-600">{isRTL ? 'يُؤكد' : 'To confirm'}</span>}
+                        </p>
+                      </div>
                       <Button type="button" variant="ghost" size="icon" onClick={() => remove(l.key)} aria-label={isRTL ? 'حذف' : 'Remove'}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
