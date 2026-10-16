@@ -10,6 +10,7 @@
 
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.93.2";
 import { cropAndEnhance } from "./image.ts";
+import { searchCatalog, wordCount } from "./search.ts";
 import { errorStatus, requireAdmin } from "../_shared/auth.ts";
 
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
@@ -102,16 +103,15 @@ async function productById(id: string): Promise<Product | null> {
   };
 }
 
-async function searchProducts(text: string): Promise<Product[]> {
-  const term = text.replace(/[,()%*]/g, " ").trim().slice(0, 60);
-  if (term.length < 2) return [];
-  const { data } = await db.from("products")
-    .select("id")
-    .eq("is_active", true)
-    .or(`name_en.ilike.%${term}%,name_ar.ilike.%${term}%,sku.ilike.%${term}%`)
-    .limit(6);
-  const found = await Promise.all((data || []).map((r) => productById(r.id)));
-  return found.filter((p): p is Product => Boolean(p));
+// Word-by-word search (any order, Arabic variants, trade shorthand); `exact` is false when
+// no product contains every word and these are only the closest matches
+async function searchProducts(text: string): Promise<{ products: Product[]; exact: boolean }> {
+  const hits = await searchCatalog(db, text.slice(0, 80));
+  const found = await Promise.all(hits.map((h) => productById(h.id)));
+  return {
+    products: found.filter((p): p is Product => Boolean(p)),
+    exact: hits.length > 0 && hits[0].score >= wordCount(text),
+  };
 }
 
 // deno-lint-ignore no-explicit-any
@@ -483,8 +483,9 @@ async function handleMessage(msg: Record<string, any>) {
 
   // Plain text = search (for a pending photo, or to pick what to shoot next)
   const state = await getState(chat);
-  const results = await searchProducts(text);
-  if (!results.length) return say(chat, `No products match “${esc(text)}”. Try fewer words, the Arabic name or the code.`);
+  const { products: results, exact } = await searchProducts(text);
+  if (!results.length) return say(chat, `No products match “${esc(text)}”. Try a shorter name (e.g. “socket double”), the Arabic name (بلاك دبل) or the item code.`);
+  const intro = exact ? "" : `Nothing has every word of “${esc(text)}”, these are the closest:\n`;
 
   if (state.mode === "search" && state.job_id) {
     const { data: job } = await db.from("photo_bot_jobs").select("id, candidates, status").eq("id", state.job_id).maybeSingle();
@@ -493,10 +494,10 @@ async function handleMessage(msg: Record<string, any>) {
       const from = list.length;
       for (const p of results) if (!list.some((c) => c.product_id === p.id)) list.push(toCandidate(p, null, "search"));
       await db.from("photo_bot_jobs").update({ candidates: list.slice(0, 30) }).eq("id", job.id);
-      return say(chat, "Tap the right product for your photo:", candidateButtons(job.id, list.slice(0, 30), from));
+      return say(chat, `${intro}Tap the right product for your photo:`, candidateButtons(job.id, list.slice(0, 30), from));
     }
   }
-  return say(chat, "Tap a product, then send its photo:", results.map((p) => [{ text: `📸 ${p.name_en.slice(0, 45)} · ${p.sku}`, callback_data: `t:${p.id}` }]));
+  return say(chat, `${intro}Tap a product, then send its photo:`, results.map((p) => [{ text: `📸 ${p.name_en.slice(0, 45)} · ${p.sku}`, callback_data: `t:${p.id}` }]));
 }
 
 async function handleUpdate(update: Record<string, any>) {
