@@ -71,7 +71,10 @@ function dbVariants(word: string): string[] {
 export interface SearchHit { id: string; score: number }
 
 export async function searchCatalog(db: SupabaseClient, text: string, limit = 6): Promise<SearchHit[]> {
-  const words = normalize(text).split(" ").filter((w) => (w.length >= 2 || isNumber(w)) && !STOP.has(w)).slice(0, 6);
+  const all = normalize(text).split(" ").filter((w) => w.length >= 2 || isNumber(w));
+  // Common words ("ql", "led", "light") are ignored next to other words, but searched when alone
+  const meaningful = all.filter((w) => !STOP.has(w));
+  const words = (meaningful.length ? meaningful : all).slice(0, 6);
   if (!words.length) return [];
 
   // Each typed word becomes a group of acceptable spellings
@@ -93,12 +96,18 @@ export async function searchCatalog(db: SupabaseClient, text: string, limit = 6)
     .map((p) => {
       const hay = normalize(`${p.name_en} ${p.name_ar} ${p.sku}`);
       const score = groups.filter((g) => g.some((v) => contains(hay, v))).length;
-      return { id: p.id as string, score, len: hay.length };
+      // Tie-breaker: also matching the common words typed ("ql strip" puts QL strips first)
+      const extra = all.filter((w) => contains(hay, w)).length;
+      return { id: p.id as string, score, extra, len: hay.length };
     })
     .filter((h) => h.score > 0)
-    .sort((a, b) => b.score - a.score || a.len - b.len)
+    .sort((a, b) => b.score - a.score || b.extra - a.extra || a.len - b.len)
     .slice(0, limit)
     .map(({ id, score }) => ({ id, score }));
 }
 
-export const wordCount = (text: string) => normalize(text).split(" ").filter((w) => (w.length >= 2 || isNumber(w)) && !STOP.has(w)).length;
+export const wordCount = (text: string) => {
+  const all = normalize(text).split(" ").filter((w) => w.length >= 2 || isNumber(w));
+  const meaningful = all.filter((w) => !STOP.has(w));
+  return (meaningful.length ? meaningful : all).length;
+};
