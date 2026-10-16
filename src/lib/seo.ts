@@ -50,6 +50,9 @@ export function productSchema(p: {
   reviews?: Array<{ rating: number; body: string; author_name: string; created_at: string }>;
 }) {
   const reviews = p.reviews || [];
+  // Google rejects a Product with neither an offer nor reviews, so price-on-request items
+  // without reviews get no Product markup at all (their breadcrumbs remain)
+  if (!(p.price > 0) && !reviews.length) return null;
   const average = reviews.length ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
   return {
     '@context': 'https://schema.org',
