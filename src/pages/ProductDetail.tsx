@@ -135,6 +135,8 @@ const ProductDetail = () => {
     description: seoDescription,
     image: seoImages[0],
     type: 'product',
+    // Hidden or unknown products must not be indexed (they used to render the demo product)
+    noindex: !loading && !product,
     jsonLd: product ? [
       productSchema({
         name: seoName,
@@ -151,7 +153,7 @@ const ProductDetail = () => {
         { name: isRTL ? 'المتجر' : 'Shop', url: absoluteUrl('/shop', language) },
         { name: seoName, url: absoluteUrl(`/product/${product.slug}`, language) },
       ]),
-    ] : null,
+    ].filter(Boolean) as object[] : null,
   });
   const [quantity, setQuantity] = useState(1);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -447,6 +449,24 @@ const ProductDetail = () => {
               <Skeleton className="h-28 w-full bg-muted" />
               <Skeleton className="h-12 w-full bg-muted" />
             </div>
+          </div>
+        </div>
+      </StorefrontLayout>
+    );
+  }
+
+  // Unknown or hidden product: a real "not available" page (noindex) instead of the demo product
+  if (!product) {
+    return (
+      <StorefrontLayout>
+        <div className="container py-24 text-center">
+          <h1 className="text-2xl font-bold md:text-3xl">{isRTL ? 'هذا المنتج غير متوفر' : 'This product is no longer available'}</h1>
+          <p className="mx-auto mt-3 max-w-md text-muted-foreground">
+            {isRTL ? 'ربما تم استبداله بمنتج أحدث. تصفح المتجر أو اطلب عرض سعر وسنساعدك.' : 'It may have been replaced by a newer item. Browse the shop or request a quotation and we will help.'}
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Button asChild><Link to="/shop">{isRTL ? 'تصفح المتجر' : 'Browse the shop'}</Link></Button>
+            <Button asChild variant="outline"><Link to="/quote">{isRTL ? 'اطلب عرض سعر' : 'Request a quotation'}</Link></Button>
           </div>
         </div>
       </StorefrontLayout>
