@@ -11,6 +11,7 @@
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.93.2";
 import { cropAndEnhance } from "./image.ts";
 import { searchCatalog, wordCount } from "./search.ts";
+import { studioShot } from "./studio.ts";
 import { errorStatus, requireAdmin } from "../_shared/auth.ts";
 
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
@@ -216,6 +217,16 @@ function candidateButtons(jobId: string, candidates: Candidate[], from = 0) {
   }]);
 }
 
+const TOGGLE_TO_ORIGINAL = "📷 Use my original photo instead";
+const TOGGLE_TO_STUDIO = "✨ Use the AI studio photo";
+
+// deno-lint-ignore no-explicit-any
+const toggleRow = (job: any) => {
+  const r = job.reading || {};
+  if (!r.studio_url || !r.original_url) return [];
+  return [[{ text: job.image_url === r.studio_url ? TOGGLE_TO_ORIGINAL : TOGGLE_TO_STUDIO, callback_data: `o:${job.id}` }]];
+};
+
 const jobKeyboard = (jobId: string, candidates: Candidate[]) => [
   ...candidateButtons(jobId, candidates),
   [{ text: "🔎 Search", callback_data: `s:${jobId}` }, { text: "🆕 New product", callback_data: `n:${jobId}` }, { text: "🗑 Skip", callback_data: `x:${jobId}` }],
@@ -245,7 +256,7 @@ async function handlePhoto(chat: number, userId: number, msg: Record<string, any
   } else return;
 
   const caption = String(msg.caption || "").slice(0, 200);
-  const working = await say(chat, "🔍 Looking at it…");
+  const working = await say(chat, "🔍 Looking at it and preparing a studio photo… (about 20 seconds)");
   await tg("sendChatAction", { chat_id: chat, action: "upload_photo" });
 
   try {
@@ -263,7 +274,13 @@ async function handlePhoto(chat: number, userId: number, msg: Record<string, any
       getState(chat),
       db.from("categories").select("slug").eq("is_active", true),
     ]);
-    const reading = await identify(original, mime.startsWith("image/png") ? "image/png" : "image/jpeg", caption, catalog, (cats || []).map((c) => c.slug));
+    const imageMime = mime.startsWith("image/png") ? "image/png" : "image/jpeg";
+    // The studio version is made while the product is being identified
+    const studioJob = studioShot(original, imageMime, caption).then(
+      (bytes) => ({ bytes, error: null as string | null }),
+      (e) => ({ bytes: null as Uint8Array | null, error: (e as Error).message }),
+    );
+    const reading = await identify(original, imageMime, caption, catalog, (cats || []).map((c) => c.slug));
 
     const bySku = new Map(catalog.map((p) => [p.sku, p]));
     const candidates: Candidate[] = [];
@@ -284,28 +301,42 @@ async function handlePhoto(chat: number, userId: number, msg: Record<string, any
     }
 
     const enhanced = await cropAndEnhance(original, reading.box);
+    const studio = await studioJob;
+    if (studio.error) console.error("studio photo failed", studio.error);
     const { data: job, error } = await db.from("photo_bot_jobs").insert({
       chat_id: chat, telegram_user_id: userId, caption, candidates: candidates.slice(0, 4),
-      reading: { what: reading.what, visible_text: reading.visible_text, tag_model: reading.tag_model, tag_price: reading.tag_price, new_product: reading.new_product },
     }).select("id").single();
     if (error) throw error;
 
-    const objectPath = `real/${job.id}.jpg`;
-    const up = await db.storage.from(BUCKET).upload(objectPath, enhanced, { contentType: "image/jpeg", upsert: true });
-    if (up.error) throw up.error;
-    const imageUrl = db.storage.from(BUCKET).getPublicUrl(objectPath).data.publicUrl;
-    await db.from("photo_bot_jobs").update({ image_url: imageUrl }).eq("id", job.id);
+    // Keep both versions: the cropped original and the AI studio photo (used by default)
+    const upload = async (path: string, bytes: Uint8Array) => {
+      const up = await db.storage.from(BUCKET).upload(path, bytes, { contentType: "image/jpeg", upsert: true });
+      if (up.error) throw up.error;
+      return db.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+    };
+    const originalUrl = await upload(`real/${job.id}-original.jpg`, enhanced);
+    const studioUrl = studio.bytes ? await upload(`real/${job.id}.jpg`, studio.bytes) : null;
+    const imageUrl = studioUrl || originalUrl;
+    await db.from("photo_bot_jobs").update({
+      image_url: imageUrl,
+      reading: {
+        what: reading.what, visible_text: reading.visible_text, tag_model: reading.tag_model, tag_price: reading.tag_price,
+        new_product: reading.new_product, original_url: originalUrl, studio_url: studioUrl, studio_error: studio.error,
+      },
+    }).eq("id", job.id);
 
     const list = candidates.slice(0, 4);
     const lines = list.map((c, i) => `${i + 1}. <b>${esc(c.name_en)}</b> · ${esc(c.sku)} · ${kwd(c.price)}${c.confidence != null ? ` · ${Math.round(c.confidence)}%` : ""}${c.why ? `\n   <i>${esc(c.why.slice(0, 90))}</i>` : ""}${c.has_real_photo ? "\n   📷 already has a real photo (this one is added to the gallery)" : ""}`);
     const tag = [reading.tag_model && `model ${esc(reading.tag_model)}`, reading.tag_price && `price ${esc(reading.tag_price)}`].filter(Boolean).join(" · ");
     const text = [
+      studioUrl ? "✨ <i>AI studio photo (the product is unchanged)</i>" : "📷 <i>Your photo, cropped and brightened (studio version unavailable right now)</i>",
       `📸 <b>${esc(reading.what || "Product")}</b>`,
       tag ? `🏷 Tag: ${tag}` : "",
       list.length ? `\nWhich one is it?\n${lines.join("\n")}` : `\nI couldn't find it in the catalog. Search for it, or create it as a new product:\n🆕 <b>${esc(reading.new_product?.name_en || "")}</b> / ${esc(reading.new_product?.name_ar || "")}`,
     ].filter(Boolean).join("\n").slice(0, 1020);
 
-    const sent = await tg("sendPhoto", { chat_id: chat, photo: imageUrl, caption: text, parse_mode: "HTML", reply_markup: { inline_keyboard: jobKeyboard(job.id, list) } });
+    const keyboard = [...jobKeyboard(job.id, list), ...(studioUrl ? [[{ text: TOGGLE_TO_ORIGINAL, callback_data: `o:${job.id}` }]] : [])];
+    const sent = await tg("sendPhoto", { chat_id: chat, photo: imageUrl, caption: text, parse_mode: "HTML", reply_markup: { inline_keyboard: keyboard } });
     if (sent?.result?.message_id) await db.from("photo_bot_jobs").update({ message_id: sent.result.message_id }).eq("id", job.id);
     if (state.mode === "shoot") await setState(chat, { mode: null, target_product_id: null });
   } catch (e) {
@@ -359,6 +390,25 @@ async function handleCallback(cb: Record<string, any>) {
   const { data: job } = await db.from("photo_bot_jobs").select("*").eq("id", id).maybeSingle();
   if (!job || job.chat_id !== chat) return ack("This photo has expired");
   const candidates = (job.candidates || []) as Candidate[];
+  // Every state of the message keeps the studio / original switch
+  const kb = (rows: unknown[][]) => [...rows, ...toggleRow(job)];
+
+  if (action === "o") {
+    const r = job.reading || {};
+    if (!r.studio_url || !r.original_url) return ack("No studio version for this photo");
+    const next = job.image_url === r.studio_url ? r.original_url : r.studio_url;
+    await db.from("photo_bot_jobs").update({ image_url: next }).eq("id", job.id);
+    // Already on the website: swap the live photo too
+    if (job.status === "done" && job.image_row_id) await db.from("product_images").update({ url: next }).eq("id", job.image_row_id);
+    await ack(next === r.studio_url ? "AI studio photo ✨" : "Your original photo 📷");
+    const rows = ((cb.message?.reply_markup?.inline_keyboard || []) as { text: string; callback_data?: string }[][])
+      .map((row) => row.map((b) => (b.callback_data === `o:${job.id}` ? { ...b, text: next === r.studio_url ? TOGGLE_TO_ORIGINAL : TOGGLE_TO_STUDIO } : b)));
+    return tg("editMessageMedia", {
+      chat_id: chat, message_id: messageId,
+      media: { type: "photo", media: `${next}?v=${Date.now()}`, caption: cb.message?.caption || "", caption_entities: cb.message?.caption_entities },
+      reply_markup: { inline_keyboard: rows },
+    });
+  }
 
   if (action === "p") {
     if (job.status !== "pending") return ack("Already handled");
@@ -369,7 +419,7 @@ async function handleCallback(cb: Record<string, any>) {
     const link = `${SITE}/product/${product.slug}`;
     return caption(
       `✅ <b>Live on the website</b>\n${esc(product.name_en)} · ${esc(product.sku)}\n${primary ? "Main photo" : "Added to the gallery"} · <a href="${link}">${link}</a>\n\nSend another photo of it now and I'll suggest the same product first.`,
-      [[...(primary ? [] : [{ text: "⭐ Make main photo", callback_data: `m:${job.id}` }]), { text: "↩️ Undo", callback_data: `u:${job.id}` }], [{ text: "🌐 Open product", url: link }]],
+      kb([[...(primary ? [] : [{ text: "⭐ Make main photo", callback_data: `m:${job.id}` }]), { text: "↩️ Undo", callback_data: `u:${job.id}` }], [{ text: "🌐 Open product", url: link }]]),
     );
   }
 
@@ -380,7 +430,7 @@ async function handleCallback(cb: Record<string, any>) {
     if (removed.length) await db.from("product_images").insert(removed);
     await db.from("photo_bot_jobs").update({ status: "pending", product_id: null, image_row_id: null, removed_images: null }).eq("id", job.id);
     await ack("Undone");
-    return caption("↩️ Undone, the product is back as it was.\nWhich one is it?", jobKeyboard(job.id, candidates));
+    return caption("↩️ Undone, the product is back as it was.\nWhich one is it?", kb(jobKeyboard(job.id, candidates)));
   }
 
   if (action === "m") {
@@ -390,7 +440,7 @@ async function handleCallback(cb: Record<string, any>) {
     await ack("Now the main photo ⭐");
     const p = await productById(job.product_id);
     const link = `${SITE}/product/${p?.slug}`;
-    return caption(`✅ <b>Main photo</b> of ${esc(p?.name_en)} · ${esc(p?.sku)}\n<a href="${link}">${link}</a>`, [[{ text: "↩️ Undo", callback_data: `u:${job.id}` }], [{ text: "🌐 Open product", url: link }]]);
+    return caption(`✅ <b>Main photo</b> of ${esc(p?.name_en)} · ${esc(p?.sku)}\n<a href="${link}">${link}</a>`, kb([[{ text: "↩️ Undo", callback_data: `u:${job.id}` }], [{ text: "🌐 Open product", url: link }]]));
   }
 
   if (action === "x") {
@@ -423,7 +473,7 @@ async function handleCallback(cb: Record<string, any>) {
     await attach(job.id, created.id);
     return caption(
       `🆕 <b>Created as a hidden draft</b>\n${esc(np.name_en)} / ${esc(np.name_ar)}\nSKU NEW-${short}\n\nSet the price and publish it in Admin → Products.`,
-      [[{ text: "↩️ Undo photo", callback_data: `u:${job.id}` }], [{ text: "🛠 Open in admin", url: `${SITE}/admin/products/${created.id}` }]],
+      kb([[{ text: "↩️ Undo photo", callback_data: `u:${job.id}` }], [{ text: "🛠 Open in admin", url: `${SITE}/admin/products/${created.id}` }]]),
     );
   }
 
