@@ -75,6 +75,7 @@ import AdminBlogDrafts from "./pages/admin/BlogDrafts";
 import AdminNewsletterSubscribers from "./pages/admin/NewsletterSubscribers";
 import AdminThemeBuilder from "./pages/admin/ThemeBuilder";
 import AdminStorageMigration from "./pages/admin/StorageMigration";
+import AdminInstagramAgent from "./pages/admin/InstagramAgent";
 
 const queryClient = new QueryClient();
 
@@ -142,6 +143,7 @@ const AnimatedRoutes = () => {
             <Route path="coupons" element={<AdminCoupons />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="messages" element={<AdminMessages />} />
+            <Route path="instagram-agent" element={<AdminInstagramAgent />} />
             <Route path="logs" element={<AdminSystemLogs />} />
             <Route path="inbox" element={<AdminEmailInbox />} />
             <Route path="observability" element={<AdminObservability />} />

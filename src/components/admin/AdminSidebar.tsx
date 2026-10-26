@@ -30,6 +30,7 @@ import {
   Newspaper,
   FilePenLine,
   Palette,
+  Instagram,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -70,6 +71,7 @@ const contentNavItems = [
   { title: 'projects', url: '/admin/projects', icon: FolderKanban },
   { title: 'testimonials', url: '/admin/testimonials', icon: MessageSquareQuote },
   { title: 'messages', url: '/admin/messages', icon: Mail },
+  { title: 'instagramAgent', url: '/admin/instagram-agent', icon: Instagram },
   { title: 'newsletter', url: '/admin/newsletter', icon: Newspaper },
 ];
 
