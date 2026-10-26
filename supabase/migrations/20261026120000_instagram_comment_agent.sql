@@ -81,11 +81,11 @@ CREATE POLICY "Admins can update instagram comments" ON public.ig_comments
 CREATE POLICY "Admins can delete instagram comments" ON public.ig_comments
   FOR DELETE USING (public.has_role(auth.uid(), 'admin'));
 
--- Safety net: poll recent posts every 5 minutes in case a webhook is missed
--- (also the main path while the Meta app is still in development mode)
+-- Poll recent posts every 2 minutes. This is the main path when no webhook is configured
+-- (no Meta webhook setup needed); with a webhook it is a safety net for missed events.
 SELECT cron.schedule(
   'instagram-agent-poll',
-  '*/5 * * * *',
+  '*/2 * * * *',
   $$
   SELECT net.http_post(
     url := 'https://yubebbfsmlopmnluajgf.supabase.co/functions/v1/instagram-agent',

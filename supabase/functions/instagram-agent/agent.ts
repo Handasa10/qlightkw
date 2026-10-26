@@ -1,8 +1,10 @@
-// Claude decides how to handle one Instagram comment and drafts the reply.
+// Decides how to handle one Instagram comment and drafts the reply.
+// Uses Claude when ANTHROPIC_API_KEY is set; otherwise the store's existing Gemini key (GOOGLE_AI_API_KEY).
 import Anthropic from 'npm:@anthropic-ai/sdk@1.3.0';
 import { REPLY_RULES } from './knowledge.ts';
 
 const MODEL = Deno.env.get('IG_AGENT_MODEL') || 'claude-opus-5-5';
+const GEMINI_MODEL = Deno.env.get('IG_AGENT_GEMINI_MODEL') || 'gemini-2.5-flash';
 
 export const CATEGORIES = [
   'technical_question',
@@ -44,8 +46,6 @@ const schema = {
 let client: Anthropic | null = null;
 
 export async function decide(ctx: CommentContext, knowledge: string, extraRules: string): Promise<AgentDecision> {
-  client ??= new Anthropic(); // reads ANTHROPIC_API_KEY
-
   const system = `${REPLY_RULES}\n\n<knowledge>\n${knowledge}\n</knowledge>${extraRules.trim() ? `\n\nقواعد إضافية من صاحب الصفحة:\n${extraRules}` : ''}`;
   const parts = [
     ctx.caption ? `<post_caption>\n${ctx.caption}\n</post_caption>` : '',
@@ -53,6 +53,15 @@ export async function decide(ctx: CommentContext, knowledge: string, extraRules:
     `<comment username="${(ctx.username ?? '').replace(/"/g, '')}">\n${ctx.text}\n</comment>`,
   ].filter(Boolean);
 
+  const d = Deno.env.get('ANTHROPIC_API_KEY')
+    ? await decideWithClaude(system, parts.join('\n\n'))
+    : await decideWithGemini(system, parts.join('\n\n'));
+  if (d.action !== 'ignore' && !d.reply.trim()) d.action = 'review';
+  return d;
+}
+
+async function decideWithClaude(system: string, user: string): Promise<AgentDecision> {
+  client ??= new Anthropic(); // reads ANTHROPIC_API_KEY
   const response = await client.beta.messages.create({
     model: MODEL,
     max_tokens: 4000,
@@ -61,7 +70,7 @@ export async function decide(ctx: CommentContext, knowledge: string, extraRules:
     output_config: { effort: 'medium', format: { type: 'json_schema', schema } },
     // knowledge + rules are identical across comments, so cache them
     system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
-    messages: [{ role: 'user', content: parts.join('\n\n') }],
+    messages: [{ role: 'user', content: user }],
   });
 
   if (response.stop_reason === 'refusal') {
@@ -69,7 +78,36 @@ export async function decide(ctx: CommentContext, knowledge: string, extraRules:
   }
   const text = response.content.find((b) => b.type === 'text');
   if (!text || text.type !== 'text') throw new Error(`No text in model response (stop_reason=${response.stop_reason})`);
-  const d = JSON.parse(text.text) as AgentDecision;
-  if (d.action !== 'ignore' && !d.reply.trim()) d.action = 'review';
-  return d;
+  return JSON.parse(text.text) as AgentDecision;
+}
+
+async function decideWithGemini(system: string, user: string): Promise<AgentDecision> {
+  const key = Deno.env.get('GOOGLE_AI_API_KEY');
+  if (!key) throw new Error('No AI key configured (ANTHROPIC_API_KEY or GOOGLE_AI_API_KEY)');
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: system }] },
+      contents: [{ role: 'user', parts: [{ text: user }] }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            category: { type: 'STRING', enum: [...CATEGORIES] },
+            action: { type: 'STRING', enum: ['reply', 'review', 'ignore'] },
+            reply: { type: 'STRING' },
+            reason: { type: 'STRING' },
+          },
+          required: ['category', 'action', 'reply', 'reason'],
+        },
+      },
+    }),
+  });
+  const body = await res.json();
+  if (!res.ok) throw new Error(`Gemini error ${res.status}: ${JSON.stringify(body.error ?? body)}`);
+  const text = body.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) return { category: 'other', action: 'review', reply: '', reason: 'No answer from the model; needs a human.' };
+  return JSON.parse(text) as AgentDecision;
 }
