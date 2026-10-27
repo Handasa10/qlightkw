@@ -430,6 +430,9 @@ const isActive = (c: IncomingComment, s: Settings) => !s.active_since || Date.pa
 async function handleComment(c: IncomingComment, s: Settings, token: string) {
   if (!s.enabled || !c.text?.trim() || isOwnComment(c, s)) return;
   if (!isActive(c, s)) return;
+  // never answer our own replies (Instagram may not tag them with the account's id or username)
+  const { data: ours } = await supabase.from('ig_comments').select('comment_id').eq('reply_comment_id', c.comment_id).limit(1);
+  if (ours?.length) return;
 
   const { data: claimed } = await supabase
     .from('ig_comments')
@@ -534,6 +537,14 @@ async function runPoll(force = false) {
   if (!force && s.last_poll_at && Date.now() - Date.parse(s.last_poll_at) < 60e3) return { skipped: 'polled recently' };
   await supabase.from('ig_agent_settings').update({ last_poll_at: new Date().toISOString() }).eq('id', 1);
   token = await maybeRefreshToken(s, token);
+  if (!s.ig_app_user_id || !s.ig_username) {
+    // learn every id the account appears under, so its own replies are recognised
+    const me = await getMe(token);
+    s.ig_app_user_id = me.id;
+    s.ig_user_id ||= me.user_id ?? null;
+    s.ig_username ||= me.username ?? null;
+    await supabase.from('ig_agent_settings').update({ ig_app_user_id: s.ig_app_user_id, ig_user_id: s.ig_user_id, ig_username: s.ig_username }).eq('id', 1);
+  }
 
   let posts: { media: IgMedia; comments: IgComment[] }[];
   try {
@@ -560,7 +571,10 @@ async function runPoll(force = false) {
     }
   }
 
-  const fresh = found.filter((c) => c.text.trim() && !isOwnComment(c, s) && isActive(c, s));
+  const { data: replies } = await supabase.from('ig_comments').select('reply_comment_id').not('reply_comment_id', 'is', null)
+    .order('created_at', { ascending: false }).limit(1000);
+  const ourReplies = new Set((replies ?? []).map((r) => r.reply_comment_id));
+  const fresh = found.filter((c) => c.text.trim() && !ourReplies.has(c.comment_id) && !isOwnComment(c, s) && isActive(c, s));
   const retried = await retryFailed(s, token);
   if (retried) console.log(`instagram-agent poll: retried ${retried} earlier comment(s)`);
   console.log(`instagram-agent poll: ${posts.length} posts (${posts.reduce((n, p) => n + (p.media.comments_count ?? 0), 0)} comments on Instagram), ${found.length} comments readable, ${fresh.length} newer than start time`);
