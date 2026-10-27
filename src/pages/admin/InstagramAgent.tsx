@@ -26,7 +26,7 @@ interface IgComment {
   username: string | null;
   text: string | null;
   commented_at: string | null;
-  status: 'new' | 'processing' | 'replied' | 'pending_review' | 'ignored' | 'failed';
+  status: 'new' | 'queued' | 'processing' | 'replied' | 'pending_review' | 'ignored' | 'failed';
   category: string | null;
   reason: string | null;
   draft_reply: string | null;
@@ -51,6 +51,7 @@ interface AgentStatus {
 
 const STATUS_VARIANT: Record<IgComment['status'], 'default' | 'secondary' | 'destructive' | 'outline'> = {
   new: 'outline',
+  queued: 'outline',
   processing: 'outline',
   replied: 'default',
   pending_review: 'secondary',
@@ -152,7 +153,7 @@ function CommentsTab() {
       <Select value={filter} onValueChange={setFilter}>
         <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
         <SelectContent>
-          {['pending_review', 'replied', 'failed', 'ignored', 'all'].map((s) => (
+          {['pending_review', 'replied', 'queued', 'failed', 'ignored', 'all'].map((s) => (
             <SelectItem key={s} value={s}>{t(`admin.igAgent.status.${s}`, s)}</SelectItem>
           ))}
         </SelectContent>

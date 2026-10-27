@@ -48,6 +48,10 @@ export const REPLY_RULES = `أنت مسؤول الرد على كومنتات ص�
 - لا تكتب اسم المستخدم في بداية الرد (النظام يضيفه تلقائيًا).
 - لا تستخدم Markdown ولا روابط غير رقم الواتساب وحساب الإنستجرام.
 
+الكومنتات القديمة (days_ago أكبر من 3):
+- لو لسه السؤال مفيد للعميل: ابدأ باعتذار قصير لطيف عن التأخير ("العذر على التأخير 🙏" مثلًا) وبعدين جاوب.
+- لو الكومنت مجرد تفاعل عابر، أو إيموجي، أو منشن، أو كلام عام ما يحتاج رد بعد كل هالمدة: اختار ignore.
+
 اختيار الإجراء (action):
 - reply: سؤال فني، سؤال عن مكان أو تواصل، سؤال سعر (رد بتحويل للخاص/الواتساب)، مديح، أو منشن لصديق مع اهتمام واضح.
 - review: شكوى، تجربة سيئة، طلب استرجاع أو ضمان، موضوع حساس أو قانوني، سؤال تحتاج فيه معلومة مو موجودة وما ينفع تحوله ببساطة، أو أي شي تشك فيه. اكتب مسودة رد مهذبة برضه.
@@ -113,6 +117,35 @@ export async function getRecentMediaWithComments(token: string, limit = 20) {
     limit: String(limit),
   });
   return (r.data ?? []).map((m) => ({ media: m, comments: m.comments?.data ?? [] }));
+}
+
+// One page of older posts with their first comments, for reviewing the back catalogue
+export async function getMediaPage(token: string, after: string | null, limit = 8) {
+  const params: Record<string, string> = {
+    fields: `id,caption,permalink,media_product_type,timestamp,comments_count,comments.limit(50){${COMMENT_FIELDS}}`,
+    limit: String(limit),
+  };
+  if (after) params.after = after;
+  const r = await igGet<{ data: (IgMedia & { comments?: { data: IgComment[] } })[]; paging?: { cursors?: { after?: string }; next?: string } }>('me/media', token, params);
+  return {
+    posts: (r.data ?? []).map((m) => ({ media: m, comments: m.comments?.data ?? [] })),
+    next: r.paging?.next ? r.paging.cursors?.after ?? null : null,
+  };
+}
+
+// Every comment on a post (follows paging), capped so one viral post cannot eat a whole run
+export async function getAllMediaComments(mediaId: string, token: string, maxPages = 6) {
+  const all: IgComment[] = [];
+  let after: string | undefined;
+  for (let i = 0; i < maxPages; i++) {
+    const params: Record<string, string> = { fields: COMMENT_FIELDS, limit: '50' };
+    if (after) params.after = after;
+    const r = await igGet<{ data: IgComment[]; paging?: { cursors?: { after?: string }; next?: string } }>(`${mediaId}/comments`, token, params);
+    all.push(...(r.data ?? []));
+    if (!r.paging?.next) break;
+    after = r.paging.cursors?.after;
+  }
+  return all;
 }
 
 export function getMedia(mediaId: string, token: string) {
@@ -198,6 +231,7 @@ export interface CommentContext {
   text: string;
   caption?: string | null;
   parentText?: string | null;
+  daysAgo?: number;
 }
 
 const schema = {
@@ -219,7 +253,7 @@ export async function decide(ctx: CommentContext, knowledge: string, extraRules:
   const parts = [
     ctx.caption ? `<post_caption>\n${ctx.caption}\n</post_caption>` : '',
     ctx.parentText ? `<parent_comment>\n${ctx.parentText}\n</parent_comment>` : '',
-    `<comment username="${(ctx.username ?? '').replace(/"/g, '')}">\n${ctx.text}\n</comment>`,
+    `<comment username="${(ctx.username ?? '').replace(/"/g, '')}" days_ago="${ctx.daysAgo ?? 0}">\n${ctx.text}\n</comment>`,
   ].filter(Boolean);
 
   const d = Deno.env.get('ANTHROPIC_API_KEY')
@@ -361,6 +395,9 @@ interface Settings {
   ig_username: string | null;
   token_refreshed_at: string | null;
   last_poll_at: string | null;
+  backfill_enabled?: boolean;
+  backfill_cursor?: string | null;
+  backfill_done?: boolean;
 }
 
 interface IncomingComment {
@@ -375,7 +412,7 @@ interface IncomingComment {
   username?: string | null;
   text: string;
   commented_at: string;
-  source: 'webhook' | 'poll';
+  source: 'webhook' | 'poll' | 'backfill';
 }
 
 const json = (data: unknown, status = 200) =>
@@ -419,6 +456,8 @@ async function postReply(row: { comment_id: string; parent_id?: string | null; u
 }
 
 function isOwnComment(c: IncomingComment, s: Settings) {
+  // Instagram returns the page's own comments without username or author: treat those as ours
+  if (!c.username && !c.from_id) return true;
   return (!!c.from_id && (c.from_id === s.ig_user_id || c.from_id === s.ig_app_user_id)) ||
     (!!c.username && !!s.ig_username && c.username.toLowerCase() === s.ig_username.toLowerCase());
 }
@@ -456,7 +495,7 @@ async function processComment(c: IncomingComment, s: Settings, token: string) {
     }
 
     const d = await decide(
-      { username: c.username, text: c.text, caption: c.media_caption, parentText: c.parent_text },
+      { username: c.username, text: c.text, caption: c.media_caption, parentText: c.parent_text, daysAgo: Math.floor((Date.now() - Date.parse(c.commented_at)) / 86400e3) },
       s.knowledge.trim() || DEFAULT_KNOWLEDGE,
       s.extra_rules,
     );
@@ -529,6 +568,66 @@ async function maybeRefreshToken(s: Settings, token: string) {
   }
 }
 
+// Turn posts into comment rows. A comment counts as already answered when the page (or the agent)
+// replied later in the same thread, so the agent never doubles up on a conversation someone handled.
+function flatten(posts: { media: IgMedia; comments: IgComment[] }[], source: IncomingComment['source'], ourReplies: Set<string>) {
+  const out: (IncomingComment & { answered: boolean })[] = [];
+  for (const { media: m, comments } of posts) {
+    const base = { media_id: m.id, media_caption: m.caption ?? null, media_permalink: m.permalink ?? null, media_type: m.media_product_type ?? null, source };
+    for (const top of comments) {
+      const replies = top.replies?.data ?? [];
+      const pageTimes = replies.filter((r) => ourReplies.has(r.id) || (!r.username && !r.from)).map((r) => Date.parse(igTime(r.timestamp)));
+      const answered = (t: string) => pageTimes.some((p) => p >= Date.parse(t));
+      const topAt = igTime(top.timestamp);
+      out.push({ ...base, comment_id: top.id, text: top.text ?? '', username: top.username ?? top.from?.username ?? null, from_id: top.from?.id ?? null, commented_at: topAt, answered: answered(topAt) });
+      for (const r of replies) {
+        const at = igTime(r.timestamp);
+        out.push({ ...base, comment_id: r.id, text: r.text ?? '', username: r.username ?? r.from?.username ?? null, from_id: r.from?.id ?? null, commented_at: at, parent_id: top.id, parent_text: top.text ?? null, answered: answered(at) });
+      }
+    }
+  }
+  return out;
+}
+
+async function loadOurReplies() {
+  const { data } = await supabase.from('ig_comments').select('reply_comment_id').not('reply_comment_id', 'is', null)
+    .order('created_at', { ascending: false }).limit(5000);
+  return new Set((data ?? []).map((r) => r.reply_comment_id as string));
+}
+
+// Review the back catalogue: walk older posts page by page, queue unanswered comments,
+// and answer queued ones slowly (one per poll) so the page never looks like it is spamming
+const BACKFILL_REPLIES_PER_POLL = 1;
+
+async function runBackfill(s: Settings, token: string, ourReplies: Set<string>, started: number) {
+  if (!s.backfill_done && Date.now() - started < POLL_TIME_BUDGET_MS / 2) {
+    const page = await getMediaPage(token, s.backfill_cursor ?? null);
+    for (const p of page.posts) {
+      if ((p.media.comments_count ?? 0) > p.comments.length) p.comments = await getAllMediaComments(p.media.id, token);
+    }
+    const candidates = flatten(page.posts, 'backfill', ourReplies)
+      .filter((c) => c.text.trim() && !c.answered && !ourReplies.has(c.comment_id) && !isOwnComment(c, s) && !isActive(c, s))
+      .map(({ answered: _, ...c }) => ({ ...c, status: 'queued' }));
+    if (candidates.length) await supabase.from('ig_comments').upsert(candidates, { onConflict: 'comment_id', ignoreDuplicates: true });
+    s.backfill_cursor = page.next;
+    s.backfill_done = !page.next;
+    await supabase.from('ig_agent_settings').update({ backfill_cursor: s.backfill_cursor, backfill_done: s.backfill_done }).eq('id', 1);
+    console.log(`instagram-agent backfill: ${page.posts.length} older posts scanned, ${candidates.length} unanswered comments queued${s.backfill_done ? ', reached the first post' : ''}`);
+  }
+  let replied = 0;
+  for (let i = 0; i < BACKFILL_REPLIES_PER_POLL && Date.now() - started < POLL_TIME_BUDGET_MS; i++) {
+    const { data: rows } = await supabase.from('ig_comments').select('*').eq('status', 'queued')
+      .order('commented_at', { ascending: false }).limit(1);
+    const row = rows?.[0];
+    if (!row) break;
+    const { data: claimed } = await supabase.from('ig_comments')
+      .update({ status: 'processing', updated_at: new Date().toISOString() })
+      .eq('comment_id', row.comment_id).eq('status', 'queued').select('comment_id');
+    if (claimed?.length) { await processComment(row as IncomingComment, s, token); replied++; }
+  }
+  return replied;
+}
+
 async function runPoll(force = false) {
   const started = Date.now();
   const s = await loadSettings();
@@ -560,35 +659,26 @@ async function runPoll(force = false) {
     for (const m of await getRecentMedia(token)) posts.push({ media: m, comments: await getMediaComments(m.id, token) });
   }
 
-  const found: IncomingComment[] = [];
-  for (const { media: m, comments } of posts) {
-    for (const top of comments) {
-      const base = { media_id: m.id, media_caption: m.caption ?? null, media_permalink: m.permalink ?? null, media_type: m.media_product_type ?? null, source: 'poll' as const };
-      found.push({ ...base, comment_id: top.id, text: top.text ?? '', username: top.username ?? top.from?.username ?? null, from_id: top.from?.id ?? null, commented_at: igTime(top.timestamp) });
-      for (const r of top.replies?.data ?? []) {
-        found.push({ ...base, comment_id: r.id, text: r.text ?? '', username: r.username ?? r.from?.username ?? null, from_id: r.from?.id ?? null, commented_at: igTime(r.timestamp), parent_id: top.id, parent_text: top.text ?? null });
-      }
-    }
-  }
-
-  const { data: replies } = await supabase.from('ig_comments').select('reply_comment_id').not('reply_comment_id', 'is', null)
-    .order('created_at', { ascending: false }).limit(1000);
-  const ourReplies = new Set((replies ?? []).map((r) => r.reply_comment_id));
-  const fresh = found.filter((c) => c.text.trim() && !ourReplies.has(c.comment_id) && !isOwnComment(c, s) && isActive(c, s));
+  const ourReplies = await loadOurReplies();
+  const found = flatten(posts, 'poll', ourReplies);
+  const fresh = found.filter((c) => c.text.trim() && !c.answered && !ourReplies.has(c.comment_id) && !isOwnComment(c, s) && isActive(c, s));
   const retried = await retryFailed(s, token);
   if (retried) console.log(`instagram-agent poll: retried ${retried} earlier comment(s)`);
   console.log(`instagram-agent poll: ${posts.length} posts (${posts.reduce((n, p) => n + (p.media.comments_count ?? 0), 0)} comments on Instagram), ${found.length} comments readable, ${fresh.length} newer than start time`);
-  if (!fresh.length) return { scanned: found.length, handled: 0 };
-  const { data: known } = await supabase.from('ig_comments').select('comment_id').in('comment_id', fresh.map((c) => c.comment_id));
+  const { data: known } = fresh.length
+    ? await supabase.from('ig_comments').select('comment_id').in('comment_id', fresh.map((c) => c.comment_id))
+    : { data: [] };
   const knownIds = new Set((known ?? []).map((r) => r.comment_id));
   const todo = fresh.filter((c) => !knownIds.has(c.comment_id))
+    .map(({ answered: _, ...c }) => c)
     .sort((a, b) => a.commented_at.localeCompare(b.commented_at))
     .slice(0, MAX_COMMENTS_PER_POLL);
   for (const c of todo) {
     if (Date.now() - started > POLL_TIME_BUDGET_MS) break; // the rest waits for the next poll
     await handleComment(c, s, token);
   }
-  return { scanned: found.length, handled: todo.length };
+  const backfilled = s.backfill_enabled ? await runBackfill(s, token, ourReplies, started) : 0;
+  return { scanned: found.length, handled: todo.length, backfilled };
 }
 
 async function requireAdmin(req: Request) {

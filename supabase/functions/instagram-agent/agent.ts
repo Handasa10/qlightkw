@@ -30,6 +30,7 @@ export interface CommentContext {
   text: string;
   caption?: string | null;
   parentText?: string | null;
+  daysAgo?: number;
 }
 
 const schema = {
@@ -51,7 +52,7 @@ export async function decide(ctx: CommentContext, knowledge: string, extraRules:
   const parts = [
     ctx.caption ? `<post_caption>\n${ctx.caption}\n</post_caption>` : '',
     ctx.parentText ? `<parent_comment>\n${ctx.parentText}\n</parent_comment>` : '',
-    `<comment username="${(ctx.username ?? '').replace(/"/g, '')}">\n${ctx.text}\n</comment>`,
+    `<comment username="${(ctx.username ?? '').replace(/"/g, '')}" days_ago="${ctx.daysAgo ?? 0}">\n${ctx.text}\n</comment>`,
   ].filter(Boolean);
 
   const d = Deno.env.get('ANTHROPIC_API_KEY')

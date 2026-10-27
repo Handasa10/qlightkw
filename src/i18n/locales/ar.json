@@ -467,6 +467,7 @@
       "handled": "جديد",
       "status": {
         "new": "جديد",
+        "queued": "في الطابور (بوستات قديمة)",
         "processing": "جاري",
         "replied": "اترد عليه",
         "pending_review": "محتاج مراجعة",

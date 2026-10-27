@@ -57,6 +57,35 @@ export async function getRecentMediaWithComments(token: string, limit = 20) {
   return (r.data ?? []).map((m) => ({ media: m, comments: m.comments?.data ?? [] }));
 }
 
+// One page of older posts with their first comments, for reviewing the back catalogue
+export async function getMediaPage(token: string, after: string | null, limit = 8) {
+  const params: Record<string, string> = {
+    fields: `id,caption,permalink,media_product_type,timestamp,comments_count,comments.limit(50){${COMMENT_FIELDS}}`,
+    limit: String(limit),
+  };
+  if (after) params.after = after;
+  const r = await igGet<{ data: (IgMedia & { comments?: { data: IgComment[] } })[]; paging?: { cursors?: { after?: string }; next?: string } }>('me/media', token, params);
+  return {
+    posts: (r.data ?? []).map((m) => ({ media: m, comments: m.comments?.data ?? [] })),
+    next: r.paging?.next ? r.paging.cursors?.after ?? null : null,
+  };
+}
+
+// Every comment on a post (follows paging), capped so one viral post cannot eat a whole run
+export async function getAllMediaComments(mediaId: string, token: string, maxPages = 6) {
+  const all: IgComment[] = [];
+  let after: string | undefined;
+  for (let i = 0; i < maxPages; i++) {
+    const params: Record<string, string> = { fields: COMMENT_FIELDS, limit: '50' };
+    if (after) params.after = after;
+    const r = await igGet<{ data: IgComment[]; paging?: { cursors?: { after?: string }; next?: string } }>(`${mediaId}/comments`, token, params);
+    all.push(...(r.data ?? []));
+    if (!r.paging?.next) break;
+    after = r.paging.cursors?.after;
+  }
+  return all;
+}
+
 export function getMedia(mediaId: string, token: string) {
   return igGet<IgMedia>(mediaId, token, { fields: 'id,caption,permalink,media_product_type,timestamp' });
 }

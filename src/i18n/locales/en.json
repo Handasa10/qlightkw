@@ -467,6 +467,7 @@
       "handled": "new",
       "status": {
         "new": "New",
+        "queued": "Queued (older posts)",
         "processing": "Processing",
         "replied": "Replied",
         "pending_review": "Needs review",
