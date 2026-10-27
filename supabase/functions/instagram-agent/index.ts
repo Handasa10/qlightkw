@@ -202,6 +202,10 @@ async function runPoll(force = false) {
   let posts: { media: IgMedia; comments: IgComment[] }[];
   try {
     posts = await getRecentMediaWithComments(token);
+    // some accounts get no nested comments back; ask each post that has comments directly
+    if (!posts.some((p) => p.comments.length) && posts.some((p) => (p.media.comments_count ?? 0) > 0)) {
+      for (const p of posts) if ((p.media.comments_count ?? 0) > 0) p.comments = await getMediaComments(p.media.id, token);
+    }
   } catch (e) {
     // fall back to one call per post if field expansion is refused
     console.error('instagram-agent: expanded media fetch failed, falling back', e);
@@ -221,7 +225,7 @@ async function runPoll(force = false) {
   }
 
   const fresh = found.filter((c) => c.text.trim() && !isOwnComment(c, s) && isActive(c, s));
-  console.log(`instagram-agent poll: ${posts.length} posts, ${found.length} comments, ${fresh.length} newer than start time`);
+  console.log(`instagram-agent poll: ${posts.length} posts (${posts.reduce((n, p) => n + (p.media.comments_count ?? 0), 0)} comments on Instagram), ${found.length} comments readable, ${fresh.length} newer than start time`);
   if (!fresh.length) return { scanned: found.length, handled: 0 };
   const { data: known } = await supabase.from('ig_comments').select('comment_id').in('comment_id', fresh.map((c) => c.comment_id));
   const knownIds = new Set((known ?? []).map((r) => r.comment_id));

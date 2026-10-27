@@ -10,6 +10,7 @@ export interface IgMedia {
   permalink?: string;
   media_product_type?: string;
   timestamp?: string;
+  comments_count?: number;
 }
 
 export interface IgComment {
@@ -50,7 +51,7 @@ const COMMENT_FIELDS = 'id,text,timestamp,username,from,replies{id,text,timestam
 // One call for the latest posts and their comments (field expansion), so the poll stays cheap
 export async function getRecentMediaWithComments(token: string, limit = 20) {
   const r = await igGet<{ data: (IgMedia & { comments?: { data: IgComment[] } })[] }>('me/media', token, {
-    fields: `id,caption,permalink,media_product_type,timestamp,comments.limit(50){${COMMENT_FIELDS}}`,
+    fields: `id,caption,permalink,media_product_type,timestamp,comments_count,comments.limit(50){${COMMENT_FIELDS}}`,
     limit: String(limit),
   });
   return (r.data ?? []).map((m) => ({ media: m, comments: m.comments?.data ?? [] }));
