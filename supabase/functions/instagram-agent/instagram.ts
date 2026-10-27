@@ -45,13 +45,24 @@ export async function getRecentMedia(token: string, limit = 8) {
   return r.data ?? [];
 }
 
+const COMMENT_FIELDS = 'id,text,timestamp,username,from,replies{id,text,timestamp,username,from}';
+
+// One call for the latest posts and their comments (field expansion), so the poll stays cheap
+export async function getRecentMediaWithComments(token: string, limit = 20) {
+  const r = await igGet<{ data: (IgMedia & { comments?: { data: IgComment[] } })[] }>('me/media', token, {
+    fields: `id,caption,permalink,media_product_type,timestamp,comments.limit(50){${COMMENT_FIELDS}}`,
+    limit: String(limit),
+  });
+  return (r.data ?? []).map((m) => ({ media: m, comments: m.comments?.data ?? [] }));
+}
+
 export function getMedia(mediaId: string, token: string) {
   return igGet<IgMedia>(mediaId, token, { fields: 'id,caption,permalink,media_product_type,timestamp' });
 }
 
 export async function getMediaComments(mediaId: string, token: string) {
   const r = await igGet<{ data: IgComment[] }>(`${mediaId}/comments`, token, {
-    fields: 'id,text,timestamp,username,from,replies{id,text,timestamp,username,from}',
+    fields: COMMENT_FIELDS,
     limit: '50',
   });
   return r.data ?? [];

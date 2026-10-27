@@ -14,9 +14,12 @@ import {
   getMedia,
   getMediaComments,
   getRecentMedia,
+  getRecentMediaWithComments,
   refreshToken,
   replyToComment,
   verifySignature,
+  type IgComment,
+  type IgMedia,
 } from './instagram.ts';
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
@@ -196,9 +199,19 @@ async function runPoll(force = false) {
   await supabase.from('ig_agent_settings').update({ last_poll_at: new Date().toISOString() }).eq('id', 1);
   token = await maybeRefreshToken(s, token);
 
+  let posts: { media: IgMedia; comments: IgComment[] }[];
+  try {
+    posts = await getRecentMediaWithComments(token);
+  } catch (e) {
+    // fall back to one call per post if field expansion is refused
+    console.error('instagram-agent: expanded media fetch failed, falling back', e);
+    posts = [];
+    for (const m of await getRecentMedia(token)) posts.push({ media: m, comments: await getMediaComments(m.id, token) });
+  }
+
   const found: IncomingComment[] = [];
-  for (const m of await getRecentMedia(token)) {
-    for (const top of await getMediaComments(m.id, token)) {
+  for (const { media: m, comments } of posts) {
+    for (const top of comments) {
       const base = { media_id: m.id, media_caption: m.caption ?? null, media_permalink: m.permalink ?? null, media_type: m.media_product_type ?? null, source: 'poll' as const };
       found.push({ ...base, comment_id: top.id, text: top.text ?? '', username: top.username ?? top.from?.username ?? null, from_id: top.from?.id ?? null, commented_at: igTime(top.timestamp) });
       for (const r of top.replies?.data ?? []) {
@@ -208,6 +221,7 @@ async function runPoll(force = false) {
   }
 
   const fresh = found.filter((c) => c.text.trim() && !isOwnComment(c, s) && isActive(c, s));
+  console.log(`instagram-agent poll: ${posts.length} posts, ${found.length} comments, ${fresh.length} newer than start time`);
   if (!fresh.length) return { scanned: found.length, handled: 0 };
   const { data: known } = await supabase.from('ig_comments').select('comment_id').in('comment_id', fresh.map((c) => c.comment_id));
   const knownIds = new Set((known ?? []).map((r) => r.comment_id));
