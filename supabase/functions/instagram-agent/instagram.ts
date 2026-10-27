@@ -1,0 +1,98 @@
+// Instagram API with Instagram Login (graph.instagram.com) helpers.
+// Permissions needed: instagram_business_basic, instagram_business_manage_comments.
+
+const IG_API_VERSION = Deno.env.get('IG_API_VERSION') || 'v23.0';
+const IG_BASE = `https://graph.instagram.com/${IG_API_VERSION}`;
+
+export interface IgMedia {
+  id: string;
+  caption?: string;
+  permalink?: string;
+  media_product_type?: string;
+  timestamp?: string;
+}
+
+export interface IgComment {
+  id: string;
+  text?: string;
+  timestamp?: string;
+  username?: string;
+  from?: { id: string; username?: string };
+  parent_id?: string;
+  replies?: { data: IgComment[] };
+}
+
+async function igGet<T>(path: string, token: string, params: Record<string, string> = {}): Promise<T> {
+  const url = new URL(`${IG_BASE}/${path}`);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  url.searchParams.set('access_token', token);
+  const res = await fetch(url);
+  const body = await res.json();
+  if (!res.ok || body.error) throw new Error(`Instagram GET ${path}: ${JSON.stringify(body.error ?? body)}`);
+  return body as T;
+}
+
+export function getMe(token: string) {
+  // user_id is the professional account id used in webhooks; id is app-scoped
+  return igGet<{ id: string; user_id?: string; username?: string }>('me', token, { fields: 'id,user_id,username' });
+}
+
+export async function getRecentMedia(token: string, limit = 8) {
+  const r = await igGet<{ data: IgMedia[] }>('me/media', token, {
+    fields: 'id,caption,permalink,media_product_type,timestamp',
+    limit: String(limit),
+  });
+  return r.data ?? [];
+}
+
+export function getMedia(mediaId: string, token: string) {
+  return igGet<IgMedia>(mediaId, token, { fields: 'id,caption,permalink,media_product_type,timestamp' });
+}
+
+export async function getMediaComments(mediaId: string, token: string) {
+  const r = await igGet<{ data: IgComment[] }>(`${mediaId}/comments`, token, {
+    fields: 'id,text,timestamp,username,from,replies{id,text,timestamp,username,from}',
+    limit: '50',
+  });
+  return r.data ?? [];
+}
+
+export function getComment(commentId: string, token: string) {
+  return igGet<IgComment>(commentId, token, { fields: 'id,text,username,timestamp' });
+}
+
+// Instagram threads are one level deep: replies always attach to the top-level comment
+export async function replyToComment(topLevelCommentId: string, message: string, token: string) {
+  const res = await fetch(`${IG_BASE}/${topLevelCommentId}/replies`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ message, access_token: token }),
+  });
+  const body = await res.json();
+  if (!res.ok || body.error) throw new Error(`Instagram reply: ${JSON.stringify(body.error ?? body)}`);
+  return body as { id: string };
+}
+
+// Long-lived tokens last 60 days; refreshing (allowed once the token is 24h old) extends them
+export async function refreshToken(token: string) {
+  const url = new URL('https://graph.instagram.com/refresh_access_token');
+  url.searchParams.set('grant_type', 'ig_refresh_token');
+  url.searchParams.set('access_token', token);
+  const res = await fetch(url);
+  const body = await res.json();
+  if (!res.ok || body.error) throw new Error(`Instagram token refresh: ${JSON.stringify(body.error ?? body)}`);
+  return body as { access_token: string; expires_in: number };
+}
+
+// Verify X-Hub-Signature-256 (HMAC-SHA256 of the raw body with the Instagram app secret)
+export async function verifySignature(rawBody: string, header: string | null, appSecret: string) {
+  if (!header?.startsWith('sha256=')) return false;
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(appSecret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawBody)));
+  const hex = Array.from(sig, (b) => b.toString(16).padStart(2, '0')).join('');
+  const given = header.slice(7);
+  if (given.length !== hex.length) return false;
+  let diff = 0;
+  for (let i = 0; i < hex.length; i++) diff |= hex.charCodeAt(i) ^ given.charCodeAt(i);
+  return diff === 0;
+}
