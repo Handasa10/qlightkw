@@ -33,8 +33,9 @@ const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPAB
 
 // Categories held for a human in hybrid mode even when the agent wants to reply
 const HYBRID_REVIEW_CATEGORIES = ['complaint', 'other'];
-// Each reply can take a while when the AI model is busy; keep every run well inside the time limit
-const MAX_COMMENTS_PER_POLL = 2;
+const MAX_COMMENTS_PER_POLL = 5;
+// A reply can take over a minute when the AI model is busy; stop starting new ones after this, to stay inside the function time limit
+const POLL_TIME_BUDGET_MS = 50_000;
 
 interface Settings {
   enabled: boolean;
@@ -213,6 +214,7 @@ async function maybeRefreshToken(s: Settings, token: string) {
 }
 
 async function runPoll(force = false) {
+  const started = Date.now();
   const s = await loadSettings();
   let token = await loadToken();
   if (!s.enabled || !token) return { skipped: 'agent disabled or not connected' };
@@ -255,7 +257,10 @@ async function runPoll(force = false) {
   const todo = fresh.filter((c) => !knownIds.has(c.comment_id))
     .sort((a, b) => a.commented_at.localeCompare(b.commented_at))
     .slice(0, MAX_COMMENTS_PER_POLL);
-  for (const c of todo) await handleComment(c, s, token);
+  for (const c of todo) {
+    if (Date.now() - started > POLL_TIME_BUDGET_MS) break; // the rest waits for the next poll
+    await handleComment(c, s, token);
+  }
   return { scanned: found.length, handled: todo.length };
 }
 

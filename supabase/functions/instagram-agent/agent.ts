@@ -90,8 +90,8 @@ async function listGeminiFlashModels(key: string): Promise<string[]> {
     .filter((m: { supportedGenerationMethods?: string[] }) => m.supportedGenerationMethods?.includes('generateContent'))
     .map((m: { name: string }) => m.name.replace(/^models\//, ''))
     .filter((n: string) => /^gemini-[\d.]+-flash/.test(n) && !/(image|tts|audio|live|thinking|exp|preview)/.test(n));
-  // newest version first; full Flash before Flash-Lite, plain aliases before dated variants
-  names.sort((a, b) => parseFloat(b.slice(7)) - parseFloat(a.slice(7)) || Number(a.includes('lite')) - Number(b.includes('lite')) || a.length - b.length);
+  // newest Flash-Lite first (fast when the full model is slow or busy), then the other Flash models newest first
+  names.sort((a, b) => Number(b.includes('lite')) - Number(a.includes('lite')) || parseFloat(b.slice(7)) - parseFloat(a.slice(7)) || a.length - b.length);
   return names;
 }
 
@@ -99,7 +99,7 @@ function callGemini(model: string, key: string, system: string, user: string) {
   return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    signal: AbortSignal.timeout(40_000),
+    signal: AbortSignal.timeout(25_000),
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: 'user', parts: [{ text: user }] }],
@@ -130,8 +130,15 @@ async function decideWithGemini(system: string, user: string): Promise<AgentDeci
   let lastError = '';
   for (let i = 0; i < models.length && i < 3; i++) {
     for (let attempt = 0; attempt < 2; attempt++) {
-      const res = await callGemini(models[i], key, system, user);
-      const body = await res.json();
+      let res: Response, body: any;
+      try {
+        res = await callGemini(models[i], key, system, user);
+        body = await res.json();
+      } catch (e) {
+        // no answer within 25s: treat like a busy model and move on to the next one
+        lastError = `Gemini ${models[i]}: ${e instanceof Error ? e.message : e}`;
+        break;
+      }
       if (res.ok) {
         if (models[i] !== geminiModel) console.log(`instagram-agent: switched Gemini model to ${models[i]}`);
         geminiModel = models[i];
