@@ -33,7 +33,7 @@ const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPAB
 
 // Categories held for a human in hybrid mode even when the agent wants to reply
 const HYBRID_REVIEW_CATEGORIES = ['complaint', 'other'];
-const MAX_COMMENTS_PER_POLL = 20;
+const MAX_COMMENTS_PER_POLL = 8;
 
 interface Settings {
   enabled: boolean;
@@ -121,7 +121,10 @@ async function handleComment(c: IncomingComment, s: Settings, token: string) {
     .upsert({ ...c, status: 'processing' }, { onConflict: 'comment_id', ignoreDuplicates: true })
     .select('comment_id');
   if (!claimed?.length) return;
+  await processComment(c, s, token);
+}
 
+async function processComment(c: IncomingComment, s: Settings, token: string) {
   try {
     if (c.media_id && c.media_caption === undefined) {
       const m = await getMedia(c.media_id, token).catch(() => null);
@@ -151,6 +154,21 @@ async function handleComment(c: IncomingComment, s: Settings, token: string) {
     console.error('instagram-agent: comment failed', c.comment_id, e);
     await updateComment(c.comment_id, { status: 'failed', error: String(e instanceof Error ? e.message : e) });
   }
+}
+
+// Failures are usually temporary (AI model busy); retry recent ones a few minutes later
+async function retryFailed(s: Settings, token: string) {
+  const { data: rows } = await supabase.from('ig_comments').select('*').eq('status', 'failed')
+    .gte('created_at', new Date(Date.now() - 6 * 3600e3).toISOString())
+    .lte('updated_at', new Date(Date.now() - 3 * 60e3).toISOString())
+    .order('created_at').limit(5);
+  for (const row of rows ?? []) {
+    const { data: claimed } = await supabase.from('ig_comments')
+      .update({ status: 'processing', updated_at: new Date().toISOString() })
+      .eq('comment_id', row.comment_id).eq('status', 'failed').select('comment_id');
+    if (claimed?.length) await processComment(row as IncomingComment, s, token);
+  }
+  return rows?.length ?? 0;
 }
 
 async function handleWebhook(payload: any) {
@@ -225,6 +243,8 @@ async function runPoll(force = false) {
   }
 
   const fresh = found.filter((c) => c.text.trim() && !isOwnComment(c, s) && isActive(c, s));
+  const retried = await retryFailed(s, token);
+  if (retried) console.log(`instagram-agent poll: retried ${retried} failed comments`);
   console.log(`instagram-agent poll: ${posts.length} posts (${posts.reduce((n, p) => n + (p.media.comments_count ?? 0), 0)} comments on Instagram), ${found.length} comments readable, ${fresh.length} newer than start time`);
   if (!fresh.length) return { scanned: found.length, handled: 0 };
   const { data: known } = await supabase.from('ig_comments').select('comment_id').in('comment_id', fresh.map((c) => c.comment_id));

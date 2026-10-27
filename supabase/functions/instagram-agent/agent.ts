@@ -4,7 +4,7 @@ import Anthropic from 'npm:@anthropic-ai/sdk@1.3.0';
 import { REPLY_RULES } from './knowledge.ts';
 
 const MODEL = Deno.env.get('IG_AGENT_MODEL') || 'claude-opus-5-5';
-// Gemini model ids get retired; if the configured one returns 404, pick the newest available Flash model from the key's model list
+// Gemini model ids get retired or overloaded; on 404/busy the agent falls back to other available Flash models
 let geminiModel = Deno.env.get('IG_AGENT_GEMINI_MODEL') || 'gemini-3.8-flash';
 
 export const CATEGORIES = [
@@ -82,26 +82,21 @@ async function decideWithClaude(system: string, user: string): Promise<AgentDeci
   return JSON.parse(text.text) as AgentDecision;
 }
 
-async function pickGeminiModel(key: string): Promise<string> {
+async function listGeminiFlashModels(key: string): Promise<string[]> {
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=${key}`);
   const body = await res.json();
   if (!res.ok) throw new Error(`Gemini model list error ${res.status}: ${JSON.stringify(body.error ?? body)}`);
   const names: string[] = (body.models ?? [])
     .filter((m: { supportedGenerationMethods?: string[] }) => m.supportedGenerationMethods?.includes('generateContent'))
     .map((m: { name: string }) => m.name.replace(/^models\//, ''))
-    .filter((n: string) => /^gemini-[\d.]+-flash/.test(n) && !/(lite|image|tts|audio|live|thinking|exp|preview)/.test(n));
-  // newest version first; prefer the plain alias (e.g. gemini-3.0-flash) over dated variants
-  names.sort((a, b) => parseFloat(b.slice(7)) - parseFloat(a.slice(7)) || a.length - b.length);
-  if (!names.length) throw new Error('No Gemini Flash model available for this key');
-  console.log(`instagram-agent: using Gemini model ${names[0]}`);
-  return names[0];
+    .filter((n: string) => /^gemini-[\d.]+-flash/.test(n) && !/(image|tts|audio|live|thinking|exp|preview)/.test(n));
+  // newest version first; full Flash before Flash-Lite, plain aliases before dated variants
+  names.sort((a, b) => parseFloat(b.slice(7)) - parseFloat(a.slice(7)) || Number(a.includes('lite')) - Number(b.includes('lite')) || a.length - b.length);
+  return names;
 }
 
-async function decideWithGemini(system: string, user: string): Promise<AgentDecision> {
-  const key = Deno.env.get('GOOGLE_AI_API_KEY');
-  if (!key) throw new Error('No AI key configured (ANTHROPIC_API_KEY or GOOGLE_AI_API_KEY)');
-  geminiModel ||= await pickGeminiModel(key);
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${key}`, {
+function callGemini(model: string, key: string, system: string, user: string) {
+  return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -122,10 +117,34 @@ async function decideWithGemini(system: string, user: string): Promise<AgentDeci
       },
     }),
   });
-  const body = await res.json();
-  if (res.status === 404) geminiModel = ''; // model retired: re-pick on the next comment
-  if (!res.ok) throw new Error(`Gemini error ${res.status}: ${JSON.stringify(body.error ?? body)}`);
-  const text = body.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) return { category: 'other', action: 'review', reply: '', reason: 'No answer from the model; needs a human.' };
-  return JSON.parse(text) as AgentDecision;
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Retry busy/overloaded answers (429/5xx), then move on to the next available Flash model
+async function decideWithGemini(system: string, user: string): Promise<AgentDecision> {
+  const key = Deno.env.get('GOOGLE_AI_API_KEY');
+  if (!key) throw new Error('No AI key configured (ANTHROPIC_API_KEY or GOOGLE_AI_API_KEY)');
+  let models = [geminiModel];
+  let lastError = '';
+  for (let i = 0; i < models.length && i < 3; i++) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const res = await callGemini(models[i], key, system, user);
+      const body = await res.json();
+      if (res.ok) {
+        if (models[i] !== geminiModel) console.log(`instagram-agent: switched Gemini model to ${models[i]}`);
+        geminiModel = models[i];
+        const text = body.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) return { category: 'other', action: 'review', reply: '', reason: 'No answer from the model; needs a human.' };
+        return JSON.parse(text) as AgentDecision;
+      }
+      lastError = `Gemini error ${res.status} (${models[i]}): ${JSON.stringify(body.error ?? body)}`;
+      const busy = res.status === 429 || res.status >= 500;
+      if (busy && attempt === 0) { await sleep(3000); continue; }
+      if (!busy && res.status !== 404) throw new Error(lastError);
+      break; // retired or still busy: try another model
+    }
+    if (models.length === 1) models = [models[0], ...(await listGeminiFlashModels(key)).filter((m) => m !== models[0])];
+  }
+  throw new Error(lastError);
 }
