@@ -33,7 +33,8 @@ const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPAB
 
 // Categories held for a human in hybrid mode even when the agent wants to reply
 const HYBRID_REVIEW_CATEGORIES = ['complaint', 'other'];
-const MAX_COMMENTS_PER_POLL = 8;
+// Each reply can take a while when the AI model is busy; keep every run well inside the time limit
+const MAX_COMMENTS_PER_POLL = 2;
 
 interface Settings {
   enabled: boolean;
@@ -156,16 +157,18 @@ async function processComment(c: IncomingComment, s: Settings, token: string) {
   }
 }
 
-// Failures are usually temporary (AI model busy); retry recent ones a few minutes later
+// Failures are usually temporary (AI model busy), and a run cut off by the function time limit
+// leaves a comment stuck in 'processing': pick one of those up again on each poll
 async function retryFailed(s: Settings, token: string) {
-  const { data: rows } = await supabase.from('ig_comments').select('*').eq('status', 'failed')
-    .gte('created_at', new Date(Date.now() - 6 * 3600e3).toISOString())
-    .lte('updated_at', new Date(Date.now() - 3 * 60e3).toISOString())
-    .order('created_at').limit(5);
+  const ago = (min: number) => new Date(Date.now() - min * 60e3).toISOString();
+  const { data: rows } = await supabase.from('ig_comments').select('*')
+    .or(`and(status.eq.failed,updated_at.lt.${ago(3)}),and(status.eq.processing,updated_at.lt.${ago(10)})`)
+    .gte('created_at', ago(6 * 60))
+    .order('created_at').limit(1);
   for (const row of rows ?? []) {
     const { data: claimed } = await supabase.from('ig_comments')
       .update({ status: 'processing', updated_at: new Date().toISOString() })
-      .eq('comment_id', row.comment_id).eq('status', 'failed').select('comment_id');
+      .eq('comment_id', row.comment_id).eq('updated_at', row.updated_at).select('comment_id');
     if (claimed?.length) await processComment(row as IncomingComment, s, token);
   }
   return rows?.length ?? 0;
@@ -244,7 +247,7 @@ async function runPoll(force = false) {
 
   const fresh = found.filter((c) => c.text.trim() && !isOwnComment(c, s) && isActive(c, s));
   const retried = await retryFailed(s, token);
-  if (retried) console.log(`instagram-agent poll: retried ${retried} failed comments`);
+  if (retried) console.log(`instagram-agent poll: retried ${retried} earlier comment(s)`);
   console.log(`instagram-agent poll: ${posts.length} posts (${posts.reduce((n, p) => n + (p.media.comments_count ?? 0), 0)} comments on Instagram), ${found.length} comments readable, ${fresh.length} newer than start time`);
   if (!fresh.length) return { scanned: found.length, handled: 0 };
   const { data: known } = await supabase.from('ig_comments').select('comment_id').in('comment_id', fresh.map((c) => c.comment_id));

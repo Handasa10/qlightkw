@@ -99,6 +99,7 @@ function callGemini(model: string, key: string, system: string, user: string) {
   return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(40_000),
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: 'user', parts: [{ text: user }] }],
