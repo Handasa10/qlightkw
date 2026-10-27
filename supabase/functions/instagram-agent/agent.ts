@@ -4,8 +4,8 @@ import Anthropic from 'npm:@anthropic-ai/sdk@1.3.0';
 import { REPLY_RULES } from './knowledge.ts';
 
 const MODEL = Deno.env.get('IG_AGENT_MODEL') || 'claude-opus-5-5';
-// Gemini model ids get retired; when unset, pick the newest available Flash model from the key's model list
-let geminiModel = Deno.env.get('IG_AGENT_GEMINI_MODEL') || '';
+// Gemini model ids get retired; if the configured one returns 404, pick the newest available Flash model from the key's model list
+let geminiModel = Deno.env.get('IG_AGENT_GEMINI_MODEL') || 'gemini-3.8-flash';
 
 export const CATEGORIES = [
   'technical_question',
