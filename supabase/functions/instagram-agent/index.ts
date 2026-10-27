@@ -8,6 +8,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.93.2';
 import { decide, type AgentDecision } from './agent.ts';
 import { DEFAULT_KNOWLEDGE } from './knowledge.ts';
+import { HELP, repliedMessage, reviewButtons, reviewMessage, telegramEnabled, tg, webhookSecret, type TgComment } from './telegram.ts';
 import {
   getComment,
   getMe,
@@ -53,6 +54,8 @@ interface Settings {
   backfill_enabled?: boolean;
   backfill_cursor?: string | null;
   backfill_done?: boolean;
+  telegram_chat_id?: number | null;
+  telegram_webhook_url?: string | null;
 }
 
 interface IncomingComment {
@@ -136,6 +139,111 @@ async function handleComment(c: IncomingComment, s: Settings, token: string) {
   await processComment(c, s, token);
 }
 
+// ---------- Telegram follow-up ----------
+async function tgSend(s: Settings, text: string, commentId: string | null, extra: Record<string, unknown> = {}) {
+  if (!telegramEnabled() || !s.telegram_chat_id) return;
+  try {
+    const msg = await tg<{ message_id: number }>('sendMessage', { chat_id: s.telegram_chat_id, text, parse_mode: 'HTML', disable_web_page_preview: true, ...extra });
+    // remember which comment a bot message is about, so replying to it answers that comment
+    if (commentId) await supabase.from('ig_tg_messages').insert({ message_id: msg.message_id, comment_id: commentId });
+  } catch (e) {
+    console.error('instagram-agent: telegram send failed', e);
+  }
+}
+
+async function ensureTelegramWebhook(s: Settings) {
+  if (!telegramEnabled()) return;
+  const url = `${Deno.env.get('SUPABASE_URL')}/functions/v1/instagram-agent`;
+  if (s.telegram_webhook_url === url) return;
+  await tg('setWebhook', { url, secret_token: await webhookSecret(), allowed_updates: ['message', 'callback_query'] });
+  await supabase.from('ig_agent_settings').update({ telegram_webhook_url: url }).eq('id', 1);
+  s.telegram_webhook_url = url;
+  console.log('instagram-agent: telegram webhook set');
+}
+
+async function handleTelegram(update: any) {
+  const s = await loadSettings();
+  const msg = update.message;
+  const cb = update.callback_query;
+  const chatId: number | undefined = msg?.chat?.id ?? cb?.message?.chat?.id;
+  if (!chatId) return;
+
+  // the first person to press /start owns the bot; everyone else is turned away
+  if (!s.telegram_chat_id) {
+    if (msg?.text?.startsWith('/start')) {
+      await supabase.from('ig_agent_settings').update({ telegram_chat_id: chatId }).eq('id', 1);
+      s.telegram_chat_id = chatId;
+      await tgSend(s, HELP, null);
+    }
+    return;
+  }
+  if (chatId !== Number(s.telegram_chat_id)) {
+    if (msg) await tg('sendMessage', { chat_id: chatId, text: 'البوت ده خاص بصاحب الصفحة.' }).catch(() => {});
+    return;
+  }
+
+  const token = await loadToken();
+  if (cb) {
+    const [act, commentId] = String(cb.data ?? '').split(':');
+    const { data: row } = await supabase.from('ig_comments').select('*').eq('comment_id', commentId).single();
+    let answer = 'مش لاقي الكومنت ده';
+    if (row && act === 'ok' && token && row.draft_reply) {
+      await postReply(row, row.draft_reply, token);
+      answer = 'نزل الرد على الإنستجرام ✅';
+    } else if (row && act === 'no') {
+      await updateComment(row.comment_id, { status: 'ignored' });
+      answer = 'اتجاهل الكومنت 🚫';
+    }
+    await tg('answerCallbackQuery', { callback_query_id: cb.id, text: answer }).catch(() => {});
+    await tg('editMessageReplyMarkup', { chat_id: chatId, message_id: cb.message.message_id, reply_markup: { inline_keyboard: [] } }).catch(() => {});
+    await tgSend(s, answer, null, { reply_to_message_id: cb.message.message_id });
+    return;
+  }
+
+  const text: string = (msg?.text ?? '').trim();
+  if (!text) return;
+  const replyTo = msg.reply_to_message?.message_id;
+  if (replyTo) {
+    const { data: link } = await supabase.from('ig_tg_messages').select('comment_id').eq('message_id', replyTo).maybeSingle();
+    const { data: row } = link ? await supabase.from('ig_comments').select('*').eq('comment_id', link.comment_id).single() : { data: null };
+    if (!row || !token) {
+      await tgSend(s, 'مش لاقي الكومنت المرتبط بالرسالة دي. اعمل Reply على رسالة من رسايل الوكيل.', null, { reply_to_message_id: msg.message_id });
+      return;
+    }
+    try {
+      await postReply(row, text, token);
+      await tgSend(s, `✅ نزل ردك على كومنت @${row.username ?? ''}`, row.comment_id, { reply_to_message_id: msg.message_id });
+    } catch (e) {
+      await tgSend(s, `❌ ما قدرتش أنزّل الرد: ${e instanceof Error ? e.message : e}`, null, { reply_to_message_id: msg.message_id });
+    }
+    return;
+  }
+
+  if (text.startsWith('/pause') || text.startsWith('/resume')) {
+    const on = text.startsWith('/resume');
+    await supabase.from('ig_agent_settings').update({ enabled: on }).eq('id', 1);
+    await tgSend(s, on ? '▶️ الوكيل اشتغل.' : '⏸ الوكيل وقف. ابعت /resume عشان يرجع.', null);
+  } else if (text.startsWith('/status')) {
+    const { data: rows } = await supabase.from('ig_comments').select('status').gte('updated_at', new Date(Date.now() - 86400e3).toISOString());
+    const n = (st: string) => (rows ?? []).filter((r) => r.status === st).length;
+    const { count: queued } = await supabase.from('ig_comments').select('comment_id', { count: 'exact', head: true }).eq('status', 'queued');
+    await tgSend(s, `📊 <b>آخر 24 ساعة</b>
+✅ ردود: ${n('replied')}
+⚠️ مستنية تدخلك: ${n('pending_review')}
+🙈 اتجاهلت: ${n('ignored')}
+❌ فشلت: ${n('failed')}
+⏳ في طابور البوستات القديمة: ${queued ?? 0}
+
+الوكيل ${s.enabled ? 'شغّال ▶️' : 'واقف ⏸'}`, null);
+  } else if (text.startsWith('/pending')) {
+    const { data: rows } = await supabase.from('ig_comments').select('*').eq('status', 'pending_review').order('created_at', { ascending: false }).limit(5);
+    if (!rows?.length) await tgSend(s, 'مفيش كومنتات مستنياك 👌', null);
+    for (const r of rows ?? []) await tgSend(s, reviewMessage(r as TgComment), r.comment_id, { reply_markup: reviewButtons(r as TgComment) });
+  } else {
+    await tgSend(s, HELP, null);
+  }
+}
+
 async function processComment(c: IncomingComment, s: Settings, token: string) {
   try {
     if (c.media_id && c.media_caption === undefined) {
@@ -161,7 +269,13 @@ async function processComment(c: IncomingComment, s: Settings, token: string) {
       draft_reply: d.reply,
       status: next === 'post' ? 'processing' : next,
     });
-    if (next === 'post') await postReply(c, d.reply, token);
+    const tc: TgComment = { ...c, category: d.category, draft_reply: d.reply };
+    if (next === 'post') {
+      await postReply(c, d.reply, token);
+      await tgSend(s, repliedMessage(tc, d.reply), c.comment_id);
+    } else if (next === 'pending_review') {
+      await tgSend(s, reviewMessage(tc), c.comment_id, { reply_markup: reviewButtons(tc) });
+    }
   } catch (e) {
     console.error('instagram-agent: comment failed', c.comment_id, e);
     await updateComment(c.comment_id, { status: 'failed', error: String(e instanceof Error ? e.message : e) });
@@ -286,6 +400,7 @@ async function runBackfill(s: Settings, token: string, ourReplies: Set<string>, 
 async function runPoll(force = false) {
   const started = Date.now();
   const s = await loadSettings();
+  await ensureTelegramWebhook(s).catch((e) => console.error('instagram-agent: telegram webhook setup failed', e));
   let token = await loadToken();
   if (!s.enabled || !token) return { skipped: 'agent disabled or not connected' };
   if (!force && s.last_poll_at && Date.now() - Date.parse(s.last_poll_at) < 60e3) return { skipped: 'polled recently' };
@@ -419,6 +534,14 @@ Deno.serve(async (req) => {
 
     const raw = await req.text();
     const signature = req.headers.get('x-hub-signature-256');
+
+    // Telegram bot updates (the secret header proves they come from Telegram for our bot)
+    const tgSecret = req.headers.get('x-telegram-bot-api-secret-token');
+    if (tgSecret) {
+      if (!telegramEnabled() || tgSecret !== (await webhookSecret())) return new Response('Forbidden', { status: 403 });
+      EdgeRuntime.waitUntil(handleTelegram(JSON.parse(raw)).catch((e) => console.error('instagram-agent: telegram update failed', e)));
+      return new Response('ok', { status: 200 });
+    }
 
     if (signature) {
       if (!(await verifySignature(raw, signature, Deno.env.get('IG_APP_SECRET') ?? ''))) return new Response('Invalid signature', { status: 401 });
