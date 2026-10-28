@@ -1,0 +1,131 @@
+// ===== Built-in wardrobe with hidden LED (sensor doors, under-shelf strips, lit rail, lit drawer) =====
+// x: 0..2.4 width, y up, z: back panel at 0, front at DEP
+const WW = 2.4, WH = 2.6, DEP = .6, T2 = .025;
+const SEC = [[0, .9], [.9, 1.6], [1.6, 2.4]]; // hanging | shelves+drawers | long hanging
+marbleTex.repeat.set(4, 4);
+const walnutTex = canvasTex(512, 1024, woodDraw('#6b4a30', '35,20,10'), [1, 1]);
+const carcM = new THREE.MeshStandardMaterial({ map: walnutTex, roughness: .45 });
+const backM = new THREE.MeshStandardMaterial({ map: fabricTex.clone(), color: '#c9b79c', roughness: .95 }); backM.map.repeat.set(3, 3);
+const doorM = new THREE.MeshStandardMaterial({ color: '#e8dfd2', roughness: .55 });
+const goldM = new THREE.MeshStandardMaterial({ color: '#c9a063', roughness: .25, metalness: 1 });
+const roomWallM = new THREE.MeshStandardMaterial({ color: '#d9cfc2', roughness: .9 });
+const woodFloorTex = canvasTex(1024, 1024, (g, w, h) => { for (let i = 0; i < 8; i++) { woodDraw(i % 2 ? '#8a6440' : '#7e5a38', '50,30,15')(g, w, h); } g.strokeStyle = 'rgba(30,18,8,.45)'; g.lineWidth = 3; for (let y = 0; y <= h; y += 128) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } }, [3, 3]);
+const floorW = new THREE.MeshStandardMaterial({ map: woodFloorTex, roughness: .4 });
+plane(10, 10, floorW, [1.2, 0, 2], [-Math.PI / 2, 0, 0]);
+box(8, 3.2, .1, roomWallM, -2.8, 0, -.1);                    // back wall
+box(.1, 3.2, 6, roomWallM, -1.4, 0, -.1);                    // left wall
+box(.1, 3.2, 6, roomWallM, 4.0, 0, -.1);                     // right wall
+box(8, .1, 6, M.ceil, -2.8, 3.0, -.1, { cast: false });     // ceiling
+
+// carcass
+box(WW, WH, .015, backM, 0, 0, .0, { cast: false });                 // fabric back
+box(WW + .04, T2, DEP, carcM, -.02, WH, 0); box(WW + .04, .08, DEP, carcM, -.02, 0, 0); // top + plinth
+for (const x of [0, .9, 1.6, 2.4]) box(T2, WH, DEP, carcM, x - T2 / 2, 0, 0);       // side panels
+// cornice fascia above
+box(WW + .04, .4, .02, doorM, -.02, WH, DEP - .02);
+
+const LEDs = { side: [], shelf: [], rail: [], drawer: [] }, LEDm = { side: [], shelf: [], rail: [], drawer: [] };
+function ledLine(group, x0, y0, z0, x1, y1, z1, nx, ny, nz, inten) { // emissive line + area light facing (nx,ny,nz)
+  const w = Math.hypot(x1 - x0, y1 - y0, z1 - z0);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(Math.max(.008, Math.abs(x1 - x0)), Math.max(.008, Math.abs(y1 - y0)), Math.max(.008, Math.abs(z1 - z0))), emis('#000', 0));
+  m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); scene.add(m); LEDm[group].push(m);
+  const horiz = Math.abs(y1 - y0) < .01;
+  const l = new THREE.RectAreaLight('#fff1dc', 0, w, .025); l.position.copy(m.position);
+  if (!horiz) { l.width = .025; l.height = w; }
+  l.lookAt(m.position.x + nx, m.position.y + ny, m.position.z + nz); scene.add(l); LEDs[group].push([l, inten]);
+}
+// vertical profiles on the inside of every side panel (front edge), facing into each section
+for (const [a, b] of SEC) { ledLine('side', a + .02, .12, DEP - .05, a + .02, WH - .03, DEP - .05, 1, 0, -.6, 8); ledLine('side', b - .02, .12, DEP - .05, b - .02, WH - .03, DEP - .05, -1, 0, -.6, 8); }
+
+// ---- section 1: hanging (rail at 1.95) + top shelf with boxes
+box(.9 - T2, T2, DEP - .03, carcM, T2 / 2, 2.15, 0);
+ledLine('shelf', .05, 2.145, DEP - .07, .85, 2.145, DEP - .07, 0, -1, -.4, 10);
+for (let i = 0; i < 3; i++) box(.24, .2, .38, new THREE.MeshStandardMaterial({ color: ['#efe6d6', '#2b2622', '#c9a063'][i], roughness: .6 }), .05 + i * .28, 2.165, .1, { r: .01 });
+const rail = new THREE.Mesh(new THREE.CylinderGeometry(.016, .016, .86, 16), goldM); rail.rotation.z = Math.PI / 2; rail.position.set(.45, 1.95, .3); scene.add(rail);
+ledLine('rail', .03, 1.93, .3, .87, 1.93, .3, 0, -1, .15, 14);
+// garments: shirts/thobes on hangers
+const garment = (x, z, col, len, w = .46) => {
+  const g = new THREE.Group(); scene.add(g);
+  const hk = new THREE.Mesh(new THREE.TorusGeometry(.03, .004, 6, 16, Math.PI * 1.4), goldM); hk.position.set(0, 1.97, 0); hk.rotation.z = Math.PI * .8; g.add(hk);
+  const hb = new THREE.Mesh(new THREE.CylinderGeometry(.006, .006, w * .9, 8), M.darkWood); hb.rotation.z = Math.PI / 2; hb.position.set(0, 1.9, 0); g.add(hb);
+  const mat = new THREE.MeshStandardMaterial({ map: fabricTex, color: col, roughness: .95 });
+  const body = new THREE.Mesh(new RoundedBoxGeometry(w, len, .05, 3, .02), mat); body.position.set(0, 1.9 - len / 2, 0); body.castShadow = true; body.receiveShadow = true; g.add(body);
+  const sh = new THREE.Mesh(new RoundedBoxGeometry(w * .22, len * .55, .045, 3, .02), mat); sh.position.set(w * .5, 1.9 - len * .3, 0); sh.rotation.z = .12; g.add(sh);
+  const sh2 = sh.clone(); sh2.position.x = -w * .5; sh2.rotation.z = -.12; g.add(sh2);
+  g.position.set(x, 0, z); g.rotation.y = Math.PI / 2 * .92; return g;
+};
+const COLS1 = ['#f7f5f0', '#f4f1ea', '#1f2a44', '#8fb3d9', '#f2efe8', '#151515', '#c8b89c'];
+COLS1.forEach((c, i) => garment(.1 + i * .115, .3, c, c === '#151515' ? 1.05 : .95, .44));
+// shoe shelves under the hanging
+for (let r = 0; r < 2; r++) { box(.9 - T2, T2, DEP - .03, carcM, T2 / 2, .3 + r * .32, 0); ledLine('shelf', .05, .3 + r * .32 - .005, DEP - .07, .85, .3 + r * .32 - .005, DEP - .07, 0, -1, -.4, 4);
+  for (let k = 0; k < 3; k++) { const c = ['#2b1d14', '#e8e2d6', '#6b4a30', '#111'][(k + r) % 4]; box(.1, .09, .26, new THREE.MeshStandardMaterial({ color: c, roughness: .35 }), .08 + k * .27, .3 + r * .32 + T2, .2, { r: .03 }); box(.1, .09, .26, new THREE.MeshStandardMaterial({ color: c, roughness: .35 }), .2 + k * .27, .3 + r * .32 + T2, .2, { r: .03 }); } }
+
+// ---- section 2: shelves with folded clothes + drawers below
+const shelfY = [1.15, 1.45, 1.75, 2.05, 2.35];
+for (const y of shelfY) {
+  box(.7 - T2, T2, DEP - .03, carcM, .9 + T2 / 2, y, 0);
+  ledLine('shelf', .94, y - .004, DEP - .07, 1.56, y - .004, DEP - .07, 0, -1, -.4, 10);
+}
+const FOLD = [['#f4f1ea', '#1f2a44', '#8fb3d9'], ['#151515', '#c8b89c', '#7a1f2b'], ['#e9e4da', '#5b6b4a', '#2c3e66'], ['#efe6d6', '#b08a4e', '#3a3a3a'], ['#d9cdb8', '#f7f5f0', '#1f2a44']];
+shelfY.forEach((y, si) => { if (si === 4) return; FOLD[si].forEach((c, k) => { for (let n = 0; n < 4; n++) box(.18, .045, .3, new THREE.MeshStandardMaterial({ map: fabricTex, color: c, roughness: .95 }), .95 + k * .205, y + T2 + n * .047, .14 + (n % 2) * .01, { r: .012 }); }); });
+// three drawers (the middle one opens)
+const drawerFront = [], drawerBody = [];
+for (let d = 0; d < 3; d++) {
+  const y = .1 + d * .33; const g = new THREE.Group(); scene.add(g);
+  box(.68, .3, .02, doorM, 0, 0, .57, { parent: g }); box(.2, .015, .02, goldM, .24, .2, .59, { parent: g });
+  box(.64, .015, .5, carcM, .02, .02, .06, { parent: g }); box(.015, .12, .5, carcM, .02, .02, .06, { parent: g }); box(.015, .12, .5, carcM, .645, .02, .06, { parent: g }); box(.64, .12, .015, carcM, .02, .02, .06, { parent: g });
+  g.position.set(.91, y, 0); drawerFront.push(g);
+}
+// drawer contents: velvet tray, watches, perfume
+const tray = box(.6, .01, .44, new THREE.MeshStandardMaterial({ color: '#2a1f2e', roughness: 1 }), .04, .035, .08, { parent: drawerFront[1] });
+for (let i = 0; i < 3; i++) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .014, 32), goldM); w.position.set(.13 + i * .13, .055, .2); drawerFront[1].add(w); const f = new THREE.Mesh(new THREE.CylinderGeometry(.028, .028, .016, 32), new THREE.MeshStandardMaterial({ color: ['#0d1a33', '#f2efe8', '#111'][i], roughness: .2, metalness: .3 })); f.position.set(.13 + i * .13, .058, .2); drawerFront[1].add(f); box(.03, .006, .16, new THREE.MeshStandardMaterial({ color: '#3a2a1e' }), .115 + i * .13, .045, .26, { parent: drawerFront[1] }); }
+for (let i = 0; i < 2; i++) { const b = new THREE.Mesh(new RoundedBoxGeometry(.07, .1, .05, 3, .01), new THREE.MeshPhysicalMaterial({ color: ['#e8c48a', '#c9d6e0'][i], roughness: .05, transmission: .6, thickness: .03 })); b.position.set(.45 + i * .1, .09, .36); drawerFront[1].add(b); const cap = new THREE.Mesh(new THREE.CylinderGeometry(.018, .018, .03, 16), goldM); cap.position.set(.45 + i * .1, .155, .36); drawerFront[1].add(cap); }
+const drL = new THREE.RectAreaLight('#fff1dc', 0, .6, .02); drL.position.set(.3, .135, .32); drL.lookAt(.3, 0, .32); drawerFront[1].add(drL); LEDs.drawer.push([drL, 7]);
+const drM = new THREE.Mesh(new THREE.BoxGeometry(.6, .006, .01), emis('#000', 0)); drM.position.set(.3, .132, .56); drawerFront[1].add(drM); LEDm.drawer.push(drM);
+// ---- section 3: long hanging + top shelf
+box(.8 - T2, T2, DEP - .03, carcM, 1.6 + T2 / 2, 2.15, 0); ledLine('shelf', 1.64, 2.145, DEP - .07, 2.36, 2.145, DEP - .07, 0, -1, -.4, 10);
+for (let i = 0; i < 2; i++) box(.3, .22, .38, new THREE.MeshStandardMaterial({ color: ['#c9a063', '#efe6d6'][i], roughness: .6 }), 1.66 + i * .36, 2.165, .1, { r: .01 });
+const rail3 = rail.clone(); rail3.scale.y = .76 / .86; rail3.position.set(2.0, 1.95, .3); scene.add(rail3);
+ledLine('rail', 1.63, 1.93, .3, 2.37, 1.93, .3, 0, -1, .15, 14);
+['#1f2a44', '#151515', '#7a6248', '#2c3e66', '#e9e4da', '#3a3a3a'].forEach((c, i) => garment(1.7 + i * .12, .3, c, 1.35, .46));
+
+// ---- doors: two leaves on section 1 and section 3 (hinged at the outer sides), section 2 has a glass door
+const doors = [];
+function door(x0, w, hingeLeft) {
+  const pivot = new THREE.Group(); pivot.position.set(hingeLeft ? x0 : x0 + w, 0, DEP + .01); scene.add(pivot);
+  const leaf = box(w - .006, WH - .09, .022, doorM, hingeLeft ? .003 : -w + .003, .085, 0, { parent: pivot });
+  box(.018, .55, .03, goldM, hingeLeft ? w - .06 : -w + .042, 1.0, .02, { parent: pivot });
+  doors.push({ pivot, sign: hingeLeft ? -1 : 1 }); return pivot;
+}
+door(0, .45, true); door(.45, .45, false); door(1.6, .4, true); door(2.0, .4, false);
+// glass door for the middle section (stays shut, shows the lit shelves)
+box(.68, 1.58, .008, M.glass, .91, 1.0, DEP + .012, { cast: false }); box(.012, 1.58, .02, goldM, .91, 1.0, DEP + .01); box(.012, 1.58, .02, goldM, 1.578, 1.0, DEP + .01);
+// sensor dot on the cornice
+const sensM = emis('#ff5a3a', 0); const sens = new THREE.Mesh(new THREE.SphereGeometry(.012, 12, 8), sensM); sens.position.set(.45, WH - .02, DEP - .02); scene.add(sens);
+// dressing room dressing: ottoman + mirror + pendant
+const ot = box(.9, .42, .5, new THREE.MeshStandardMaterial({ map: fabricTex, color: '#b9a383', roughness: .95 }), 2.6, 0, 2.3, { r: .08 });
+box(.04, 2.0, .7, goldM, 3.93, .5, .6); plane(.62, 1.9, new THREE.MeshStandardMaterial({ color: '#cfd6da', metalness: 1, roughness: .04 }), [3.9, 1.5, .95], [0, -Math.PI / 2, 0]);
+// room light (dim morning ambience) and a cove for the final shot
+const roomL = new THREE.PointLight('#fff1d6', 0, 9, 1.6); roomL.position.set(1.2, 2.8, 2.2); scene.add(roomL);
+const winSun = new THREE.RectAreaLight('#cfe0ff', 0, 1.6, 2.0); winSun.position.set(3.94, 1.6, 2.6); winSun.lookAt(0, 1.2, 2.6); scene.add(winSun);
+const hemi = new THREE.HemisphereLight('#ffe9d2', '#5a4a3c', .1); scene.add(hemi);
+
+const VIEWS = {
+  f: { pos: [1.2, 1.32, 3.55], tgt: [1.2, 1.3, 0], fov: 64 },
+  d: { pos: [2.1, 1.35, 2.0], tgt: [.5, 1.3, .3], fov: 58 },
+  s: { pos: [1.3, 1.55, 1.25], tgt: [1.25, 1.55, 0], fov: 54 },
+  r: { pos: [.75, 1.15, 1.25], tgt: [.42, 1.7, .2], fov: 58 },
+  dr: { pos: [1.28, 1.25, 1.15], tgt: [1.25, .45, .45], fov: 50 },
+  room: { pos: [3.1, 1.55, 3.4], tgt: [1.0, 1.2, .2], fov: 66 },
+};
+// state "door:<0..1>|lights:<side,shelf,rail,drawer>|drawer:<0..1>|room:<0..1>"
+window.setState = (st) => {
+  const o = Object.fromEntries(st.split('|').map(p => p.split(':')));
+  const open = +(o.door ?? 0), lights = (o.lights ?? '').split('+').filter(Boolean), dOpen = +(o.drawer ?? 0), room = +(o.room ?? 0);
+  doors.forEach(({ pivot, sign }) => pivot.rotation.y = sign * open * 1.75);
+  drawerFront[1].position.z = dOpen * .4;
+  for (const g of ['side', 'shelf', 'rail', 'drawer']) { const on = lights.includes(g); LEDs[g].forEach(([l, k]) => l.intensity = on ? k : 0); LEDm[g].forEach(m => { m.material = on ? emis('#fff1dc', 3) : emis('#000', 0); }); }
+  sensM.emissiveIntensity = lights.length ? 2 : 0;
+  roomL.intensity = room * 10; winSun.intensity = room > 0 ? 0 : .55; hemi.intensity = .06 + room * .12;
+  scene.environmentIntensity = .04 + room * .08; renderer.toneMappingExposure = .9;
+};

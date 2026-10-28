@@ -1,0 +1,75 @@
+// ===== Living corner: beige sofa, cognac leather chair, walnut table, red cushions; light colour states =====
+const woodFloorTex = canvasTex(1024, 1024, (g, w, h) => { woodDraw('#a88462', '70,45,25')(g, w, h); g.strokeStyle = 'rgba(40,25,12,.35)'; g.lineWidth = 3; for (let y = 0; y <= h; y += 128) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } }, [3, 3]);
+plane(12, 12, new THREE.MeshStandardMaterial({ map: woodFloorTex, roughness: .5 }), [0, 0, 2], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#f1ebe2', roughness: .92 });
+box(8, 3.0, .1, wallM, -4, 0, -.6); box(.1, 3.0, 8, wallM, -3.0, 0, -.6); box(8, .1, 8, M.ceil, -4, 3.0, -.6, { cast: false });
+// oak slat panel behind the sofa
+const slatM = new THREE.MeshStandardMaterial({ map: oakTex, color: '#c79a68', roughness: .55 });
+box(2.9, 2.6, .02, new THREE.MeshStandardMaterial({ color: '#2a1d14', roughness: .8 }), -1.45, .2, -.5, { cast: false });
+for (let i = 0; i < 29; i++) box(.05, 2.6, .04, slatM, -1.43 + i * .1, .2, -.48);
+
+// sofa (beige fabric)
+const beige = new THREE.MeshStandardMaterial({ map: fabricTex.clone(), color: '#e3cfae', roughness: .95 }); beige.map.repeat.set(4, 2);
+const SX = -1.25, SZ = -.3;
+box(2.5, .32, .95, beige, SX, .1, SZ, { r: .05 });
+box(2.5, .55, .22, beige, SX, .35, SZ, { r: .08 });
+box(.22, .32, .95, beige, SX, .42, SZ, { r: .08 }); box(.22, .32, .95, beige, SX + 2.28, .42, SZ, { r: .08 });
+for (let i = 0; i < 3; i++) { box(.68, .14, .72, beige, SX + .23 + i * .69, .42, SZ + .22, { r: .06 }); box(.66, .42, .16, beige, SX + .24 + i * .69, .56, SZ + .2, { r: .07 }); }
+for (const x of [SX + .05, SX + 2.4]) for (const z of [SZ + .05, SZ + .85]) box(.05, .1, .05, M.darkWood, x, 0, z);
+// red + mustard + cream cushions
+const red = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#b3262b', roughness: .9 });
+const mustard = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#d39b2a', roughness: .9 });
+const teal = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#1f6f78', roughness: .9 });
+const cush = (m, x, z, rz) => { const c = box(.44, .42, .13, m, 0, 0, 0, { r: .06 }); c.position.set(x, .78, z); c.rotation.set(-.25, 0, rz); };
+cush(red, SX + .45, SZ + .42, .12); cush(mustard, SX + .8, SZ + .4, -.06); cush(teal, SX + 1.85, SZ + .42, -.1); cush(red, SX + 2.08, SZ + .45, .12);
+// throw blanket (teal) over the arm
+box(.3, .03, .7, teal, SX + 2.24, .75, SZ + .1, { r: .01 });
+
+// cognac leather armchair (right, angled)
+const leather = new THREE.MeshStandardMaterial({ color: '#8a4a22', roughness: .42, metalness: .05 });
+const ch = new THREE.Group(); scene.add(ch);
+box(.85, .3, .8, leather, -.425, .15, -.4, { r: .07, parent: ch }); box(.85, .55, .18, leather, -.425, .4, -.4, { r: .08, parent: ch });
+box(.16, .28, .8, leather, -.425, .4, -.4, { r: .06, parent: ch }); box(.16, .28, .8, leather, .265, .4, -.4, { r: .06, parent: ch });
+for (const x of [-.38, .34]) for (const z of [-.36, .34]) box(.03, .15, .03, M.brass, x, 0, z, { parent: ch });
+ch.position.set(1.35, 0, 1.15); ch.rotation.y = -1.05;
+
+// walnut coffee table (round) with a bowl of fruit + books
+const walnutTex = canvasTex(512, 512, woodDraw('#5a3a22', '30,16,6'), [1, 1]);
+const walnut = new THREE.MeshStandardMaterial({ map: walnutTex, roughness: .35 });
+const top = new THREE.Mesh(new THREE.CylinderGeometry(.55, .55, .05, 64), walnut); top.position.set(0, .4, 1.05); top.castShadow = top.receiveShadow = true; scene.add(top);
+const ped = new THREE.Mesh(new THREE.CylinderGeometry(.18, .26, .38, 32), walnut); ped.position.set(0, .19, 1.05); ped.castShadow = true; scene.add(ped);
+const bowl = new THREE.Mesh(new THREE.SphereGeometry(.15, 32, 16, 0, 6.29, Math.PI / 2, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#f2ede4', roughness: .3, side: THREE.DoubleSide })); bowl.position.set(-.12, .57, 1.0); scene.add(bowl);
+const fruit = [['#d8261c', -.17, .97], ['#e8a417', -.06, 1.03], ['#4f8f2a', -.13, 1.07], ['#d8261c', -.05, .94]];
+fruit.forEach(([c, x, z]) => { const f = new THREE.Mesh(new THREE.SphereGeometry(.055, 24, 16), new THREE.MeshStandardMaterial({ color: c, roughness: .35 })); f.position.set(x, .5, z); f.castShadow = true; scene.add(f); });
+for (let i = 0; i < 2; i++) box(.3 - i * .04, .04, .22, new THREE.MeshStandardMaterial({ color: ['#1f3a5f', '#e9e1d2'][i], roughness: .7 }), .12, .425 + i * .04, .95, { r: .005 });
+// rug
+const rugT = canvasTex(1024, 768, (g, w, h) => { g.fillStyle = '#cfc4b4'; g.fillRect(0, 0, w, h); for (let i = 0; i < 12000; i++) { g.fillStyle = `rgba(${R() > .5 ? 120 : 240},${R() > .5 ? 110 : 230},${R() > .5 ? 100 : 215},.07)`; g.fillRect(R() * w, R() * h, 3, 3); } g.strokeStyle = '#9b3a2a'; g.lineWidth = 18; g.strokeRect(50, 50, w - 100, h - 100); g.strokeStyle = '#1f6f78'; g.lineWidth = 8; g.strokeRect(90, 90, w - 180, h - 180); });
+plane(3.2, 2.3, new THREE.MeshStandardMaterial({ map: rugT, roughness: 1 }), [0, .006, .95], [-Math.PI / 2, 0, 0]);
+plant(-2.4, -.1, 1.6, .55);
+// side table + lamp shade (off) left of sofa
+box(.45, .5, .45, walnut, -1.85, 0, -.2);
+
+// ---- lights ----
+const hemi = new THREE.HemisphereLight('#fff', '#5a4a3c', .2); scene.add(hemi);
+const downs = [];
+for (const [x, z] of [[-1.0, .4], [.9, .4], [-1.0, 1.9], [.9, 1.9], [0, -.1]]) { const s = new THREE.SpotLight('#fff', 0, 10, .95, .85, 1.5); s.position.set(x, 2.97, z); s.target.position.set(x, 0, z); s.castShadow = x === 0; if (s.castShadow) { s.shadow.mapSize.set(1024, 1024); s.shadow.bias = -.0005; } scene.add(s, s.target); downs.push(s); }
+const fill = new THREE.RectAreaLight('#fff', 0, 3, 2); fill.position.set(.5, 2.2, 3.6); fill.lookAt(-.3, .7, 0); scene.add(fill);
+// mixed-light state: left half cold, right half warm
+const mixL = new THREE.SpotLight('#a9c2ff', 0, 8, .55, .6, 1.4); mixL.position.set(-1.1, 2.97, .7); mixL.target.position.set(-.9, .4, -.1); scene.add(mixL, mixL.target);
+const mixR = new THREE.SpotLight('#ff9f3d', 0, 8, .55, .6, 1.4); mixR.position.set(.6, 2.97, .7); mixR.target.position.set(.6, .4, -.1); scene.add(mixR, mixR.target);
+
+const VIEWS = {
+  m: { pos: [2.0, 1.55, 4.4], tgt: [-.15, .72, .3], fov: 56 },
+  c: { pos: [1.05, 1.1, 2.55], tgt: [-.3, .62, .2], fov: 48 },
+};
+const COL = { show: '#fff6ea', cold: '#a9c2ff', warm: '#ffcf94', yellow: '#ff9f3d', k4: '#fff1de' };
+// state: show | cold | warm | yellow | k4 | mixed
+window.setState = (st) => {
+  const mixed = st === 'mixed', col = COL[st] ?? '#fff';
+  downs.forEach(s => { s.color.set(col); s.intensity = mixed ? 0 : st === 'show' ? 10 : 8; });
+  fill.color.set(col); fill.intensity = mixed ? .2 : st === 'show' ? 1.2 : .6;
+  hemi.color.set(mixed ? '#fff' : col); hemi.intensity = st === 'show' ? .35 : .15;
+  mixL.intensity = mixR.intensity = mixed ? 30 : 0;
+  scene.environmentIntensity = st === 'show' ? .3 : .08;
+  renderer.toneMappingExposure = st === 'show' ? .95 : .9;
+};

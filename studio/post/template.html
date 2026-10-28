@@ -1,0 +1,29 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<!-- Image post template (1080x1350). Copy to studio/post/<name>.html with a background render as bg.jpg next to it, edit the texts, then: node studio/post/shot.js studio/post/<name>.html out.jpg
+     Wrap Latin/number runs (CRI 90+, @handles, phone) in <bdi dir="ltr"> so they keep their order inside Arabic text. -->
+<style>
+@font-face{font-family:Cairo;font-weight:600;src:url(../reel/template/fonts/cairo2.ttf)}
+@font-face{font-family:Cairo;font-weight:800;src:url(../reel/template/fonts/cairo3.ttf)}
+@font-face{font-family:Cairo;font-weight:900;src:url(../reel/template/fonts/cairo4.ttf)}
+:root{--o:#EF5924;--ink:#120e0c}
+html,body{margin:0;width:1080px;height:1350px;overflow:hidden;font-family:Cairo;color:#fff;background:var(--ink)}
+.bg{position:absolute;inset:0;background:url(bg.jpg) center/cover}
+.shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,9,8,.85) 0%,rgba(12,9,8,.15) 38%,rgba(12,9,8,.2) 55%,rgba(12,9,8,.92) 100%)}
+.top{position:absolute;top:70px;left:70px;right:70px;text-align:center}
+.kicker{display:inline-block;background:var(--o);padding:6px 28px;border-radius:40px;font-weight:800;font-size:36px}
+h1{font-weight:900;font-size:76px;line-height:1.25;margin:26px 0 0;text-shadow:0 4px 30px rgba(0,0,0,.6)}
+.list{position:absolute;bottom:190px;left:70px;right:70px;display:flex;flex-direction:column;gap:18px}
+.row{background:rgba(18,14,12,.86);border:3px solid var(--o);border-radius:30px;padding:16px 30px;font-weight:800;font-size:40px;display:flex;gap:18px;align-items:center}
+.row b{color:#ffb15a;font-weight:900;direction:ltr;unicode-bidi:isolate}
+bdi,[dir=ltr]{unicode-bidi:isolate}
+.foot{position:absolute;bottom:50px;left:70px;right:70px;display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:32px}
+.foot img{height:90px}
+</style></head><body>
+<div class="bg"></div><div class="shade"></div>
+<div class="top"><span class="kicker">نصيحة إضاءة 💡</span><h1>العنوان الرئيسي هنا</h1></div>
+<div class="list">
+  <div class="row"><b>3000K</b> النقطة الأولى</div>
+  <div class="row"><b>CRI 90+</b> النقطة الثانية</div>
+</div>
+<div class="foot"><img src="../reel/template/logo3d.png"><span>حولي – شارع تونس · <bdi dir="ltr">5111 1725</bdi> · <bdi dir="ltr">@quality_light1</bdi></span></div>
+</body></html>

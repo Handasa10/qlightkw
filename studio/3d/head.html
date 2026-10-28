@@ -1,0 +1,121 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script>
+</head><body>
+<script type="module">
+import * as THREE from 'three';
+import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const W = window.RW || 2400, H = window.RH || 1500;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H); renderer.setPixelRatio(1);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .82;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+RectAreaLightUniformsLib.init();
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#0d0b0a');
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.18;
+
+// ---------- procedural textures ----------
+const R = (s => () => (s = (s * 16807) % 2147483647) / 2147483647)(12345);
+function canvasTex(w, h, draw, rep = [1, 1], srgb = true) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); draw(g, w, h);
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...rep);
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+}
+const marbleTex = canvasTex(1024, 512, (g, w, h) => {
+  g.fillStyle = '#e9e1d4'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2500; i++) { g.fillStyle = `rgba(${200 + R() * 40},${190 + R() * 40},${175 + R() * 40},0.08)`; g.beginPath(); g.arc(R() * w, R() * h, 4 + R() * 40, 0, 7); g.fill(); }
+  for (let v = 0; v < 9; v++) {
+    let x = R() * w, y = R() * h; g.strokeStyle = `rgba(150,130,110,${0.12 + R() * 0.25})`; g.lineWidth = .6 + R() * 2.2; g.beginPath(); g.moveTo(x, y);
+    for (let k = 0; k < 60; k++) { x += 8 + R() * 18; y += (R() - .5) * 26; g.lineTo(x, y); } g.stroke();
+  }
+  g.strokeStyle = 'rgba(120,105,90,0.55)'; g.lineWidth = 3; g.strokeRect(0, 0, w, h);
+}, [14 / 1.2, 6 / 0.6]);
+const plasterTex = canvasTex(512, 512, (g, w, h) => { g.fillStyle = '#efe9e0'; g.fillRect(0, 0, w, h); for (let i = 0; i < 6000; i++) { g.fillStyle = `rgba(${R() > .5 ? 255 : 200},${R() > .5 ? 250 : 190},${R() > .5 ? 240 : 180},0.05)`; g.fillRect(R() * w, R() * h, 2, 2); } }, [4, 2]);
+function woodDraw(base, dark) { return (g, w, h) => { g.fillStyle = base; g.fillRect(0, 0, w, h); for (let i = 0; i < 260; i++) { const x = R() * w; g.strokeStyle = `rgba(${dark},${0.05 + R() * 0.12})`; g.lineWidth = .5 + R() * 2.5; g.beginPath(); g.moveTo(x, 0); for (let y = 0; y <= h; y += 20) g.lineTo(x + Math.sin(y * .01 + i) * 4, y); g.stroke(); } }; }
+const oakTex = canvasTex(512, 1024, woodDraw('#8a6440', '60,38,20'), [1, 1]);
+const flutedTex = canvasTex(1024, 512, (g, w, h) => { woodDraw('#7d5a38', '50,30,15')(g, w, h); for (let x = 0; x < w; x += 32) { const gr = g.createLinearGradient(x, 0, x + 32, 0); gr.addColorStop(0, 'rgba(0,0,0,0.35)'); gr.addColorStop(.2, 'rgba(255,230,200,0.10)'); gr.addColorStop(.6, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,0.30)'); g.fillStyle = gr; g.fillRect(x, 0, 32, h); } }, [6, 1]);
+const flutedBump = canvasTex(256, 64, (g, w, h) => { for (let x = 0; x < w; x += 8) { const gr = g.createLinearGradient(x, 0, x + 8, 0); gr.addColorStop(0, '#000'); gr.addColorStop(.5, '#fff'); gr.addColorStop(1, '#000'); g.fillStyle = gr; g.fillRect(x, 0, 8, h); } }, [6, 1], false);
+const fabricTex = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#d9cdb8'; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 2) { g.fillStyle = `rgba(0,0,0,${0.03 + R() * 0.04})`; g.fillRect(0, y, w, 1); } for (let x = 0; x < w; x += 2) { g.fillStyle = `rgba(255,255,255,${0.02 + R() * 0.04})`; g.fillRect(x, 0, 1, h); } }, [6, 2]);
+const darkFabric = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#5b4636'; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 2) { g.fillStyle = `rgba(0,0,0,${0.05 + R() * 0.05})`; g.fillRect(0, y, w, 1); } }, [4, 4]);
+const rugTex = canvasTex(2048, 1024, (g, w, h) => {
+  g.fillStyle = '#cbb79b'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 20000; i++) { g.fillStyle = `rgba(${R() > .5 ? 120 : 230},${R() > .5 ? 100 : 210},${R() > .5 ? 80 : 180},0.05)`; g.fillRect(R() * w, R() * h, 3, 3); }
+  const bd = 90; g.strokeStyle = '#7a5b3a'; g.lineWidth = 26; g.strokeRect(bd, bd, w - 2 * bd, h - 2 * bd);
+  g.strokeStyle = '#b89558'; g.lineWidth = 6; g.strokeRect(bd + 40, bd + 40, w - 2 * bd - 80, h - 2 * bd - 80); g.strokeRect(bd - 40, bd - 40, w - 2 * bd + 80, h - 2 * bd + 80);
+  // border motif
+  g.fillStyle = '#8c6a44';
+  for (let x = bd + 60; x < w - bd - 40; x += 70) { [bd, h - bd].forEach(y => { g.save(); g.translate(x, y); g.rotate(Math.PI / 4); g.fillRect(-12, -12, 24, 24); g.restore(); }); }
+  for (let y = bd + 60; y < h - bd - 40; y += 70) { [bd, w - bd].forEach(x => { g.save(); g.translate(x, y); g.rotate(Math.PI / 4); g.fillRect(-12, -12, 24, 24); g.restore(); }); }
+  // central medallions (8-point star)
+  const star = (cx, cy, r, col) => { g.fillStyle = col; for (let k = 0; k < 2; k++) { g.save(); g.translate(cx, cy); g.rotate(k * Math.PI / 4); g.fillRect(-r, -r, 2 * r, 2 * r); g.restore(); } };
+  [[w * .3, h / 2], [w * .7, h / 2]].forEach(([cx, cy]) => { star(cx, cy, 170, '#8c6a44'); star(cx, cy, 140, '#d8c6a8'); star(cx, cy, 90, '#a7824f'); star(cx, cy, 45, '#e6d7bd'); });
+  star(w / 2, h / 2, 60, '#a7824f');
+  g.strokeStyle = 'rgba(140,106,68,0.5)'; g.lineWidth = 3;
+  for (let x = 300; x < w - 300; x += 120) for (let y = 260; y < h - 260; y += 120) { g.beginPath(); g.arc(x, y, 6, 0, 7); g.stroke(); }
+});
+const stoneTex = canvasTex(1024, 1024, (g, w, h) => { // TV wall dark marble
+  g.fillStyle = '#3b3632'; g.fillRect(0, 0, w, h);
+  for (let v = 0; v < 26; v++) { let x = R() * w, y = 0; g.strokeStyle = `rgba(220,200,170,${0.08 + R() * 0.3})`; g.lineWidth = .5 + R() * 2.5; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 50; k++) { x += (R() - .5) * 40; y += 22; g.lineTo(x, y); } g.stroke(); }
+}, [1, 1]);
+
+// ---------- materials ----------
+const M = {
+  floor: new THREE.MeshStandardMaterial({ map: marbleTex, roughness: .18, metalness: 0 }),
+  wall: new THREE.MeshStandardMaterial({ map: plasterTex, roughness: .9 }),
+  ceil: new THREE.MeshStandardMaterial({ color: '#f4f0ea', roughness: .95 }),
+  fluted: new THREE.MeshStandardMaterial({ map: flutedTex, bumpMap: flutedBump, bumpScale: 3, roughness: .6 }),
+  oak: new THREE.MeshStandardMaterial({ map: oakTex, roughness: .5 }),
+  darkWood: new THREE.MeshStandardMaterial({ color: '#3a2a1e', roughness: .45 }),
+  fabric: new THREE.MeshStandardMaterial({ map: fabricTex, roughness: .95 }),
+  cushion: new THREE.MeshStandardMaterial({ map: darkFabric, roughness: .9 }),
+  goldCush: new THREE.MeshStandardMaterial({ color: '#b08a4e', roughness: .6, metalness: .2 }),
+  brass: new THREE.MeshStandardMaterial({ color: '#c9a063', roughness: .28, metalness: 1 }),
+  black: new THREE.MeshStandardMaterial({ color: '#141212', roughness: .4, metalness: .3 }),
+  rug: new THREE.MeshStandardMaterial({ map: rugTex, roughness: 1 }),
+  stone: new THREE.MeshStandardMaterial({ map: stoneTex, roughness: .15 }),
+  tableTop: new THREE.MeshStandardMaterial({ map: marbleTex.clone(), roughness: .12 }),
+  screen: new THREE.MeshStandardMaterial({ color: '#050608', roughness: .1, metalness: .5 }),
+  glass: new THREE.MeshPhysicalMaterial({ color: '#cfe3ea', roughness: .05, transmission: .9, transparent: true, opacity: .25, thickness: .02 }),
+  leaf: new THREE.MeshStandardMaterial({ color: '#41603a', roughness: .8 }),
+  pot: new THREE.MeshStandardMaterial({ color: '#d8d0c4', roughness: .7 }),
+  courtWall: new THREE.MeshStandardMaterial({ color: '#cbb89b', roughness: .95 }),
+};
+M.tableTop.map.repeat.set(1, 1);
+const emis = (col, k) => new THREE.MeshStandardMaterial({ color: '#000', emissive: col, emissiveIntensity: k });
+const LED = emis('#ffd9a8', 6), LEDsoft = emis('#ffcf96', 2.5);
+
+// ---------- helpers ----------
+const G = new THREE.Group(); scene.add(G);
+function box(w, h, d, mat, x, y, z, o = {}) { // x,y,z = min corner
+  const geo = o.r ? new RoundedBoxGeometry(w, h, d, 3, o.r) : new THREE.BoxGeometry(w, h, d);
+  if (o.uv) { const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * o.uv[0], uv.getY(i) * o.uv[1]); }
+  const m = new THREE.Mesh(geo, mat); m.position.set(x + w / 2, y + h / 2, z + d / 2);
+  m.castShadow = o.cast ?? true; m.receiveShadow = true; (o.parent || G).add(m); return m;
+}
+function plane(w, h, mat, pos, rot, parent = G) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); m.position.set(...pos); m.rotation.set(...rot); m.receiveShadow = true; parent.add(m); return m; }
+const LX = 8.6, LZ = 6.35, HC = 4.3, HB = 3.45;
+
+
+function plant(x, z, h = 1.4, potH = .5) {
+  box(.42, potH, .42, M.pot, x - .21, 0, z - .21);
+  const lm = [M.leaf, new THREE.MeshStandardMaterial({ color: '#557a45', roughness: .8 }), new THREE.MeshStandardMaterial({ color: '#2f4a2a', roughness: .8 })];
+  for (let i = 0; i < 26; i++) {
+    const a = R() * 6.28, r = R() * .32, y = potH + .3 + R() * (h - .3);
+    const lf = new THREE.Mesh(new THREE.IcosahedronGeometry(.1 + R() * .12, 0), lm[i % 3]);
+    lf.position.set(x + Math.cos(a) * r * (1 - (y - potH) / h * .4), y, z + Math.sin(a) * r); lf.rotation.set(R() * 3, R() * 3, R() * 3); lf.castShadow = true; scene.add(lf);
+  }
+  box(.03, h * .7, .03, M.darkWood, x - .015, potH, z - .015);
+}
