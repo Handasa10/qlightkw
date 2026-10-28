@@ -2,7 +2,7 @@
 // Usage: node studio/3d/shoot.js <body> "<view>@<state>;<view>@<state>" <width> <height> <outdir>
 //   <body>  file name in studio/3d/bodies without .html (each body defines VIEWS and window.setState)
 // Writes <outdir>/<view>_<state>.jpg (characters : | + become -). Run `npm install` in studio/3d once.
-const { chromium } = require('/opt/node22/lib/node_modules/playwright');
+const { chromium } = (() => { try { return require('playwright'); } catch { return require('/opt/node22/lib/node_modules/playwright'); } })();
 const fs = require('fs'), path = require('path'), http = require('http');
 const [,, body, jobs, w, h, out] = process.argv;
 const dir = __dirname;

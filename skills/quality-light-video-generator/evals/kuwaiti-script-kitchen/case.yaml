@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: kuwaiti-script-kitchen
+expected_outcome: |
+  A voice description in English plus a Kuwaiti script of about 9–12 lines (105–140 words) with an [expression] tag on every line, numbers spelled out in words, real technical points (4000K for kitchens, CRI 90+, under-cabinet light), the design-fee offer, the Hawally address, WhatsApp and the sign-off; then asks for approval.

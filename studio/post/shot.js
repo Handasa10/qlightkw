@@ -1,5 +1,5 @@
 // Screenshot a 1080x1350 post page.  Usage: node studio/post/shot.js <page.html> <out.jpg>
-const { chromium } = require('/opt/node22/lib/node_modules/playwright');
+const { chromium } = (() => { try { return require('playwright'); } catch { return require('/opt/node22/lib/node_modules/playwright'); } })();
 const path = require('path');
 (async () => {
   const [,, html, out] = process.argv;

@@ -9,3 +9,9 @@ function keyed(t, keys, z = 1, cx = 540, cy = 960, dur = .45) {
   bgImg(IM[a], 1, z, cx, cy); if (a !== b) bgImg(IM[b], k, z, cx, cy);
 }
 function flash(t, t0, a = .35) { if (t > t0 && t < t0 + .6) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,236,210,${a * (1 - prog(t, t0, t0 + .6))})`; ctx.fillRect(0, 0, W, H); ctx.restore(); } }
+// Start / end of every frame. In overlay mode (graphics over AI or phone footage) the canvas stays transparent.
+function beginFrame() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  if (window.OVERLAY) ctx.clearRect(0, 0, W, H); else { ctx.fillStyle = '#0d0b0a'; ctx.fillRect(0, 0, W, H); }
+}
+function endFrame(t) { if (!window.OVERLAY) finish(t); }

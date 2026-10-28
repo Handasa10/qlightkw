@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: cafe-ideas-for-shops
+expected_outcome: |
+  8 to 10 ranked ideas for cafés/shops, each with hook, product, audience, recommended style and duration, CTA; mixes styles including trending formats; avoids already-produced topics; ends asking which idea to start.

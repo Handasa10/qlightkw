@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: starts-with-intake-card
+expected_outcome: |
+  Starts with one short multiple-choice card (products/category, goal, audience) with a recommended option, in Egyptian Arabic, and proposes no ideas yet.

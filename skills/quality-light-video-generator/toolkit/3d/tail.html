@@ -1,0 +1,24 @@
+// ---------- cameras & render ----------
+const camera = new THREE.PerspectiveCamera(60, W / H, .05, 100);
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const gtao = new GTAOPass(scene, camera, W, H); gtao.output = GTAOPass.OUTPUT.Default; gtao.blendIntensity = .9;
+gtao.updateGtaoMaterial({ radius: .35, distanceExponent: 1.2, thickness: 1, scale: 1 });
+composer.addPass(gtao);
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(W, H), .2, .4, .96));
+composer.addPass(new OutputPass());
+
+window.render = (name) => {
+  const v = VIEWS[name];
+  camera.position.set(...v.pos); camera.fov = v.fov; camera.updateProjectionMatrix(); camera.lookAt(...v.tgt);
+  // a stray NaN pixel can black out the whole frame through the post passes: nudge the camera and retry
+  const probe = document.createElement('canvas'); probe.width = probe.height = 8; const pg = probe.getContext('2d');
+  for (let k = 0; k < 4; k++) {
+    composer.render(); pg.drawImage(renderer.domElement, 0, 0, 8, 8);
+    if (pg.getImageData(0, 0, 8, 8).data.some((v, i) => i % 4 !== 3 && v > 3)) break;
+    camera.position.x += .013; camera.position.y += .007; camera.lookAt(...v.tgt);
+  }
+  return renderer.domElement.toDataURL('image/jpeg', .93);
+};
+window.READY = true;
+</script></body></html>
