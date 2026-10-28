@@ -80,10 +80,14 @@ Then a card: approve · edit (he writes notes) · regenerate with another angle.
 
 ## 5) Voice / footage
 
-- Default: tell him to paste the voice description and script into **Google AI Studio → TTS** with the voice
-  **Achird** (his usual voice) and send the WAV. Wait for it.
-- If `GOOGLE_AI_API_KEY` is set in the environment, offer to generate it yourself:
-  `python3 toolkit/tts.py script.txt voice.txt vo48.wav` (strip nothing: the tags guide the delivery).
+- Default: generate the voice yourself with Gemini TTS (voice **Achird**) through the studio function, which uses the
+  Google key already stored in Supabase and sends the WAV to the owner's bot with ✅ / 🔁 buttons:
+  `python3 toolkit/studio.py tts script.txt voice.txt "<title>"` (script with its [tags], voice description as is).
+  It prints the voice id, model, duration and the WAV's public URL. Wait for the owner's ✅ (`python3 toolkit/studio.py
+  voice <id>` → `approved`; 🔁 makes a new take with a new URL), then download the approved WAV as `$W/vo.wav`.
+  The function tries the TTS models newest-first and falls back when one is out of quota.
+- If the studio function is unreachable, ask him to paste the voice description and script into **Google AI Studio →
+  TTS** with **Achird** and send the WAV.
 - UGC / store footage / AI clips: wait for the files; list exactly which clips are still missing.
 
 ## 6) Production

@@ -6,7 +6,7 @@
 //   POST + x-telegram-bot-api-secret-token   Telegram bot updates (approve / reject / ask for changes)
 //   POST { action: 'tick' }                   cron every 5 min: keep the Telegram webhook set, send queued questions; in 'meta' mode publish due posts
 //   POST { action: 'flush' }                  send queued questions / messages (content_questions) to the owner now
-//   POST { action: ... } + x-studio-token     Claude studio sessions: list / create / update items, signed upload URLs
+//   POST { action: ... } + x-studio-token     Claude studio sessions: list / create / update items, signed upload URLs, tts voices
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.93.2';
 
@@ -322,6 +322,122 @@ async function handleQuestionText(s: Settings, typed: string, replyTo?: number):
   return true;
 }
 
+// ---------------- voice-overs (Gemini TTS, the AI Studio voices) ----------------
+
+const GOOGLE_KEY = Deno.env.get('GOOGLE_AI_API_KEY') || '';
+const GEMINI = 'https://generativelanguage.googleapis.com/v1beta';
+
+interface Voice {
+  id: string;
+  title: string | null;
+  script: string;
+  voice_description: string | null;
+  voice: string;
+  status: string;
+  take: number;
+  message_id: number | null;
+}
+
+// TTS models to try in order: STUDIO_TTS_MODEL first if set, then pro before flash, newest first
+async function ttsModels(): Promise<string[]> {
+  const res = await fetch(`${GEMINI}/models?pageSize=1000`, { headers: { 'x-goog-api-key': GOOGLE_KEY } });
+  const names: string[] = ((await res.json()).models ?? []).map((m: { name: string }) => m.name.split('/').pop()).filter((n: string) => n.includes('tts'));
+  names.sort((a, b) => (Number(b.includes('pro')) - Number(a.includes('pro'))) || b.localeCompare(a));
+  const fixed = Deno.env.get('STUDIO_TTS_MODEL');
+  const list = fixed ? [fixed, ...names.filter((n) => n !== fixed)] : names;
+  if (!list.length) throw new Error('no Gemini TTS model available for this key');
+  return list;
+}
+
+// one TTS call per model until one answers; quota / overload errors move on to the next model
+async function synthesize(text: string, voice: string) {
+  let last = '';
+  for (const model of await ttsModels()) {
+    const res = await fetch(`${GEMINI}/models/${model}:generateContent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GOOGLE_KEY },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text }] }],
+        generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } },
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
+    const part = body.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData;
+    if (res.ok && part) return { model, part };
+    last = `${model}: ${body.error?.message?.split('\n')[0] || `HTTP ${res.status}`}`;
+    if (![429, 500, 503, 404].includes(res.status)) break;
+  }
+  throw new Error(last || 'TTS failed');
+}
+
+function wavFile(pcm: Uint8Array, rate: number) {
+  const h = new DataView(new ArrayBuffer(44));
+  const str = (o: number, t: string) => [...t].forEach((c, i) => h.setUint8(o + i, c.charCodeAt(0)));
+  str(0, 'RIFF'); h.setUint32(4, 36 + pcm.length, true); str(8, 'WAVE'); str(12, 'fmt ');
+  h.setUint32(16, 16, true); h.setUint16(20, 1, true); h.setUint16(22, 1, true); h.setUint32(24, rate, true);
+  h.setUint32(28, rate * 2, true); h.setUint16(32, 2, true); h.setUint16(34, 16, true); str(36, 'data'); h.setUint32(40, pcm.length, true);
+  const out = new Uint8Array(44 + pcm.length); out.set(new Uint8Array(h.buffer), 0); out.set(pcm, 44);
+  return out;
+}
+
+// generate one take, store it in the bucket and send it to the owner with approve / regenerate buttons
+async function makeVoice(s: Settings, v: Voice) {
+  try {
+    if (!GOOGLE_KEY) throw new Error('GOOGLE_AI_API_KEY is not set in the function secrets');
+    const { model, part } = await synthesize(`${v.voice_description ?? ''}\n\n${v.script}`.trim(), v.voice);
+    const rate = Number(/rate=(\d+)/.exec(part.mimeType ?? '')?.[1] ?? 24000);
+    const pcm = Uint8Array.from(atob(part.data), (c) => c.charCodeAt(0));
+    const wav = wavFile(pcm, rate);
+    const path = `voices/${v.id}-take${v.take}.wav`;
+    const up = await supabase.storage.from(BUCKET).upload(path, wav, { contentType: 'audio/wav', upsert: true });
+    if (up.error) throw up.error;
+    const url = supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+    const duration = Math.round(pcm.length / 2 / rate * 10) / 10;
+
+    let messageId: number | null = null;
+    if (BOT_TOKEN && s.telegram_chat_id) {
+      const form = new FormData();
+      form.append('chat_id', String(s.telegram_chat_id));
+      form.append('document', new Blob([wav], { type: 'audio/wav' }), `${(v.title || 'voice').replace(/[^\p{L}\p{N}_ -]/gu, '').trim() || 'voice'} - take ${v.take}.wav`);
+      form.append('caption', `🎙️ ${v.title ?? 'الصوت'} · نسخة ${v.take} · ${duration} ثانية · صوت ${v.voice}`.slice(0, 1000));
+      form.append('reply_markup', JSON.stringify({ inline_keyboard: [[{ text: '✅ موافق', callback_data: `va:${v.id}` }, { text: '🔁 ولّد تاني', callback_data: `vr:${v.id}` }]] }));
+      const tgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, { method: 'POST', body: form });
+      const tgBody = await tgRes.json();
+      if (!tgBody.ok) throw new Error(`Telegram sendDocument: ${tgBody.description ?? tgRes.status}`);
+      messageId = tgBody.result.message_id;
+    }
+    await supabase.from('content_voices').update({ status: 'ready', model, url, duration_sec: duration, message_id: messageId, error: null, updated_at: new Date().toISOString() }).eq('id', v.id);
+    return { id: v.id, url, duration_sec: duration, model };
+  } catch (e) {
+    await supabase.from('content_voices').update({ status: 'failed', error: errMsg(e), updated_at: new Date().toISOString() }).eq('id', v.id);
+    await send(s, `❌ ما قدرتش أولّد الصوت: ${esc(errMsg(e))}`, null).catch(() => {});
+    throw e;
+  }
+}
+
+async function handleVoiceCallback(s: Settings, cb: any): Promise<boolean> {
+  const [act, id] = String(cb.data ?? '').split(':');
+  if (!['va', 'vr'].includes(act)) return false;
+  const { data } = await supabase.from('content_voices').select('*').eq('id', id).maybeSingle();
+  const v = data as Voice | null;
+  if (!v || v.status !== 'ready') {
+    await tg('answerCallbackQuery', { callback_query_id: cb.id, text: 'الصوت ده اتقفل' }).catch(() => {});
+    return true;
+  }
+  await tg('editMessageReplyMarkup', { chat_id: s.telegram_chat_id, message_id: cb.message.message_id, reply_markup: { inline_keyboard: [] } }).catch(() => {});
+  if (act === 'va') {
+    await supabase.from('content_voices').update({ status: 'approved', updated_at: new Date().toISOString() }).eq('id', v.id);
+    await tg('answerCallbackQuery', { callback_query_id: cb.id, text: '✅' }).catch(() => {});
+    await send(s, '✅ الصوت اتوافق عليه، وهبدأ الفيديو.', null, { reply_to_message_id: cb.message.message_id });
+  } else {
+    await supabase.from('content_voices').update({ status: 'regenerating', take: v.take + 1, updated_at: new Date().toISOString() }).eq('id', v.id);
+    await tg('answerCallbackQuery', { callback_query_id: cb.id, text: '🔁 بولّد نسخة جديدة…' }).catch(() => {});
+    await send(s, '🔁 بولّد نسخة جديدة، دقيقة وتوصلك.', null, { reply_to_message_id: cb.message.message_id });
+    await makeVoice(s, { ...v, take: v.take + 1 }).catch(() => {});
+  }
+  return true;
+}
+
 async function handleTelegram(update: any) {
   const s = await loadSettings();
   const msg = update.message;
@@ -345,6 +461,7 @@ async function handleTelegram(update: any) {
 
   if (cb) {
     if (await handleQuestionCallback(s, cb)) return;
+    if (await handleVoiceCallback(s, cb)) return;
     const [act, id] = String(cb.data ?? '').split(':');
     const it = await getItem(id);
     let answer = 'مش لاقي العنصر ده';
@@ -611,6 +728,18 @@ async function studioAction(body: any) {
       if (error) throw error;
       return { signed_url: data.signedUrl, public_url: supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl };
     }
+    case 'tts': {
+      // voice-over for a script: generated with Gemini, stored in the bucket, sent to the owner to approve
+      if (!body.script) throw new Error('script required');
+      const { data, error } = await supabase.from('content_voices').insert({
+        item_id: body.item_id ?? null, title: body.title ?? null, script: body.script, voice_description: body.voice_description ?? null,
+        voice: body.voice || 'Achird',
+      }).select('*').single();
+      if (error) throw error;
+      return await makeVoice(s, data as Voice);
+    }
+    case 'voice':
+      return { voice: (await supabase.from('content_voices').select('id, status, take, url, duration_sec, error').eq('id', body.id).maybeSingle()).data };
     case 'notify':
       await send(s, String(body.text ?? ''), null);
       return { ok: true };
