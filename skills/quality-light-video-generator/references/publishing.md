@@ -19,6 +19,7 @@ The same Postora profile also holds **Smart Energy** accounts (instagram/faceboo
 `check_account_health` says it needs reconnecting, tell the owner to reconnect it in Postora and continue with the others.
 
 ## 2. Time
+When the owner approved in Telegram, the queue item already has `scheduled_at`: use it as is.
 Slots are 09:00, 14:00 and 18:00 Kuwait time (UTC+3, no daylight saving). "Next free slot" = the earliest slot at least
 20 minutes from now that no scheduled post already uses: check `list_posts` with status `scheduled`.
 Pass `scheduled_at` with the offset, e.g. `2026-11-02T14:00:00+03:00`, and `timezone: "Asia/Kuwait"`.
@@ -30,10 +31,10 @@ practical for small images, not videos. Host the MP4 on the QL Supabase storage:
 ```
 python3 toolkit/studio.py upload <final.mp4> reels/<yyyy-mm-dd>-<slug>.mp4   # prints the public URL
 ```
-This needs, once: the `content-studio` function deployed with the `STUDIO_TOKEN` secret and the
-`content-media` bucket (repo `handasa10/qlightkw`, files `supabase/migrations/20261029090000_content_studio.sql`
-and `supabase/functions/content-studio/index.ts`, steps 1, 2 and 4 of `docs/CONTENT_STUDIO_SETUP.md`), plus in the
-Claude environment settings: the domain `yubebbfsmlopmnluajgf.supabase.co` allowed and the variable `STUDIO_TOKEN`.
+This needs, once (see `docs/CONTENT_STUDIO_SETUP.md` in the repo `handasa10/qlightkw`): the `content-studio` function and
+the `content-media` bucket (already deployed on the Qlight project), the `STUDIO_TOKEN` secret in Supabase, and in the
+Claude environment settings the domain `yubebbfsmlopmnluajgf.supabase.co` allowed plus the variable `STUDIO_TOKEN`
+(same value). The QL Studio Telegram bot needs `STUDIO_TELEGRAM_BOT_TOKEN` in Supabase and the owner's `/start`.
 If the upload fails, say exactly which of these is missing (never ask for the token in chat), and hand over the MP4 and
 caption so the owner can post from Meta Business Suite at the chosen slot.
 

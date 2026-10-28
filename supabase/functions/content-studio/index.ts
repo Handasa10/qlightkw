@@ -1,9 +1,10 @@
-// Content Studio - reel + image post pipeline for the QUALITY LIGHT Instagram and Facebook pages.
-// idea -> script -> media -> owner approval (Telegram) -> next free slot -> publish on Instagram + Facebook.
+// Content Studio - reel + image post pipeline for the QUALITY LIGHT social pages.
+// idea -> script -> media -> owner approval (Telegram) -> next free slot -> the Claude session schedules it on Postora
+// (publisher 'postora', the default) or this function publishes on Instagram + Facebook itself (publisher 'meta').
 // Single file on purpose: it can be pasted as-is into the Supabase dashboard editor.
 // Entry points:
 //   POST + x-telegram-bot-api-secret-token   Telegram bot updates (approve / reject / ask for changes)
-//   POST { action: 'tick' }                   cron every 5 min: publish due posts, follow Instagram processing
+//   POST { action: 'tick' }                   cron every 5 min: keep the Telegram webhook set; in 'meta' mode publish due posts
 //   POST { action: ... } + x-studio-token     Claude studio sessions: list / create / update items, signed upload URLs
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.93.2';
@@ -23,6 +24,7 @@ const IG_PROCESSING_TIMEOUT_MS = 45 * 60e3;
 
 interface Settings {
   paused: boolean;
+  publisher: 'postora' | 'meta';
   reel_slots: string[];
   image_slots: string[];
   publish_instagram: boolean;
@@ -47,6 +49,7 @@ interface Item {
   preview_url?: string | null;
   cover_url?: string | null;
   scheduled_at?: string | null;
+  platforms?: string[] | null;
   ig_container_id?: string | null;
   ig_media_id?: string | null;
   ig_permalink?: string | null;
@@ -58,7 +61,7 @@ interface Item {
 }
 
 // fields a studio session may set on an item
-const EDITABLE = ['kind', 'status', 'topic', 'hook', 'angle', 'script', 'voice_description', 'caption', 'feedback', 'media_url', 'preview_url', 'cover_url', 'duration_sec', 'scheduled_at', 'error'];
+const EDITABLE = ['kind', 'status', 'topic', 'hook', 'angle', 'script', 'voice_description', 'caption', 'feedback', 'media_url', 'preview_url', 'cover_url', 'duration_sec', 'scheduled_at', 'error', 'platforms', 'postora_post_ids'];
 // statuses that wait for the owner and are sent to Telegram when an item reaches them
 const NEEDS_OWNER = ['idea', 'script_ready', 'media_ready'];
 
@@ -95,7 +98,7 @@ function slotTime(dayOffset: number, hhmm: string, now = new Date()): Date {
 async function nextFreeSlot(kind: Item['kind'], s: Settings): Promise<Date> {
   const slots = [...(kind === 'reel' ? s.reel_slots : s.image_slots)].sort();
   const { data } = await supabase.from('content_items').select('scheduled_at')
-    .in('status', ['approved', 'publishing', 'published']).not('scheduled_at', 'is', null)
+    .in('status', ['approved', 'scheduled', 'publishing', 'published']).not('scheduled_at', 'is', null)
     .gte('scheduled_at', new Date(Date.now() - 3600e3).toISOString());
   const taken = new Set((data ?? []).map((r) => Math.round(Date.parse(r.scheduled_at) / 60e3)));
   const earliest = Date.now() + 20 * 60e3;
@@ -204,7 +207,7 @@ const HELP = `أهلًا 👋 ده بوت استوديو محتوى كواليت
 • الأفكار والسكريبتات والفيديوهات هتوصلك هنا للموافقة.
 • ✅ موافقة تنقل الخطوة للي بعدها، و❌ رفض يلغيها.
 • اعمل Reply على أي رسالة واكتب ملاحظاتك، وهتتعدّل في جلسة الاستوديو الجاية.
-• الفيديو اللي توافق عليه بيتجدول أوتوماتيك في أقرب ميعاد فاضي وينزل على الانستجرام والفيسبوك.
+• الفيديو اللي توافق عليه بياخد أقرب ميعاد فاضي (9:00 · 14:00 · 18:00) ويتجدول على المنصات اللي اخترتها عن طريق Postora.
 
 الأوامر:
 /queue المجدول للنشر
@@ -270,7 +273,7 @@ async function handleTelegram(update: any) {
     await supabase.from('content_settings').update({ paused }).eq('id', 1);
     await send(s, paused ? '⏸ النشر وقف. المجدول هيستنى لحد ما تبعت /resume.' : '▶️ النشر اشتغل.', null);
   } else if (text.startsWith('/queue')) {
-    const { data } = await supabase.from('content_items').select('*').in('status', ['approved', 'publishing'])
+    const { data } = await supabase.from('content_items').select('*').in('status', ['approved', 'scheduled', 'publishing'])
       .order('scheduled_at', { ascending: true }).limit(15);
     const lines = (data ?? []).map((r: Item) => `• ${kwTime(r.scheduled_at)} · ${KIND_AR[r.kind]} · ${esc(r.topic)}`);
     await send(s, lines.length ? `🗓️ <b>المجدول</b>\n${lines.join('\n')}` : 'مفيش حاجة مجدولة دلوقتي.', null);
@@ -287,7 +290,7 @@ async function handleTelegram(update: any) {
 🎬 جاهز للمراجعة: ${n('media_ready')}
 ✏️ مستني تعديل: ${n('revise')}
 🛠️ تحت التنفيذ: ${n('idea_approved') + n('script_approved')}
-🗓️ مجدول: ريلز ${n('approved', 'reel')} · صور ${n('approved', 'image')}
+🗓️ مجدول: ريلز ${n('approved', 'reel') + n('scheduled', 'reel')} · صور ${n('approved', 'image') + n('scheduled', 'image')}
 ✅ اتنشر: ${n('published')} · ❌ فشل: ${n('failed')}
 
 النشر ${s.paused ? 'واقف ⏸' : 'شغّال ▶️'}`, null);
@@ -319,7 +322,9 @@ async function ownerDecision(s: Settings, it: Item, act: string): Promise<string
     if (!it.media_url) return 'مفيش ملف مرفوع للعنصر ده لسه.';
     const at = await nextFreeSlot(it.kind, s);
     await patchItem(it.id, { status: 'approved', scheduled_at: at.toISOString() });
-    return `🗓️ اتجدول: ${kwTime(at.toISOString())}\n${it.topic}`;
+    return s.publisher === 'meta'
+      ? `🗓️ اتجدول: ${kwTime(at.toISOString())}\n${it.topic}`
+      : `✅ اتوافق عليه، وهيتجدول على Postora في: ${kwTime(at.toISOString())}\n${it.topic}`;
   }
   return `العنصر ده حالته دلوقتي: ${it.status}`;
 }
@@ -433,6 +438,8 @@ async function tick() {
   const s = await loadSettings();
   await ensureTelegramWebhook(s).catch((e) => console.error('content-studio: webhook', e));
   let started = 0;
+  // with Postora the Claude session schedules approved items itself; this function only publishes in 'meta' mode
+  if (s.publisher !== 'meta') return { publisher: s.publisher };
   if (!s.paused) {
     const { data: due } = await supabase.from('content_items').select('*').eq('status', 'approved')
       .lte('scheduled_at', new Date().toISOString()).order('scheduled_at', { ascending: true }).limit(3);
@@ -482,6 +489,9 @@ async function studioAction(body: any) {
       await patchItem(body.id, patch);
       const it = await getItem(body.id);
       if (it && patch.status && NEEDS_OWNER.includes(it.status)) await notifyOwner(s, it);
+      if (it && patch.status === 'scheduled') {
+        await send(s, `📅 <b>اتجدول على Postora</b> · ${KIND_AR[it.kind]}\n${esc(it.topic)}\n🕘 ${kwTime(it.scheduled_at)}${it.platforms?.length ? `\n📲 ${esc(it.platforms.join(' · '))}` : ''}`, it.id);
+      }
       return { item: it };
     }
     case 'upload_url': {

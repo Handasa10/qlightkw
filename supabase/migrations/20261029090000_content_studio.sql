@@ -1,9 +1,11 @@
--- Content studio: reel + image post pipeline (idea -> script -> media -> approval -> scheduled publish on Instagram + Facebook)
--- Claude studio sessions write items through the content-studio function; the owner approves each step from Telegram.
+-- Content studio: reel + image post pipeline (idea -> script -> media -> owner approval in Telegram -> slot -> Postora, or the Graph API in meta mode)
+-- Claude sessions write items through the content-studio function; the owner approves each step from the QL Studio Telegram bot.
 
 CREATE TABLE IF NOT EXISTS public.content_settings (
   id INT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
   paused BOOLEAN NOT NULL DEFAULT false,
+  -- 'postora': approved items get a slot and the Claude session schedules them on Postora; 'meta': this function publishes through the Graph API
+  publisher TEXT NOT NULL DEFAULT 'postora' CHECK (publisher IN ('postora', 'meta')),
   -- local Kuwait times (UTC+3, no daylight saving)
   reel_slots TEXT[] NOT NULL DEFAULT ARRAY['09:00', '14:00', '18:00'],
   image_slots TEXT[] NOT NULL DEFAULT ARRAY['11:30', '20:30'],
@@ -18,9 +20,9 @@ INSERT INTO public.content_settings (id) VALUES (1) ON CONFLICT DO NOTHING;
 CREATE TABLE IF NOT EXISTS public.content_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   kind TEXT NOT NULL CHECK (kind IN ('reel', 'image')),
-  -- idea -> idea_approved -> script_ready -> script_approved -> media_ready -> approved -> publishing -> published
+  -- idea -> idea_approved -> script_ready -> script_approved -> media_ready -> approved -> scheduled (Postora) | publishing -> published (Meta)
   -- side states: revise (owner asked for changes, see feedback), rejected, failed
-  status TEXT NOT NULL DEFAULT 'idea' CHECK (status IN ('idea', 'idea_approved', 'script_ready', 'script_approved', 'media_ready', 'approved', 'publishing', 'published', 'revise', 'rejected', 'failed')),
+  status TEXT NOT NULL DEFAULT 'idea' CHECK (status IN ('idea', 'idea_approved', 'script_ready', 'script_approved', 'media_ready', 'approved', 'scheduled', 'publishing', 'published', 'revise', 'rejected', 'failed')),
   topic TEXT NOT NULL,
   hook TEXT,
   angle TEXT,
@@ -34,6 +36,8 @@ CREATE TABLE IF NOT EXISTS public.content_items (
   cover_url TEXT,
   duration_sec NUMERIC,
   scheduled_at TIMESTAMPTZ,
+  platforms TEXT[],
+  postora_post_ids JSONB,
   ig_container_id TEXT,
   ig_media_id TEXT,
   ig_permalink TEXT,

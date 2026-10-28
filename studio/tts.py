@@ -2,7 +2,7 @@
 """Voice-over with Gemini TTS (the same voices as Google AI Studio).
 
 Usage: python3 studio/tts.py <script.txt> <voice_description.txt> <out.wav>
-Env:   GOOGLE_AI_API_KEY (required), GEMINI_TTS_VOICE (default Charon), GEMINI_TTS_MODEL (default: newest *tts* model the key can use)
+Env:   GOOGLE_AI_API_KEY (required), GEMINI_TTS_VOICE (default Achird, the owner's AI Studio voice), GEMINI_TTS_MODEL (default: newest *tts* model the key can use)
 Writes a 48 kHz mono 16-bit WAV ready for align.py / synth.py (vo48.wav) plus the raw 24 kHz file next to it.
 """
 import base64, json, os, subprocess, sys, urllib.request
@@ -38,7 +38,7 @@ def main():
         'contents': [{'parts': [{'text': f'{style}\n\n{text}'}]}],
         'generationConfig': {
             'responseModalities': ['AUDIO'],
-            'speechConfig': {'voiceConfig': {'prebuiltVoiceConfig': {'voiceName': os.environ.get('GEMINI_TTS_VOICE', 'Charon')}}},
+            'speechConfig': {'voiceConfig': {'prebuiltVoiceConfig': {'voiceName': os.environ.get('GEMINI_TTS_VOICE', 'Achird')}}},
         },
     }
     res = call(f'models/{model}:generateContent', body)

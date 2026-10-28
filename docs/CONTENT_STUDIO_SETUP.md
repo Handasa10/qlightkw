@@ -1,57 +1,49 @@
-# استوديو المحتوى الأوتوماتيكي — خطوات التشغيل
+# استوديو المحتوى — خطوات التشغيل (النسخة الحالية)
 
-المنظومة: جلسات Claude مجدولة في السحابة بتقترح المواضيع، وتكتب السكريبتات، وتعمل الريلز والبوستات.
-أنت بتوافق على كل خطوة من بوت تليجرام **QL Studio**، والدالة `content-studio` على Supabase بتجدول وتنشر على
-انستجرام وفيسبوك في المواعيد: ريلز 9:00 · 14:00 · 18:00، وبوستات صور 11:30 · 20:30 (بتوقيت الكويت).
+**المنظومة:** بالطلب من الشات، فيديو بفيديو. تقول «شغّل المهارة» والمهارة **Quality light video generator**
+بتقترح الأفكار، وتكتب السكريبت، وتعمل الريل. أنت بتوافق من بوت تليجرام **QL Studio**، وبعد موافقتك
+**Postora** بيجدول وينشر على انستجرام + فيسبوك + تيك توك + ثريدز. المواعيد: 9:00 · 14:00 · 18:00 (توقيت الكويت).
+الصوت: أنت بتولّده من Google AI Studio بصوت **Achird** وتبعت الـ WAV. الريلز بس حاليًا (بوستات الصور بعدين).
 
 > ⚠️ ما تبعتش أي توكن أو مفتاح في الشات. كل المفاتيح بتتحط في أماكنها بس (Supabase Secrets / إعدادات بيئة Claude).
 
-## 1) قاعدة البيانات
-Supabase ← SQL Editor ← الصق محتوى الملف ده كله واضغط Run:
-`supabase/migrations/20261029090000_content_studio.sql`
+| # | الخطوة | مين | الحالة |
+|---|---|---|---|
+| 1 | قاعدة البيانات + مخزن الفيديوهات `content-media` | Claude (Supabase) | ✅ اتعملت |
+| 2 | الدالة `content-studio` (Verify JWT مقفول) | Claude (Supabase) | ✅ اترفعت |
+| 3 | بوت تليجرام QL Studio | أنت | ⏳ |
+| 4 | `STUDIO_TOKEN` | أنت | ⏳ |
+| 5 | إعدادات بيئة Claude | أنت | ⏳ |
+| 6 | حسابات Postora | أنت | ✅ متوصلة |
 
-## 2) الدالة
-Edge Functions ← Deploy a new function ← Via Editor ← الاسم `content-studio` ← الصق محتوى
-`supabase/functions/content-studio/index.ts` ← Deploy. بعدها من إعدادات الدالة اقفل **Verify JWT**.
-
-## 3) بوت تليجرام جديد للاستوديو
+## 3) بوت تليجرام QL Studio
 - في تليجرام افتح @BotFather ← `/newbot` ← سمّيه مثلًا `QL Studio`.
 - خد التوكن وحطه في Supabase ← Edge Functions ← Secrets باسم `STUDIO_TELEGRAM_BOT_TOKEN`.
-- بعد 5 دقايق (أول تشغيل للكرون) افتح البوت واضغط `/start`. أول واحد يضغط بيبقى صاحب البوت.
+- استنى 5 دقايق، وبعدين افتح البوت واضغط `/start`. أول واحد يضغط بيبقى صاحب البوت.
 
-## 4) مفتاح الاستوديو
-اعمل كلمة سر طويلة عشوائية (40 حرف مثلًا) وحطها في Supabase Secrets باسم `STUDIO_TOKEN`.
-نفس القيمة هتتحط كمان في إعدادات بيئة Claude (خطوة 7).
+## 4) مفتاح الاستوديو `STUDIO_TOKEN`
+اعمل كلمة سر عشوائية طويلة (40 حرف مثلًا)، وحطها في مكانين **بنفس القيمة**:
+- Supabase ← Edge Functions ← Secrets باسم `STUDIO_TOKEN`
+- إعدادات بيئة Claude (خطوة 5)
 
-## 5) صلاحية النشر على انستجرام
-- Meta for Developers ← تطبيقك ← Use cases ← Instagram API ← Permissions: ضيف `instagram_business_content_publish`.
-- اعمل Generate token من جديد لحساب quality_light1.
-- حدّث التوكن بنفس الطريقة اللي عملناها قبل كده (من غير ما تبعته في الشات):
-  ```sql
-  update public.ig_agent_secrets set access_token = 'التوكن_الجديد', updated_at = now() where id = 1;
-  ```
-
-## 6) صلاحية النشر على صفحة فيسبوك
-- Graph API Explorer ← نفس التطبيق ← User token بالصلاحيات:
-  `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`.
-- حوّله لتوكن طويل المدة (Access Token Debugger ← Extend Access Token).
-- في الـ Explorer نفّذ `me/accounts` بالتوكن الطويل، وخد `access_token` و`id` بتوع صفحة كواليتي لايت.
-  توكن الصفحة اللي بيطلع من توكن طويل المدة ما بيخلصش.
-- حطهم في Supabase Secrets: `FB_PAGE_ACCESS_TOKEN` و`FB_PAGE_ID`.
-
-## 7) إعدادات بيئة Claude (عشان الجلسات المجدولة تشتغل لوحدها)
+## 5) إعدادات بيئة Claude
 من قائمة البيئة في عنوان الجلسة ← Edit:
-- **Network access**: ضيف الدومين `yubebbfsmlopmnluajgf.supabase.co` في Allowed domains.
-- **Environment variables**:
-  - `STUDIO_TOKEN` = نفس قيمة خطوة 4
-  - `GOOGLE_AI_API_KEY` = مفتاح Google AI Studio
-  - `GEMINI_TTS_VOICE` = اسم الصوت اللي بتستخدمه في AI Studio (مثلًا Charon)
+- **Network access** ← Allowed domains: ضيف `yubebbfsmlopmnluajgf.supabase.co`
+- **Environment variables**: `STUDIO_TOKEN` = نفس قيمة خطوة 4
 
-## 8) الجدولة
-بعد ما الخطوات دي تخلص، Claude بيعمل المهام المجدولة:
-- **جلسة الأفكار والسكريبتات**: كل يوم الصبح.
-- **جلسة الإنتاج**: كل يوم بالليل. بتعمل الريلز والبوستات اللي سكريبتاتها اتوافق عليها، وتبعتها لك على تليجرام.
+## 6) حسابات Postora (متوصلة)
+انستجرام quality_light1 · فيسبوك «Quality Light - كواليتي لايت للإضاءة» · تيك توك Qualty.light · ثريدز quality_light1.
+حسابات Smart Energy موجودة على نفس البروفايل، والمهارة ما بتنشرش عليها غير لو طلبت.
+
+## الدورة
+فكرة (تختار في الشات) ← سكريبت (توافق) ← WAV من AI Studio ← الفيديو ← **تليجرام: ✅ وافق وجدول** ←
+Claude يجدوله على Postora في الميعاد اللي اتحدد، والبوت يقولك «📅 اتجدول».
 
 ## أوامر البوت
-`/pending` المستني موافقتك · `/queue` المجدول · `/status` ملخص · `/pause` و`/resume` إيقاف وتشغيل النشر.
-عشان تطلب تعديل على أي فكرة أو سكريبت أو فيديو: اعمل **Reply** على رسالته واكتب ملاحظاتك.
+`/pending` المستني موافقتك · `/queue` المجدول · `/status` ملخص.
+عشان تطلب تعديل على أي فيديو: اعمل **Reply** على رسالته واكتب ملاحظاتك.
+
+## اتلغى (مش محتاجينه طول ما النشر من Postora)
+- صلاحية `instagram_business_content_publish` وتجديد توكن انستجرام للنشر.
+- توكن صفحة الفيسبوك و`FB_PAGE_ID`.
+- مفتاح Gemini (الصوت من AI Studio يدوي) والجلسات المجدولة.

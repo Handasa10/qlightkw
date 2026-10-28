@@ -16,8 +16,8 @@ audiences, contact details, the standing offer, the technical facts to stay cons
 
 ```
 1 intake card → 2 ideas (8–10) → owner picks → 3 style + duration card → 4 script → owner approves
-→ 5 voice (owner's WAV, or footage for UGC) → 6 production → 7 review: video + caption → owner approves
-→ 8 platforms + time card → publish/schedule on Postora → 9 report
+→ 5 voice (owner's WAV from AI Studio, voice Achird; or footage for UGC) → 6 production → 7 review: video + caption,
+owner approves in Telegram (QL Studio bot) → 8 platforms card → schedule on Postora → 9 report
 ```
 
 One video per run, three approval gates (idea, script, final video), and nothing is published without the owner
@@ -77,8 +77,8 @@ Then a card: approve · edit (he writes notes) · regenerate with another angle.
 
 ## 5) Voice / footage
 
-- Default: tell him to paste the voice description and script into **Google AI Studio → TTS** (his usual voice) and send
-  the WAV. Wait for it.
+- Default: tell him to paste the voice description and script into **Google AI Studio → TTS** with the voice
+  **Achird** (his usual voice) and send the WAV. Wait for it.
 - If `GOOGLE_AI_API_KEY` is set in the environment, offer to generate it yourself:
   `python3 toolkit/tts.py script.txt voice.txt vo48.wav` (strip nothing: the tags guide the delivery).
 - UGC / store footage / AI clips: wait for the files; list exactly which clips are still missing.
@@ -96,24 +96,32 @@ Hard rules for every style: 1080×1920, 30 fps; **no subtitles/captions burned i
 unless the owner asks for captions on a UGC video); QL logo bottom-left during the content and a logo/CTA end scene;
 the final MP4 under 50 MB (runvid.sh caps the bitrate); check stills before the full render and 4 frames after it.
 
-## 7) Review
+## 7) Review: owner approval in Telegram
 
-Send the video (SendUserFile, or the path) with:
-- a short scene-by-scene summary in Egyptian Arabic,
-- a note on anything simulated (e.g. "low CRI shown by desaturating the render"),
-- the ready-to-copy caption (`references/caption.md`).
-
-Card: approve and publish · edit (notes) · approve, I'll publish it myself.
+Send the video in the chat too (SendUserFile, or the path), with a short scene-by-scene summary in Egyptian Arabic, a
+note on anything simulated (e.g. "low CRI shown by desaturating the render") and the ready-to-copy caption
+(`references/caption.md`). Then, when the studio queue is reachable (`STUDIO_TOKEN` set, Supabase host allowed;
+see `references/publishing.md`):
+1. upload the final MP4 and the preview: `python3 toolkit/studio.py upload …` (prints the public URLs);
+2. `create` a queue item for this video with status `media_ready` (topic, script, voice_description, caption,
+   media_url, preview_url, duration_sec): the **QL Studio** Telegram bot sends the preview with ✅ / ❌ buttons;
+3. tell the owner to approve it from Telegram (or here). ✅ in Telegram gives the item its slot (`approved` +
+   `scheduled_at`, the next free 09:00 / 14:00 / 18:00 Kuwait time). Wait for it: poll
+   `python3 toolkit/studio.py list approved revise` every minute or two for up to ~15 minutes, then ask in chat.
+   A Telegram reply means `revise` + feedback: apply it and send the new version the same way.
+If the queue is not reachable, ask for the approval here with a card: approve and publish · edit · I'll publish it myself.
 
 ## 8) Publish with Postora
 
-Read `references/publishing.md`, then one card with two questions:
-1. **Platforms** (multiSelect): Instagram + Facebook Reels (Recommended) · TikTok · YouTube Shorts · Threads.
-2. **When**: next free slot among 09:00 / 14:00 / 18:00 Kuwait time (Recommended; say which one) · now · a time he types.
+Read `references/publishing.md`, then one card:
+1. **Platforms** (multiSelect): Instagram + Facebook + TikTok + Threads (Recommended, the owner's default) ·
+   Instagram + Facebook only · YouTube Shorts too · other.
+2. **When** (skip if Telegram already gave a slot): next free slot (Recommended; say which) · now · a time he types.
 
-Then host the file, create the post on the QUALITY LIGHT accounts only (never Smart Energy's unless he asks), confirm
-with `get_post`, and report the scheduled time and platforms. If hosting is not set up, say exactly what is missing
-(publishing.md has the one-time setup) and hand over the MP4 + caption so he can post from Meta Business Suite.
+Then create the posts on the QUALITY LIGHT accounts only (never Smart Energy's unless he asks), confirm with
+`get_post`, and record it on the queue item: `update <id> {"status": "scheduled", "platforms": [...],
+"postora_post_ids": {...}}` (the bot then tells the owner in Telegram). If hosting is not set up, say exactly what is
+missing and hand over the MP4 + caption so he can post from Meta Business Suite.
 
 ## 9) Report and next
 
