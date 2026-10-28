@@ -4,7 +4,8 @@
 // Single file on purpose: it can be pasted as-is into the Supabase dashboard editor.
 // Entry points:
 //   POST + x-telegram-bot-api-secret-token   Telegram bot updates (approve / reject / ask for changes)
-//   POST { action: 'tick' }                   cron every 5 min: keep the Telegram webhook set; in 'meta' mode publish due posts
+//   POST { action: 'tick' }                   cron every 5 min: keep the Telegram webhook set, send queued questions; in 'meta' mode publish due posts
+//   POST { action: 'flush' }                  send queued questions / messages (content_questions) to the owner now
 //   POST { action: ... } + x-studio-token     Claude studio sessions: list / create / update items, signed upload URLs
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.93.2';
@@ -216,6 +217,111 @@ const HELP = `أهلًا 👋 ده بوت استوديو محتوى كواليت
 /pause إيقاف النشر
 /resume تشغيل النشر`;
 
+// ---------------- questions from the Claude session (choice cards answered in the bot) ----------------
+
+interface Question {
+  id: number;
+  header: string | null;
+  question: string;
+  options: { label: string; description?: string }[];
+  multi: boolean;
+  recommended: number | null;
+  status: string;
+  selected: number[];
+  message_id: number | null;
+}
+
+function questionText(q: Question) {
+  const lines = [q.header ? `🧭 <b>${esc(q.header)}</b>` : '', `<b>${esc(q.question)}</b>`];
+  q.options.forEach((o, i) => lines.push(`${i === (q.recommended ?? -1) ? '⭐' : '▫️'} <b>${i + 1}) ${esc(o.label)}</b>${o.description ? `\n      ${esc(o.description)}` : ''}`));
+  if (q.options.length) lines.push(q.multi ? '\n<i>اختار واحد أو أكتر وبعدين اضغط «تم ✅»، أو اكتب ردك.</i>' : '\n<i>اضغط اختيارك، أو اكتب ردك (مثلًا رقم الاختيار أو اقتراح تاني).</i>');
+  return lines.filter(Boolean).join('\n');
+}
+
+function questionKeyboard(q: Question) {
+  const rows = q.options.map((o, i) => {
+    const on = q.selected.includes(i);
+    const label = `${q.multi ? (on ? '☑️ ' : '⬜ ') : ''}${i === (q.recommended ?? -1) ? '⭐ ' : ''}${i + 1}) ${o.label}`.slice(0, 60);
+    return [{ text: label, callback_data: `${q.multi ? 'qt' : 'qa'}:${q.id}:${i}` }];
+  });
+  if (q.multi) rows.push([{ text: 'تم ✅', callback_data: `qd:${q.id}` }]);
+  return { inline_keyboard: rows };
+}
+
+// send every pending question/message to the owner, oldest first
+async function flushQuestions(s: Settings) {
+  if (!BOT_TOKEN || !s.telegram_chat_id) return { sent: 0, reason: 'bot not linked' };
+  const { data } = await supabase.from('content_questions').select('*').eq('status', 'pending').order('id', { ascending: true }).limit(20);
+  let sent = 0;
+  for (const q of (data ?? []) as Question[]) {
+    try {
+      if (!q.options?.length) {
+        await send(s, q.question, null);
+        await supabase.from('content_questions').update({ status: 'answered', sent_at: new Date().toISOString(), answered_at: new Date().toISOString() }).eq('id', q.id);
+      } else {
+        const m = await tg<{ message_id: number }>('sendMessage', {
+          chat_id: s.telegram_chat_id, text: questionText(q), parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: questionKeyboard(q),
+        });
+        await supabase.from('content_questions').update({ status: 'sent', sent_at: new Date().toISOString(), message_id: m.message_id }).eq('id', q.id);
+      }
+      sent++;
+    } catch (e) {
+      console.error('content-studio: question send failed', q.id, e);
+    }
+  }
+  return { sent };
+}
+
+async function answerQuestion(s: Settings, q: Question, selected: number[], text: string | null) {
+  await supabase.from('content_questions').update({ status: 'answered', selected, answer_text: text, answered_at: new Date().toISOString() }).eq('id', q.id);
+  if (q.message_id) await tg('editMessageReplyMarkup', { chat_id: s.telegram_chat_id, message_id: q.message_id, reply_markup: { inline_keyboard: [] } }).catch(() => {});
+  const picked = selected.map((i) => q.options[i]?.label).filter(Boolean).join(' + ');
+  await send(s, `✅ وصلني: ${esc(picked || text || '')}`, null, q.message_id ? { reply_to_message_id: q.message_id } : {});
+}
+
+async function handleQuestionCallback(s: Settings, cb: any): Promise<boolean> {
+  const [act, id, idx] = String(cb.data ?? '').split(':');
+  if (!['qa', 'qt', 'qd'].includes(act)) return false;
+  const { data } = await supabase.from('content_questions').select('*').eq('id', Number(id)).maybeSingle();
+  const q = data as Question | null;
+  if (!q || q.status !== 'sent') {
+    await tg('answerCallbackQuery', { callback_query_id: cb.id, text: 'السؤال ده اتقفل' }).catch(() => {});
+    return true;
+  }
+  if (act === 'qa') {
+    await tg('answerCallbackQuery', { callback_query_id: cb.id, text: q.options[Number(idx)]?.label?.slice(0, 190) ?? '✅' }).catch(() => {});
+    await answerQuestion(s, q, [Number(idx)], null);
+  } else if (act === 'qt') {
+    const i = Number(idx);
+    q.selected = q.selected.includes(i) ? q.selected.filter((x) => x !== i) : [...q.selected, i].sort();
+    await supabase.from('content_questions').update({ selected: q.selected }).eq('id', q.id);
+    await tg('answerCallbackQuery', { callback_query_id: cb.id }).catch(() => {});
+    await tg('editMessageReplyMarkup', { chat_id: s.telegram_chat_id, message_id: cb.message.message_id, reply_markup: questionKeyboard(q) }).catch(() => {});
+  } else {
+    await tg('answerCallbackQuery', { callback_query_id: cb.id, text: '✅' }).catch(() => {});
+    await answerQuestion(s, q, q.selected, null);
+  }
+  return true;
+}
+
+// typed answer: a reply to a card, or plain text while a card is open (a number picks that option)
+async function handleQuestionText(s: Settings, typed: string, replyTo?: number): Promise<boolean> {
+  const text = typed.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x660)); // Arabic-Indic digits
+  let q: Question | null = null;
+  if (replyTo) {
+    const { data } = await supabase.from('content_questions').select('*').eq('message_id', replyTo).eq('status', 'sent').maybeSingle();
+    q = data as Question | null;
+  } else {
+    const { data } = await supabase.from('content_questions').select('*').eq('status', 'sent').order('id', { ascending: false }).limit(1);
+    q = (data?.[0] as Question) ?? null;
+  }
+  if (!q) return false;
+  const nums = (text.match(/\d+/g) ?? []).map(Number).filter((n) => n >= 1 && n <= q!.options.length);
+  const onlyNumbers = /^[\d\s,،+و]+$/.test(text) && nums.length > 0;
+  await answerQuestion(s, q, onlyNumbers ? nums.map((n) => n - 1) : [], onlyNumbers ? null : text);
+  return true;
+}
+
 async function handleTelegram(update: any) {
   const s = await loadSettings();
   const msg = update.message;
@@ -238,6 +344,7 @@ async function handleTelegram(update: any) {
   }
 
   if (cb) {
+    if (await handleQuestionCallback(s, cb)) return;
     const [act, id] = String(cb.data ?? '').split(':');
     const it = await getItem(id);
     let answer = 'مش لاقي العنصر ده';
@@ -251,6 +358,7 @@ async function handleTelegram(update: any) {
   const text: string = (msg?.text ?? msg?.caption ?? '').trim();
   if (!text) return;
   const replyTo = msg.reply_to_message?.message_id;
+  if (!text.startsWith('/') && await handleQuestionText(s, text, replyTo)) return;
   if (replyTo) {
     const { data: link } = await supabase.from('content_tg_messages').select('item_id').eq('message_id', replyTo).maybeSingle();
     const it = link ? await getItem(link.item_id) : null;
@@ -437,6 +545,7 @@ async function advance(s: Settings, it: Item) {
 async function tick() {
   const s = await loadSettings();
   await ensureTelegramWebhook(s).catch((e) => console.error('content-studio: webhook', e));
+  await flushQuestions(s).catch((e) => console.error('content-studio: questions', e));
   let started = 0;
   // with Postora the Claude session schedules approved items itself; this function only publishes in 'meta' mode
   if (s.publisher !== 'meta') return { publisher: s.publisher };
@@ -530,6 +639,8 @@ Deno.serve(async (req) => {
     }
     const body = raw ? JSON.parse(raw) : {};
     if (body.action === 'tick') return json(await tick());
+    // sends only rows already queued in the database, to the owner's chat: safe without the studio token
+    if (body.action === 'flush') return json(await flushQuestions(await loadSettings()));
     const token = req.headers.get('x-studio-token') ?? '';
     if (!STUDIO_TOKEN || !(await timingSafeEqual(token, STUDIO_TOKEN))) return json({ error: 'Unauthorized' }, 401);
     return json(await studioAction(body));

@@ -24,13 +24,16 @@ One video per run, three approval gates (idea, script, final video), and nothing
 choosing the platforms and the time. When he says «نكمل» after a run, start again at step 2 (skip the intake if the
 category and goal are unchanged).
 
-### Asking questions
+### Asking questions: through the owner's Telegram bot
 
-Every decision is a small multiple-choice card: use the AskUserQuestion tool when it is available (up to 4 questions per
-call, 2–4 options each, your recommended option first with "(Recommended)" in its label, a one-line reason in each
-description). Without that tool, write the same card as a numbered list and mark your recommendation with ⭐.
-Skip any question the owner already answered in his message or earlier in the conversation, and never re-ask a
+The owner wants every choice card **and** every deliverable to reach him on the **QL Studio** Telegram bot, and answers
+there. Read `references/bot.md`: you queue a card as a row in `content_questions` (Supabase connector, project
+`yubebbfsmlopmnluajgf`), trigger an immediate send, then wait for his answer (button, typed number, or free text) and
+continue from it. Long texts (idea tables, scripts, captions) go to the bot as plain messages too; keep the chat reply
+short ("sent to the bot"). Each card: 2–4 options, the recommended one first (`recommended: 0`), a one-line reason in
+each description; `multi: true` for multi-select (platforms). Skip any question already answered, and never re-ask a
 standing fact from `brand.md`. If he says «اختار أنت» or «ابدأ», take your recommendations and keep going.
+If the bot or the Supabase connector is unavailable, ask in chat instead (AskUserQuestion, or a numbered list with ⭐).
 
 ## 1) Intake card (one card, before any idea)
 
