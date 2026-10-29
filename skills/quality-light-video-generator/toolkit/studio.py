@@ -9,7 +9,7 @@ Env: STUDIO_TOKEN (required), STUDIO_URL (default: the QUALITY LIGHT project's c
   python3 studio/studio.py update <id> patch.json|'{json}'
   python3 studio/studio.py upload <local file> <remote path>   prints the public URL
   python3 studio/studio.py notify "text"                 message to the owner on Telegram
-  python3 studio/studio.py tts script.txt voice.txt [title]   Gemini voice-over (Achird), sent to the owner's bot to approve
+  python3 studio/studio.py tts script.txt voice.txt [title] [item_id]   Gemini voice-over (Achird), sent to the owner's bot to approve
   python3 studio/studio.py voice <id>                   status of a voice-over (ready / approved / failed) and its WAV URL
 """
 import json, os, sys, urllib.request
@@ -51,7 +51,7 @@ def main():
             'update': lambda: {'action': 'update', 'id': args[0], 'patch': load(args[1])},
             'notify': lambda: {'action': 'notify', 'text': ' '.join(args)},
             'tts': lambda: {'action': 'tts', 'script': open(args[0], encoding='utf-8').read().strip(),
-                            'voice_description': open(args[1], encoding='utf-8').read().strip(), 'title': args[2] if len(args) > 2 else None,
+                            'voice_description': open(args[1], encoding='utf-8').read().strip(), 'title': args[2] if len(args) > 2 else None, 'item_id': args[3] if len(args) > 3 else None,
                             'voice': os.environ.get('GEMINI_TTS_VOICE', 'Achird')},
             'voice': lambda: {'action': 'voice', 'id': args[0]}}[cmd]()
     print(json.dumps(api(body), ensure_ascii=False, indent=1))
