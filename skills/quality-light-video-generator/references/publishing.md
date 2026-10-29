@@ -38,6 +38,11 @@ Claude environment settings the domain `yubebbfsmlopmnluajgf.supabase.co` allowe
 If the upload fails, say exactly which of these is missing (never ask for the token in chat), and hand over the MP4 and
 caption so the owner can post from Meta Business Suite at the chosen slot.
 
+**Postora size limit:** Postora fails to fetch files above roughly 12 MB ("Edge Function returned a non-2xx"); 10.5 MB
+works. Upload a Postora copy encoded to fit: `ffmpeg -i final.mp4 -c:v libx264 -preset slow -b:v 1300k -maxrate 1950k
+-bufsize 2600k -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart final_postora.mp4` (≈ 10 MB for 60 s; lower
+the bitrate for longer videos), then `upload_media` with its URL and pass `media_file_ids` to `create_post`.
+
 ## 4. Create the posts
 One `create_post` per caption variant:
 - Instagram + Facebook together: `platforms: ["instagram","facebook"]`, their `account_ids`, `caption` (full caption),
