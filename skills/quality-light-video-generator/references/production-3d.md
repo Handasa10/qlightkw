@@ -22,7 +22,7 @@ with each idea (typically 10–12 scenes for 60–80 s).
 ## 3. 3D renders
 Rooms in `$T/3d/bodies/`: `living_colors` (sofa, leather chair, walnut table; states show/cold/warm/yellow/mixed),
 `accent_corner` (painting + console; mode dark/flat/spot, beam, pos good|bad, cct, cri, dim), `garden` (day/dusk/
-night + path/tree/wall/seat layers), `wardrobe` (doors, shelf/rail/drawer LEDs), `stairs`, `majlis`, `cove_hall` (gypsum cove, voltage drop 12v/24v), `cafe` (flat panels vs pendants + bar spots + shelf LEDs; layer tokens `panels pend bar shelf wash`), `shop` (boutique wall: flat downlights vs track spots + under-shelf linear; tokens `flat track shelf`), `mirror` (vanity: downlight over the head vs side LED bars; tokens `top side bust`; draw faces as 2D diagrams, a sculpted 3D face reads uncanny). Each body
+night + path/tree/wall/seat layers), `wardrobe` (doors, shelf/rail/drawer LEDs), `stairs`, `majlis`, `cove_hall` (gypsum cove, voltage drop 12v/24v), `cafe` (flat panels vs pendants + bar spots + shelf LEDs; layer tokens `panels pend bar shelf wash`), `shop` (boutique wall: flat downlights vs track spots + under-shelf linear; tokens `flat track shelf`), `mirror` (vanity: downlight over the head vs side LED bars; tokens `top side bust`; draw faces as 2D diagrams, a sculpted 3D face reads uncanny), `gypsum` (ceiling before closing: grid, drivers + hatches, cables, cove channel, marked spots; presets `open closed hatch test done`). Each body
 defines `VIEWS` (cameras) and `window.setState(string)`; read the body to learn its states.
 
 Shoot: `node $T/3d/shoot.js <body> "view@state;view@state" 540 960 $W/test` (small test) → contact sheet with PIL

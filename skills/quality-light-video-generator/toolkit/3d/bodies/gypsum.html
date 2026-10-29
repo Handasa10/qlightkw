@@ -1,0 +1,118 @@
+// ===== Gypsum ceiling before closing: open grid with drivers, cables, the strip channel and marked spot positions → closed, tested and finished =====
+// room x -3..3, z -4..2, floor y=0, concrete slab 3.3, gypsum ceiling 2.9 with a perimeter cove on the left and right walls
+const RX = 3, Z0 = -4, Z1 = 2, SLAB = 3.3, GC = 2.9, COVE = .5;
+const concreteTex = canvasTex(512, 512, (g, w, h) => { g.fillStyle = '#8d8a85'; g.fillRect(0, 0, w, h); for (let i = 0; i < 9000; i++) { const c = 110 + R() * 60; g.fillStyle = `rgba(${c},${c - 3},${c - 8},.25)`; g.fillRect(R() * w, R() * h, 2, 2); } }, [4, 4]);
+const concrete = new THREE.MeshStandardMaterial({ map: concreteTex, roughness: .95 });
+const floorRaw = plane(6, 6, concrete, [0, 0, -1], [-Math.PI / 2, 0, 0]);
+marbleTex.repeat.set(3, 3);
+const floorDone = plane(6, 6, M.floor, [0, .001, -1], [-Math.PI / 2, 0, 0]);
+const wallRaw = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#b9b2a8', roughness: .95 });
+const wallDone = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#efe7da', roughness: .9 });
+const walls = [box(.1, SLAB, 6.2, wallRaw, -RX - .1, 0, Z0 - .1), box(.1, SLAB, 6.2, wallRaw, RX, 0, Z0 - .1), box(6.2, SLAB, .1, wallRaw, -RX - .1, 0, Z0 - .1)];
+box(6.2, .15, 6.2, concrete, -RX - .1, SLAB, Z0 - .1, { cast: false });
+
+// ---- metal grid + hangers (only visible while the ceiling is open) ----
+const steel = new THREE.MeshStandardMaterial({ color: '#b8bcc0', roughness: .35, metalness: .9 });
+const grid = new THREE.Group(); scene.add(grid);
+for (let z = Z0 + .3; z < Z1; z += .6) box(2 * (RX - COVE), .03, .05, steel, -RX + COVE, GC + .015, z - .025, { parent: grid });
+for (let x = -RX + COVE + .2; x < RX - COVE; x += 1.2) box(.05, .04, Z1 - Z0, steel, x - .025, GC + .045, Z0, { parent: grid });
+for (let x = -2; x <= 2; x += 1.2) for (let z = Z0 + .6; z < Z1; z += 1.2) box(.008, SLAB - GC - .08, .008, steel, x, GC + .08, z, { parent: grid });
+
+// ---- gypsum tiles (1.2 × .6); some are left out while the ceiling is open ----
+const boardTex = canvasTex(512, 256, (g, w, h) => { g.fillStyle = '#e9e6e0'; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(160,150,140,.35)'; g.fillRect(0, 0, w, 6); g.fillRect(0, 0, 6, h); for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(200,190,175,.25)'; g.beginPath(); g.arc(R() * w, R() * h, 4 + R() * 6, 0, 7); g.fill(); } });
+const boardRaw = new THREE.MeshStandardMaterial({ map: boardTex, roughness: .95, side: THREE.DoubleSide });
+const boardDone = new THREE.MeshStandardMaterial({ color: '#f6f2ec', roughness: .95, side: THREE.DoubleSide });
+const tiles = [];
+const OPEN = new Set(['1,2', '2,2', '1,3', '2,3', '3,4', '3,5', '2,5', '0,7', '1,7', '2,8', '3,8', '1,9']);
+for (let i = 0; i < 4; i++) for (let j = 0; j < 10; j++) {
+  const x = -RX + COVE + i * 1.25, z = Z0 + j * .6;
+  const t = plane(1.25, .6, boardRaw, [x + .625, GC, z + .3], [Math.PI / 2, 0, 0]);
+  tiles.push({ t, open: OPEN.has(`${i},${j}`) });
+}
+// perimeter drop + cove lip on both side walls, with the aluminium channel for the strip
+const covePieces = [];
+for (const sx of [-1, 1]) {
+  covePieces.push(box(COVE, .1, Z1 - Z0, boardRaw, sx < 0 ? -RX : RX - COVE, GC - .25, Z0));
+  covePieces.push(box(.03, .12, Z1 - Z0, boardRaw, sx < 0 ? -RX + COVE - .03 : RX - COVE, GC - .15, Z0));
+}
+const channelM = new THREE.MeshStandardMaterial({ color: '#d0d4d8', roughness: .3, metalness: .9 });
+const strips = [];
+const washTex = canvasTex(256, 64, (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.3, 'rgba(255,255,255,.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }, [1, 1], false);
+for (const sx of [-1, 1]) {
+  box(.03, .015, Z1 - Z0, channelM, sx * (RX - COVE + .09) - .015, GC - .15, Z0);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(.012, .006, Z1 - Z0 - .02), emis('#000', 0)); m.position.set(sx * (RX - COVE + .09), GC - .135, (Z0 + Z1) / 2); scene.add(m);
+  // the wash on the ceiling: an additive gradient band from the cove edge toward the middle
+  const wm = new THREE.MeshBasicMaterial({ map: washTex, color: '#000', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+  const w = new THREE.Mesh(new THREE.PlaneGeometry(1.3, Z1 - Z0), wm); w.rotation.x = Math.PI / 2; if (sx > 0) w.rotation.z = Math.PI;
+  w.position.set(sx * (RX - COVE - .65), GC - .006, (Z0 + Z1) / 2); scene.add(w);
+  const l = new THREE.PointLight('#ffd6a0', 0, 4, 2); l.position.set(sx * (RX - COVE - .4), GC - .3, (Z0 + Z1) / 2); scene.add(l);
+  strips.push({ m, wm, l });
+}
+// raised middle above the cove: the wash falls on the tiles near the walls
+// ---- drivers on top of the grid, a maintenance hatch under each one ----
+const driverM = new THREE.MeshStandardMaterial({ color: '#2b2e33', roughness: .4, metalness: .5 });
+const DRIVERS = [[1.15, -1.0], [-1.25, .3]];
+const hatches = [];
+for (const [x, z] of DRIVERS) {
+  box(.24, .045, .07, driverM, x - .12, GC + .1, z - .035);
+  box(.06, .03, .04, emis('#5fd38a', 1.2), x + .05, GC + .145, z - .02, { cast: false });
+  const frame = new THREE.MeshStandardMaterial({ color: '#f1ede6', roughness: .6 });
+  for (const [w, d, ox, oz] of [[.6, .02, 0, -.3], [.6, .02, 0, .3], [.02, .6, -.3, 0], [.02, .6, .3, 0]]) box(w, .02, d, frame, x + ox - w / 2, GC - .02, z + oz - d / 2, { cast: false });
+  const door = new THREE.Group(); door.position.set(x, GC - .005, z - .3); scene.add(door);
+  box(.58, .012, .58, frame, -.29, -.006, .01, { parent: door });
+  hatches.push(door);
+}
+const underHatch = (t) => DRIVERS.some(([x, z]) => Math.abs(t.position.x - x) < .63 && Math.abs(t.position.z - z) < .31);
+// ---- cables: conduits from the drivers to the cove and the spots ----
+const cableM = new THREE.MeshStandardMaterial({ color: '#e8742a', roughness: .6 });
+const cables = new THREE.Group(); scene.add(cables);
+function cable(pts) { const c = new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...p))); const m = new THREE.Mesh(new THREE.TubeGeometry(c, 60, .012, 8), cableM); m.castShadow = true; cables.add(m); }
+cable([[1.15, 3.05, -1.0], [1.8, 3.1, -1.4], [2.5, 3.05, -1.6], [2.42, 2.9, -2.4]]);
+cable([[-1.25, 3.05, .3], [-1.9, 3.1, .1], [-2.42, 2.9, -.5]]);
+cable([[1.15, 3.05, -1.0], [.6, 3.12, -1.8], [0, 3.1, -2.6], [-.6, 3.05, -3.2]]);
+cable([[-1.25, 3.05, .3], [-.6, 3.12, .9], [.3, 3.08, 1.2]]);
+// ---- spots: positions marked with an X while open, fixtures when finished ----
+const SPOTS = []; for (const x of [-1.2, 0, 1.2]) for (const z of [-2.8, -1.6, -.4, .8]) SPOTS.push([x, z]);
+const markTex = canvasTex(128, 128, (g, w, h) => { g.strokeStyle = '#d0281e'; g.lineWidth = 12; g.beginPath(); g.moveTo(24, 24); g.lineTo(104, 104); g.moveTo(104, 24); g.lineTo(24, 104); g.stroke(); g.beginPath(); g.arc(64, 64, 46, 0, 7); g.lineWidth = 6; g.stroke(); }, [1, 1]);
+const markM = new THREE.MeshBasicMaterial({ map: markTex, transparent: true, depthWrite: false });
+const spots = [];
+for (const [x, z] of SPOTS) {
+  const mark = plane(.32, .32, markM, [x, GC - .003, z], [Math.PI / 2, 0, 0]);
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .012, 28), new THREE.MeshStandardMaterial({ color: '#f4f1ec', roughness: .4 })); ring.position.set(x, GC - .006, z); scene.add(ring);
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(.028, 24), emis('#000', 0)); lens.rotation.x = Math.PI / 2; lens.position.set(x, GC - .013, z); scene.add(lens);
+  const s = new THREE.SpotLight('#ffd9a8', 0, 8, 18 * Math.PI / 180, .5, 1.6); s.position.set(x, GC - .03, z); s.target.position.set(x, 0, z); scene.add(s, s.target);
+  spots.push({ mark, ring, lens, s });
+}
+// ---- construction props: ladder + work lamp ----
+const props = new THREE.Group(); scene.add(props);
+const ladM = new THREE.MeshStandardMaterial({ color: '#c9ccd0', roughness: .4, metalness: .8 });
+for (const sx of [-1, 1]) { const r = box(.04, 2.0, .04, ladM, -1.8 + sx * .22, 0, -3.1, { parent: props }); r.rotation.x = .18; const r2 = box(.04, 2.0, .04, ladM, -1.8 + sx * .22, 0, -2.5, { parent: props }); r2.rotation.x = -.18; }
+for (let k = 1; k < 6; k++) box(.48, .03, .05, ladM, -2.04, k * .32, -3.05 + k * .05, { parent: props });
+const work = new THREE.PointLight('#f2f4ff', 0, 12, 1.2); work.position.set(-1.5, 1.6, 1.2); scene.add(work);
+box(.25, .2, .12, new THREE.MeshStandardMaterial({ color: '#f2c230', roughness: .5 }), -1.62, 1.5, 1.14, { parent: props });
+box(.03, 1.5, .03, M.black, -1.5, 0, 1.2, { parent: props });
+const hemi = new THREE.HemisphereLight('#eef2ff', '#4a4038', .3); scene.add(hemi);
+
+const VIEWS = {
+  w: { pos: [0, 1.35, 1.2], tgt: [0, 3.4, -1.6], fov: 76 },     // the whole ceiling from below
+  h: { pos: [1.55, 1.75, .1], tgt: [1.15, 3.0, -1.0], fov: 55 },   // the driver above its hatch
+  c: { pos: [-1.3, 1.65, 1.6], tgt: [-2.6, 2.85, -1.6], fov: 60 }, // the cove channel on the left wall
+  k: { pos: [.3, 1.6, -.5], tgt: [0, 3.2, -2.3], fov: 60 },       // cables through the open tiles
+  m: { pos: [-.3, 1.6, .3], tgt: [0, 2.9, -1.6], fov: 55 },       // a spot position marked on the board
+};
+// state "build:open|closed|done|marks:0|1|hatch:0|1|lights:0|1"   presets: open | closed | test | done
+window.setState = (st) => {
+  const P = { open: 'build:open|marks:1|hatch:0|lights:0', closed: 'build:closed|marks:0|hatch:0|lights:0', test: 'build:closed|marks:0|hatch:0|lights:1', done: 'build:done|marks:0|hatch:0|lights:1', hatch: 'build:closed|marks:0|hatch:1|lights:0' };
+  const o = Object.fromEntries((P[st] ?? st).split('|').map(p => p.split(':')));
+  const open = o.build === 'open', done = o.build === 'done', on = o.lights === '1';
+  for (const { t, open: gap } of tiles) { t.visible = !(open && gap) && !(o.hatch === '1' && underHatch(t)); t.material = done ? boardDone : boardRaw; }
+  covePieces.forEach(p => p.material = done ? boardDone : boardRaw);
+  walls.forEach(w => w.material = done ? wallDone : wallRaw);
+  floorDone.visible = done; props.visible = !done;
+  hatches.forEach(d => d.rotation.x = o.hatch === '1' ? 1.3 : 0);
+  for (const s of spots) { s.mark.visible = o.marks === '1'; s.ring.visible = !open; s.s.intensity = on ? 7 : 0; s.lens.material = on ? emis('#ffd9a8', 5) : emis('#000', 0); }
+  for (const s of strips) { s.l.intensity = on ? 1.5 : 0; s.wm.color.set(on ? '#c9a070' : '#000'); s.m.material = on ? emis('#ffd6a0', 6) : emis('#000', 0); }
+  work.intensity = on ? 0 : 6; hemi.intensity = on ? .1 : .35;
+  scene.environmentIntensity = on ? .08 : .25;
+  renderer.toneMappingExposure = on ? 1.0 : .85;
+};
