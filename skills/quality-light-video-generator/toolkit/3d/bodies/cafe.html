@@ -1,0 +1,136 @@
+// ===== Café at night: flat cold panels (6500K) vs warm layers (low pendants over the tables, bar spots, shelf LEDs) =====
+// floor y=0, ceiling 3.2; x -3..3; back wall (bar) at z=-5, the camera end at z=3.5; window wall on the left
+const CW = 3, CZ0 = -5, CZ1 = 3.6, CH = 3.2;
+const woodFloorTex = canvasTex(1024, 1024, (g, w, h) => { woodDraw('#5e4330', '35,20,10')(g, w, h); g.strokeStyle = 'rgba(20,10,4,.55)'; g.lineWidth = 3; for (let y = 0; y <= h; y += 96) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } }, [4, 6]);
+plane(6, 8.6, new THREE.MeshStandardMaterial({ map: woodFloorTex, roughness: .5 }), [0, 0, -.7], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#cdbfae', roughness: .92 });
+const brickTex = canvasTex(1024, 1024, (g, w, h) => {
+  g.fillStyle = '#5a3a2c'; g.fillRect(0, 0, w, h);
+  for (let y = 0, r = 0; y < h; y += 42, r++) for (let x = (r % 2) * -60; x < w; x += 120) {
+    const c = 120 + R() * 50; g.fillStyle = `rgb(${c},${c * .58},${c * .42})`; g.fillRect(x + 3, y + 3, 114, 36);
+    g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(x + 3, y + 30, 114, 9);
+  }
+}, [3, 1.6]);
+const brickM = new THREE.MeshStandardMaterial({ map: brickTex, roughness: .9 });
+box(.1, CH, CZ1 - CZ0, brickM, CW, 0, CZ0);                                   // right wall: brick
+box(6.2, CH, .1, wallM, -3.1, 0, CZ0 - .1);                                    // back wall
+box(6.2, CH, .1, wallM, -3.1, 0, CZ1);                                         // camera wall
+box(6.2, .1, CZ1 - CZ0, new THREE.MeshStandardMaterial({ color: '#2a2420', roughness: .9 }), -3.1, CH, CZ0, { cast: false }); // dark ceiling
+// left wall: low wall + big window to the night street
+box(.1, .6, CZ1 - CZ0, wallM, -CW - .1, 0, CZ0); box(.1, .5, CZ1 - CZ0, wallM, -CW - .1, CH - .5, CZ0);
+const nightTex = canvasTex(1024, 512, (g, w, h) => {
+  const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#060912'); gr.addColorStop(.7, '#101a2c'); gr.addColorStop(1, '#1b2232'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 60; i++) { const x = R() * w, y = h * (.45 + R() * .5), r = 6 + R() * 26; const b = g.createRadialGradient(x, y, 0, x, y, r); const c = ['255,190,120', '255,230,190', '140,180,255', '255,140,90'][i % 4]; b.addColorStop(0, `rgba(${c},.55)`); b.addColorStop(1, `rgba(${c},0)`); g.fillStyle = b; g.fillRect(x - r, y - r, 2 * r, 2 * r); }
+});
+plane(CZ1 - CZ0, CH - 1.1, new THREE.MeshBasicMaterial({ map: nightTex, toneMapped: true }), [-CW - .05, .6 + (CH - 1.1) / 2, (CZ0 + CZ1) / 2], [0, Math.PI / 2, 0]);
+for (let z = CZ0; z <= CZ1; z += 1.45) box(.06, CH - 1.1, .06, M.black, -CW - .02, .6, z);
+box(.08, .05, CZ1 - CZ0, M.black, -CW - .02, .6, CZ0); box(.08, .05, CZ1 - CZ0, M.black, -CW - .02, CH - .55, CZ0);
+
+// ---- bar along the back wall ----
+const barWood = new THREE.MeshStandardMaterial({ map: flutedTex, bumpMap: flutedBump, bumpScale: 3, color: '#a57b52', roughness: .55 });
+box(3.8, 1.02, .6, barWood, -1.9, 0, -3.9);
+box(3.9, .05, .68, M.tableTop, -1.95, 1.02, -3.94);
+box(3.8, .9, .5, M.darkWood, -1.9, 0, -4.95);                                  // back counter
+box(3.8, .04, .52, M.tableTop, -1.9, .9, -4.96);
+// espresso machine + grinder + cups on the back counter
+const steel = new THREE.MeshStandardMaterial({ color: '#c8c8c8', roughness: .22, metalness: 1 });
+box(.8, .42, .42, steel, -.4, .94, -4.9, { r: .04 }); box(.8, .06, .3, M.black, -.4, 1.36, -4.85);
+for (const x of [-.25, .15]) box(.08, .12, .08, M.black, x, .98, -4.55);
+box(.18, .4, .18, M.black, .7, .94, -4.85, { r: .03 });
+const cupM = new THREE.MeshStandardMaterial({ color: '#f2ece2', roughness: .4 });
+function cup(x, y, z, s = 1) { const c = new THREE.Mesh(new THREE.CylinderGeometry(.045 * s, .035 * s, .08 * s, 24), cupM); c.position.set(x, y + .04 * s, z); c.castShadow = true; scene.add(c); const p = new THREE.Mesh(new THREE.CylinderGeometry(.075 * s, .075 * s, .01, 24), cupM); p.position.set(x, y + .005, z); scene.add(p); }
+for (let i = 0; i < 5; i++) cup(-1.6 + i * .16, 1.07, -3.65);
+// shelves on the back wall with jars and bottles, an LED strip under each
+const shelves = [];
+const jarCols = ['#6b3a1e', '#a46a2c', '#2f2a26', '#c99b5a', '#3f5a3a', '#7a2f22'];
+for (const y of [1.55, 1.95, 2.35]) {
+  box(3.4, .04, .26, M.oak, -1.7, y, -4.98);
+  for (let x = -1.6; x < 1.6; x += .17 + R() * .1) {
+    const h = .12 + R() * .14, r = .04 + R() * .02;
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 20), new THREE.MeshStandardMaterial({ color: jarCols[Math.floor(R() * 6)], roughness: .35, metalness: .05 }));
+    m.position.set(x, y + .04 + h / 2, -4.86); m.castShadow = true; scene.add(m);
+  }
+  const strip = new THREE.Mesh(new THREE.BoxGeometry(3.3, .01, .02), emis('#000', 0)); strip.position.set(0, y - .006, -4.8); scene.add(strip);
+  const l = new THREE.RectAreaLight('#ffc98a', 0, 3.3, .06); l.position.set(0, y - .012, -4.82); l.lookAt(0, y - 1, -4.82); scene.add(l);
+  shelves.push({ strip, l });
+}
+// bar stools
+for (let i = 0; i < 4; i++) {
+  const x = -1.4 + i * .95;
+  const seat = new THREE.Mesh(new THREE.CylinderGeometry(.19, .19, .06, 32), new THREE.MeshStandardMaterial({ color: '#6a4228', roughness: .5 })); seat.position.set(x, .76, -3.45); seat.castShadow = true; scene.add(seat);
+  const leg = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, .74, 12), M.brass); leg.position.set(x, .37, -3.45); scene.add(leg);
+  const foot = new THREE.Mesh(new THREE.TorusGeometry(.16, .012, 8, 32), M.brass); foot.rotation.x = Math.PI / 2; foot.position.set(x, .28, -3.45); scene.add(foot);
+}
+
+// ---- tables, chairs, banquette ----
+const TABLES = [[-1.1, -1.7], [1.1, -2.0], [-1.1, .9], [1.1, .6]];
+const chairM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#9a6a48', roughness: .9 });
+function chair(x, z, face) {
+  box(.42, .06, .42, chairM, x - .21, .45, z - .21, { r: .02 });
+  box(.42, .42, .05, chairM, x - .21, .5, face > 0 ? z - .23 : z + .18, { r: .02 });
+  for (const dx of [-.18, .16]) for (const dz of [-.18, .16]) box(.025, .45, .025, M.darkWood, x + dx, 0, z + dz);
+}
+for (const [x, z] of TABLES) {
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(.42, .42, .04, 48), M.tableTop); top.position.set(x, .75, z); top.castShadow = top.receiveShadow = true; scene.add(top);
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, .72, 16), M.brass); stem.position.set(x, .37, z); scene.add(stem);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(.22, .24, .03, 32), M.brass); base.position.set(x, .015, z); scene.add(base);
+  chair(x, z - .7, 1); chair(x, z + .7, -1);
+  cup(x - .14, .77, z - .08, 1.1); cup(x + .16, .77, z + .1, 1.1);
+  const plate = new THREE.Mesh(new THREE.CylinderGeometry(.11, .11, .012, 32), cupM); plate.position.set(x + .05, .776, z - .2); scene.add(plate);
+  const cake = new THREE.Mesh(new THREE.BoxGeometry(.09, .06, .06), new THREE.MeshStandardMaterial({ color: '#6b3b22', roughness: .6 })); cake.position.set(x + .05, .812, z - .2); cake.rotation.y = .5; cake.castShadow = true; scene.add(cake);
+}
+plant(2.6, 2.6, 1.6, .6); plant(-2.6, -4.3, 1.3, .5);
+
+// ---- lights ----
+const hemi = new THREE.HemisphereLight('#ffe9d2', '#2a2018', .05); scene.add(hemi);
+// layer 1: flat ceiling panels (the "before")
+const panels = [];
+for (const x of [-1.5, 1.5]) for (const z of [-3, -.6, 1.8]) {
+  const l = new THREE.RectAreaLight('#eef3ff', 0, .6, .6); l.position.set(x, CH - .01, z); l.lookAt(x, 0, z); scene.add(l);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(.6, .015, .6), emis('#000', 0)); m.position.set(x, CH - .008, z); scene.add(m);
+  panels.push({ l, m });
+}
+// layer 2: low pendants over every table (dome shades: the light pools on the table)
+const shadeM = new THREE.MeshStandardMaterial({ color: '#1d1a17', roughness: .35, metalness: .6, side: THREE.DoubleSide });
+const pendants = [];
+for (const [x, z] of TABLES) {
+  const y = 1.62;
+  const shade = new THREE.Mesh(new THREE.SphereGeometry(.2, 40, 16, 0, Math.PI * 2, 0, Math.PI / 2), shadeM); shade.position.set(x, y, z); shade.castShadow = true; scene.add(shade);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(.2, .006, 8, 48), M.brass); rim.rotation.x = Math.PI / 2; rim.position.set(x, y, z); scene.add(rim);
+  const cord = new THREE.Mesh(new THREE.CylinderGeometry(.004, .004, CH - y - .2, 6), M.black); cord.position.set(x, (CH + y + .2) / 2, z); scene.add(cord);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(.05, 20, 12), emis('#000', 0)); bulb.position.set(x, y + .04, z); scene.add(bulb);
+  const l = new THREE.PointLight('#ffc27a', 0, 6, 1.6); l.position.set(x, y - .02, z); l.castShadow = true; l.shadow.mapSize.set(1024, 1024); l.shadow.bias = -.002; l.shadow.camera.near = .05; scene.add(l);
+  pendants.push({ l, bulb });
+}
+// layer 3: narrow spots on the bar top
+const barSpots = [];
+for (const x of [-1.25, 0, 1.25]) {
+  const s = new THREE.SpotLight('#ffd09a', 0, 8, 12 * Math.PI / 180, .45, 1.5); s.position.set(x, CH - .02, -3.1); s.target.position.set(x, 1.05, -3.65); s.castShadow = true; s.shadow.mapSize.set(1024, 1024); scene.add(s, s.target);
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .02, 24), emis('#000', 0)); ring.position.set(x, CH - .01, -3.1); scene.add(ring);
+  barSpots.push({ s, ring });
+}
+// layer 4: warm wall grazing on the brick
+const wash = [];
+for (const z of [-3.2, -1, 1.2]) { const s = new THREE.SpotLight('#ffb870', 0, 6, .55, .9, 1.4); s.position.set(CW - .25, CH - .05, z); s.target.position.set(CW, .3, z); scene.add(s, s.target); wash.push(s); }
+
+const VIEWS = {
+  w: { pos: [0, 1.55, 3.3], tgt: [0, 1.15, -4.5], fov: 74 },      // the whole café from the door
+  p: { pos: [-1.1, 1.2, 1.75], tgt: [.1, .95, -3.6], fov: 70 },  // POV: sitting at a table, looking at the bar
+  t: { pos: [-.45, 1.35, -.7], tgt: [-1.05, 1.05, -1.7], fov: 62 }, // close-up of a table under its pendant
+  b: { pos: [.6, 1.45, -1.6], tgt: [0, 1.15, -4.4], fov: 58 },     // the bar
+};
+const CCT = { 2700: '#ffc27a', 3000: '#ffd09a', 4000: '#fff0dc', 6500: '#e6eeff' };
+// state "panels:<0..1>|pend:<0..1>|bar:<0..1>|shelf:<0..1>|wash:<0..1>"  presets: flat | warm | dark
+window.setState = (st) => {
+  const preset = { flat: 'panels:1', warm: 'panels:0|pend:1|bar:1|shelf:1|wash:1', dark: 'panels:0' }[st] ?? st;
+  const o = Object.fromEntries(preset.split('|').map(p => p.split(':')).map(([k, v]) => [k, +v]));
+  const P = o.panels ?? 0, pe = o.pend ?? 0, ba = o.bar ?? 0, sh = o.shelf ?? 0, wa = o.wash ?? 0;
+  for (const p of panels) { p.l.intensity = 9 * P; p.m.material = P ? emis(CCT[6500], 2.2 * P) : emis('#000', 0); }
+  for (const p of pendants) { p.l.intensity = 6 * pe; p.bulb.material = pe ? emis(CCT[2700], 8 * pe) : emis('#000', 0); }
+  for (const b of barSpots) { b.s.intensity = 24 * ba; b.ring.material = ba ? emis(CCT[3000], 6 * ba) : emis('#000', 0); }
+  for (const s of shelves) { s.l.intensity = 9 * sh; s.strip.material = sh ? emis(CCT[2700], 5 * sh) : emis('#000', 0); }
+  for (const s of wash) s.intensity = 18 * wa;
+  hemi.color.set(P ? '#eef3ff' : '#ffe2c0'); hemi.intensity = P ? .9 : .05;
+  scene.environmentIntensity = P ? .55 : .05;
+  renderer.toneMappingExposure = P ? .72 : 1.15;
+};
