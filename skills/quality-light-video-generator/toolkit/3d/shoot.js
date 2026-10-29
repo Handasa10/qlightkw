@@ -17,7 +17,7 @@ const server = http.createServer((req, res) => {
 }).listen(0, '127.0.0.1', async () => {
   const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   const p = await b.newPage({ viewport: { width: +w, height: +h } });
-  p.on('pageerror', e => console.log('PAGEERR', e.message));
+  p.on('pageerror', e => { console.log('PAGEERR', e.message); process.exit(1); });
   p.on('console', m => { if (m.type() === 'error') console.log('ERR', m.text()); });
   await p.addInitScript(`window.RW=${w};window.RH=${h};`);
   await p.goto(`http://127.0.0.1:${server.address().port}/${page}`);

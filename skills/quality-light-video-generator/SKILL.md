@@ -35,6 +35,9 @@ each description; `multi: true` for multi-select (platforms). Skip any question 
 standing fact from `brand.md`. If he says «اختار أنت» or «ابدأ», take your recommendations and keep going.
 If the bot or the Supabase connector is unavailable, ask in chat instead (AskUserQuestion, or a numbered list with ⭐).
 
+When the run was started by the scheduled task (its prompt says so), follow `references/scheduled.md` instead of the
+interactive steps below; it uses the same references for ideas, styles, scripts, production and publishing.
+
 ## 1) Intake card (one card, before any idea)
 
 Ask together:
