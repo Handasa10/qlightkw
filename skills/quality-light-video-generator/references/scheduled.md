@@ -45,6 +45,12 @@ Pick the oldest item in this order of statuses: `script_approved` with an approv
   ✅ وافق وجدول. Wait up to 25 minutes; if approved, schedule it right away (§1.1).
 If time is left after one video (the whole run should stay under ~2 hours), advance the next item.
 
+## 3b. The watcher
+Between runs the owner keeps answering in the bot; the session must react without being told in chat. Keep
+`python3 toolkit/watch.py /tmp/ql_watch_since` (or `studio/watch.py`) running in the background (Bash
+`run_in_background`, timeout 2 h): it exits with the new answers, voice approvals and item changes as JSON. Act on
+them (next pipeline step), then start it again. If it exits with code 3 (no news for ~110 min), start it again.
+
 ## 4. End
 Release the lock, then one bot message summarising the run in Egyptian Arabic (what was sent, what waits for him,
 what got scheduled and when). If something blocked the run (quota, Postora account, upload), say exactly what.

@@ -15,3 +15,25 @@ function beginFrame() {
   if (window.OVERLAY) ctx.clearRect(0, 0, W, H); else { ctx.fillStyle = '#0d0b0a'; ctx.fillRect(0, 0, W, H); }
 }
 function endFrame(t) { if (!window.OVERLAY) finish(t); }
+// Cover frame: the video's first frame doubles as the thumbnail on Instagram, TikTok and Facebook (their default cover),
+// and `node render.js stills 0` exports it as the cover JPG. Keep title and logo inside the 4:5 grid crop (y 285–1635).
+// o: { img | left+right (split before/after) + leftTag/rightTag, kicker, title: [line1, line2], sub, accent }
+function drawCover(o) {
+  if (o.left && o.right) {
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, 540, H); ctx.clip(); bgImg(o.left, 1, 1.12, 300, 900); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.rect(540, 0, 540, H); ctx.clip(); bgImg(o.right, 1, 1.12, 780, 900); ctx.restore();
+    ctx.save(); ctx.fillStyle = '#fff'; ctx.shadowColor = C.o; ctx.shadowBlur = 30; ctx.fillRect(536, 0, 8, H); ctx.restore();
+  } else bgImg(o.img, 1, 1.08, 540, 900);
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, 'rgba(8,6,5,.15)'); g.addColorStop(.2, 'rgba(8,6,5,.55)'); g.addColorStop(.48, 'rgba(8,6,5,.25)'); g.addColorStop(.72, 'rgba(8,6,5,.35)'); g.addColorStop(1, 'rgba(8,6,5,.85)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  if (o.kicker) label(o.kicker, 540, 400, 1, 0, 0, { size: 46, bg: o.accent || C.o });
+  (o.title || []).forEach((s, i) => { // shrink each line to fit 960 px
+    ctx.font = `900 120px Cairo`; const size = Math.min(120, 120 * 960 / ctx.measureText(s).width);
+    txt(s, 540, 560 + i * 150, { size, weight: 900, color: i ? (o.accent2 || C.o2) : '#fff', glow: 30 });
+  });
+  if (o.leftTag) label(o.leftTag, 270, 1250, 1, 0, 0, { size: 52, bg: C.red });
+  if (o.rightTag) label(o.rightTag, 810, 1250, 1, 0, 0, { size: 52, bg: GOOD, color: '#06210f' });
+  if (o.sub) label(o.sub, 540, 1450, 1, 0, 0, { size: 50, bg: 'rgba(18,14,12,.88)' });
+  drawImg(LOGO3D, 540, 1580, 130, { glow: 40 });
+}

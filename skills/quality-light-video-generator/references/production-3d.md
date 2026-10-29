@@ -50,6 +50,13 @@ bottom-left from ~3 s until the logo scene. No subtitles.
 Arabic + Latin in one string can flip order ("15° – 24°", "CRI 90+", "+965…"): use `dir: 'ltr'` on pure-Latin
 texts, rephrase mixed ones («مؤشر ألوان 90 وفوق»), and always check the stills.
 
+## 4b. Cover (thumbnail)
+The first frame is the cover on Instagram, TikTok and Facebook, so every reel opens on a designed cover that holds
+0.35 s and dissolves into the hook: `drawCover(COVER)` in `draw(t)` while `t < .6` (alpha `1 - clamp((t - .35) / .25)`),
+with `COVER = { img | left+right + leftTag/rightTag, kicker, title: [question, answer], sub }` (title ≤ 2 short lines,
+the strongest render, split before/after when the video compares). Don't fade in from black at t = 0. Export the
+cover JPG with `node render.js stills 0` (→ `stills/s_0.00.jpg`) and upload it next to the video as `<slug>_cover.jpg`.
+
 ## 5. Check stills
 `bash build.sh <duration>` then `node render.js stills "t1,t2,…"` (1–2 per scene, plus every tricky moment) → contact
 sheet (PIL, e.g. 10 per row at 216×384) → look → fix overlaps, empty frames, wrong order, unreadable text → repeat.
