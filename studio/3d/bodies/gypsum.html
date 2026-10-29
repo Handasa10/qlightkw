@@ -108,7 +108,7 @@ window.setState = (st) => {
   for (const { t, open: gap } of tiles) { t.visible = !(open && gap) && !(o.hatch === '1' && underHatch(t)); t.material = done ? boardDone : boardRaw; }
   covePieces.forEach(p => p.material = done ? boardDone : boardRaw);
   walls.forEach(w => w.material = done ? wallDone : wallRaw);
-  floorDone.visible = done; props.visible = !done;
+  floorDone.visible = done; props.visible = !done && o.props !== '0';
   hatches.forEach(d => d.rotation.x = o.hatch === '1' ? 1.3 : 0);
   for (const s of spots) { s.mark.visible = o.marks === '1'; s.ring.visible = !open; s.s.intensity = on ? 7 : 0; s.lens.material = on ? emis('#ffd9a8', 5) : emis('#000', 0); }
   for (const s of strips) { s.l.intensity = on ? 1.5 : 0; s.wm.color.set(on ? '#c9a070' : '#000'); s.m.material = on ? emis('#ffd6a0', 6) : emis('#000', 0); }
