@@ -157,7 +157,7 @@ add(mus, fin, CFG["end"], .35)
 
 # ---------- VO + ducking ----------
 w = wave.open('vo48.wav'); vo = np.frombuffer(w.readframes(w.getnframes()), np.int16).astype(float) / 32768
-vo = vo / np.abs(vo).max() * .89
+vo = vo / max(np.abs(vo).max(), 1e-9) * .89  # a silent track (no-voice reels) stays silent
 v = np.zeros(N); v[:len(vo)] = vo[:N]
 fr = 480; rms = np.sqrt(np.convolve(v ** 2, np.ones(fr) / fr, 'same'))
 act = np.clip(rms / .04, 0, 1)

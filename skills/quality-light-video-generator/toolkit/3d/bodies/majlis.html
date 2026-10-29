@@ -99,13 +99,14 @@ const panelP = new THREE.PointLight('#eef2ff', 0, 14, 1.2); panelP.position.set(
 const hemi = new THREE.HemisphereLight('#ffe9d2', '#5a4a3c', .2); scene.add(hemi);
 const lanternVis = v => lantMs.forEach(o => { if (o.isMesh && o !== lantMs[0]) o.visible = v; });
 window.setState = (n) => {
-  const lv = { S0: 0, S1: 1, S2: 2, S3: 3, S4: 4, S5: 5, S6: 6 }[n]; const ev = lv === 6;
+  const lv = { OFF: -1, S0: 0, S1: 1, S2: 2, S3: 3, S4: 4, S5: 5, S6: 6 }[n]; const ev = lv === 6;
   archL.forEach(([l, k]) => l.intensity = lv >= 1 ? k * (ev ? .8 : 1) : 0); archM.forEach(m => m.material.emissiveIntensity = lv >= 1 ? 5 : 0);
   coveL.forEach(l => l.intensity = lv >= 2 ? (ev ? 7 : 9) : 0); coveMs.forEach(m => m.visible = lv >= 2);
   sofaL.forEach(l => l.intensity = lv >= 3 ? 4 : 0); sofaMs.forEach(m => m.material.emissiveIntensity = lv >= 3 ? 4 : 0);
   downs.forEach(s => s.intensity = lv >= 4 ? s.userData.k * (ev ? .3 : 1) : 0); downMs.forEach(m => m.visible = lv >= 4);
   lantL.forEach(p => p.intensity = lv >= 5 ? (ev ? 3.2 : 4) : 0); lantMs[1].emissiveIntensity = lv >= 5 ? 2.2 : 0; lantMs[0].material.emissiveIntensity = lv >= 5 ? .6 : 0;
   lanternVis(lv >= 5); panelM.visible = lv === 0; panelP.intensity = lv === 0 ? 3.4 : 0;
-  hemi.intensity = lv === 0 ? .3 : ev ? .04 : .12; renderer.toneMappingExposure = lv === 0 ? .8 : ev ? .8 : .9;
+  hemi.intensity = lv === 0 ? .3 : lv < 0 ? .004 : ev ? .04 : .015 + .02 * lv;
+  scene.environmentIntensity = lv === 0 ? .18 : lv < 0 ? .003 : ev ? .05 : .01 + .025 * lv; renderer.toneMappingExposure = lv === 0 ? .8 : ev ? .8 : .9;
 };
 const VIEWS = { p1: { pos: [3.0, 1.45, 6.3], tgt: [3.0, 1.6, 0], fov: 78 }, p2: { pos: [.9, 1.5, 5.6], tgt: [4.6, 1.3, .6], fov: 78 }, w1: { pos: [3.0, 1.5, 6.3], tgt: [3.0, 1.55, 0], fov: 62 } };
