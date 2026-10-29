@@ -4,7 +4,7 @@
 #   BASE=base.mp4 bash runvid.sh <duration> <out.mp4>  graphics over a footage edit made with cut.py (AI clips / UGC / store footage)
 set -e
 cd "$(dirname "$0")"
-DUR=$1; OUT=$2
+DUR=$1; OUT=$2; mkdir -p "$(dirname "$OUT")"
 P=$(python3 -c "d=$DUR;print(' '.join(str(round(d*i/4,2)) for i in range(5)))"); read -r a b c d e <<< "$P"
 if [ -n "$BASE" ]; then R="node render.js overlay $BASE"; else R="node render.js video"; fi
 $R c_1.mp4 $a $b > log_1.txt 2>&1 &
