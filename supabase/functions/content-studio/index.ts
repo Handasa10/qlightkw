@@ -349,9 +349,9 @@ async function ttsModels(): Promise<string[]> {
   return list;
 }
 
-// one TTS call per model until one answers; quota / overload errors move on to the next model
+// one TTS call per model until one answers; any error except a bad key moves on to the next model
 async function synthesize(text: string, voice: string) {
-  let last = '';
+  const errs: string[] = [];
   for (const model of await ttsModels()) {
     const res = await fetch(`${GEMINI}/models/${model}:generateContent`, {
       method: 'POST',
@@ -364,10 +364,11 @@ async function synthesize(text: string, voice: string) {
     const body = await res.json().catch(() => ({}));
     const part = body.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData;
     if (res.ok && part) return { model, part };
-    last = `${model}: ${body.error?.message?.split('\n')[0] || `HTTP ${res.status}`}`;
-    if (![429, 500, 503, 404].includes(res.status)) break;
+    const last = `${model}: ${body.error?.message?.split('\n')[0] || `HTTP ${res.status}`}`;
+    errs.push(last);
+    if (res.status === 401 || /API key/i.test(last)) break; // bad key: no other model will answer
   }
-  throw new Error(last || 'TTS failed');
+  throw new Error(errs.join(' | ') || 'TTS failed');
 }
 
 function wavFile(pcm: Uint8Array, rate: number) {
