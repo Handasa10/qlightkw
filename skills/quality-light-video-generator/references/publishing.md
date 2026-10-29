@@ -45,14 +45,17 @@ the bitrate for longer videos), then `upload_media` with its URL and pass `media
 
 ## 4. Create the posts
 One `create_post` per caption variant:
-- Instagram + Facebook together: `platforms: ["instagram","facebook"]`, their `account_ids`, `caption` (full caption),
-  `media_urls: [url]`, `instagram_share_to_feed: true`, `facebook_post_type: "reel"`, `scheduled_at`, `timezone`.
+- Instagram **on its own post** (combined with Facebook, Postora published only Facebook and silently dropped
+  Instagram): `platforms: ["instagram"]`, its account id, the full caption, the media, `instagram_share_to_feed: true`,
+  `scheduled_at`, `timezone`.
+- Facebook: `platforms: ["facebook"]`, `facebook_post_type: "reel"`, same caption and time.
 - TikTok: `platforms: ["tiktok"]`, the TikTok caption, `tiktok_privacy: "PUBLIC_TO_EVERYONE"`, comments on.
 - YouTube Shorts: `youtube_video_type: "short"`, `youtube_title`, `youtube_privacy: "public"`, `youtube_tags`.
 - Threads: short caption, same video.
 Optional `first_comment` for quiz videos («اكتب A ولا B 👇»).
 
 ## 5. Confirm
-`get_post` for each id: report platform results, the Kuwait time, and any warning. If a platform failed, show the error
+`get_post` for each id after the slot: every chosen platform must have a `platform_results` entry with `success`;
+a platform missing from the results did not publish, so post it again on its own. Report platform results, the Kuwait time, and any warning. If a platform failed, show the error
 and offer `retry_failed_post`. To move or cancel later: `reschedule_post` / `cancel_scheduled_post` (cancel only when
 the owner asks).
