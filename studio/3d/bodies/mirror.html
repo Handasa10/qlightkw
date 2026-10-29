@@ -1,0 +1,88 @@
+// ===== Vanity mirror: a plaster bust lit by one downlight above the head (shadows under the eyes) vs light from the sides of the mirror =====
+// mirror wall at z=0, floor y=0, ceiling 2.7; the bust stands at z=.55 facing the mirror (-z)
+const BH = 2.7, HY = 1.6, HZ = .55;
+const tileTex = canvasTex(1024, 1024, (g, w, h) => {
+  g.fillStyle = '#d9d2c8'; g.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 128) for (let x = 0; x < w; x += 256) { const c = 205 + R() * 25; g.fillStyle = `rgb(${c},${c - 6},${c - 14})`; g.fillRect(x + 2, y + 2, 252, 124); }
+}, [3, 3]);
+const tileM = new THREE.MeshStandardMaterial({ map: tileTex, roughness: .35 });
+plane(6, 6, M.floor, [0, 0, 1.5], [-Math.PI / 2, 0, 0]);
+box(4, BH, .1, tileM, -2, 0, -.1);
+box(.1, BH, 4, tileM, -1.6, 0, -.1); box(.1, BH, 4, tileM, 1.5, 0, -.1);
+box(4, .1, 4, M.ceil, -2, BH, -.1, { cast: false });
+// vanity: oak cabinet + stone top + basin + tap
+box(1.2, .8, .5, new THREE.MeshStandardMaterial({ map: oakTex, color: '#9b7350', roughness: .5 }), -.6, 0, 0);
+box(1.24, .04, .54, M.tableTop, -.62, .8, -.02);
+const basin = new THREE.Mesh(new THREE.CylinderGeometry(.2, .16, .12, 48), new THREE.MeshStandardMaterial({ color: '#f4f1ec', roughness: .2 })); basin.position.set(0, .9, .25); basin.castShadow = true; scene.add(basin);
+box(.03, .25, .03, M.brass, -.015, .84, .05); box(.03, .03, .14, M.brass, -.015, 1.06, .05);
+// mirror (dark polished glass: the views look from the mirror at the face, so it needn't reflect)
+const sheenTex = canvasTex(256, 512, (g, w, h) => { const gr = g.createLinearGradient(0, h, w, 0); gr.addColorStop(0, '#3a4146'); gr.addColorStop(.45, '#59626a'); gr.addColorStop(.5, '#7d878f'); gr.addColorStop(.56, '#56606a'); gr.addColorStop(1, '#353c42'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+box(.7, .95, .02, new THREE.MeshStandardMaterial({ map: sheenTex, roughness: .12, metalness: 0 }), -.35, 1.15, 0);
+// two vertical LED bars at the sides of the mirror (the fix)
+const bars = [];
+for (const sx of [-1, 1]) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(.05, .7, .03), emis('#000', 0)); m.position.set(sx * .45, 1.62, .03); scene.add(m);
+  const l = new THREE.RectAreaLight('#fff0dc', 0, .05, .7); l.position.set(sx * .45, 1.62, .05); l.lookAt(sx * .45, 1.62, 2); scene.add(l);
+  bars.push({ m, l });
+}
+// a towel, a plant and a soap dish for scale
+box(.04, .5, .3, new THREE.MeshStandardMaterial({ map: fabricTex, color: '#e8e0d4', roughness: 1 }), 1.42, .9, .4);
+plant(-1.25, .4, 1.1, .45);
+
+// ---- the bust: a sculpted ellipsoid (brow, eye sockets, nose, cheekbones, lips, chin) on a neck and shoulders ----
+const plaster = new THREE.MeshStandardMaterial({ color: '#e7dccd', roughness: .75 });
+const gs = (d, s) => Math.exp(-(d * d) / (2 * s * s));
+const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const headGeo = new THREE.SphereGeometry(1, 256, 192);
+const pos = headGeo.attributes.position, v = new THREE.Vector3();
+for (let i = 0; i < pos.count; i++) {
+  v.fromBufferAttribute(pos, i);
+  let x = v.x * .078, y = v.y * .108, z = v.z * .098;
+  x *= 1 - .3 * smooth(-.01, -.105, y);                                  // narrower jaw
+  z *= 1 - .1 * smooth(0, -.105, y);
+  const f = smooth(0, .06, z);                                           // only the front of the face gets features
+  let d = .004 * gs(y - .03, .009) * gs(x, .035);                        // brow ridge
+  for (const sx of [-1, 1]) {
+    d -= .009 * gs(Math.hypot(x - sx * .031, (y - .012) * 1.3), .013);  // eye sockets
+    d += .004 * gs(Math.hypot(x - sx * .031, y - .011), .008);          // eyeballs
+    d += .004 * gs(Math.hypot(x - sx * .045, y + .015), .017);          // cheekbones
+  }
+  d += .022 * gs(x, .008 + .007 * smooth(.015, -.035, y)) * smooth(.02, -.03, y) * smooth(-.047, -.035, y); // nose
+  d += .004 * gs(y + .058, .007) * gs(x, .018);                          // lips
+  d += .007 * gs(Math.hypot(x * .8, y + .088), .02);                     // chin
+  const n = new THREE.Vector3(x / .078 ** 2, y / .108 ** 2, z / .098 ** 2).normalize();
+  pos.setXYZ(i, x + n.x * d * f, y + n.y * d * f, z + n.z * d * f);
+}
+headGeo.computeVertexNormals();
+const head = new THREE.Mesh(headGeo, plaster); head.castShadow = head.receiveShadow = true;
+const bust = new THREE.Group(); bust.add(head);
+const neck = new THREE.Mesh(new THREE.CylinderGeometry(.05, .058, .16, 40), plaster); neck.position.set(0, -.15, -.01); neck.castShadow = neck.receiveShadow = true; bust.add(neck);
+const sh = new THREE.Mesh(new THREE.SphereGeometry(1, 60, 30, 0, Math.PI * 2, 0, Math.PI / 2), plaster); sh.scale.set(.2, .12, .11); sh.position.set(0, -.3, -.01); sh.castShadow = sh.receiveShadow = true; bust.add(sh);
+bust.position.set(0, HY, HZ); bust.rotation.y = Math.PI; scene.add(bust);
+
+// ---- lights ----
+const hemi = new THREE.HemisphereLight('#fff4e6', '#5a4a3c', .05); scene.add(hemi);
+const top = new THREE.SpotLight('#fff3e2', 0, 6, 22 * Math.PI / 180, .5, 1.4); top.position.set(0, BH - .02, HZ + .02); top.target.position.set(0, 0, HZ + .02);
+top.castShadow = true; top.shadow.mapSize.set(2048, 2048); top.shadow.bias = -.0003; top.shadow.camera.near = .3; scene.add(top, top.target);
+const topRing = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .015, 24), emis('#000', 0)); topRing.position.set(0, BH - .008, HZ + .02); scene.add(topRing);
+const fill = new THREE.PointLight('#ffe8cc', 0, 5, 2); fill.position.set(.6, 1.5, 1.8); scene.add(fill);
+
+const VIEWS = {
+  v: { pos: [1.05, 1.55, 1.9], tgt: [-.05, 1.45, .2], fov: 50 },  // the vanity from behind the shoulder
+  m: { pos: [0, 1.5, 2.6], tgt: [0, 1.35, 0], fov: 52 },          // the vanity straight on (bust hidden)
+  u: { pos: [.35, 1.25, 1.2], tgt: [0, 2.3, .5], fov: 60 },       // looking up at the downlight over the head
+};
+// the face itself is drawn as a 2D diagram in the reel: a sculpted 3D face reads uncanny at phone size
+// state "top:<0..1>|side:<0..1>|bust:0|1"  presets: top | side | dark
+window.setState = (st) => {
+  const preset = { top: 'top:1', side: 'top:.12|side:1', dark: 'top:0' }[st] ?? st.replace(/^(top|side|dark)(\|)/, (m, k, bar) => ({ top: 'top:1', side: 'top:.12|side:1', dark: 'top:0' })[k] + bar);
+  const o = Object.fromEntries(preset.split('|').map(p => p.split(':')).map(([k, v]) => [k, +v]));
+  const T = o.top ?? 0, S = o.side ?? 0;
+  bust.visible = (o.bust ?? 1) > 0;
+  top.intensity = 18 * T; topRing.material = T ? emis('#fff3e2', 6 * T) : emis('#000', 0);
+  for (const b of bars) { b.l.intensity = 14 * S; b.m.material = S ? emis('#fff0dc', 5 * S) : emis('#000', 0); }
+  fill.intensity = S ? .4 : .05;
+  hemi.intensity = .04 + .06 * S;
+  scene.environmentIntensity = .03 + .05 * S;
+  renderer.toneMappingExposure = 1.0;
+};

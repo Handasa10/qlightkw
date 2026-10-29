@@ -1,0 +1,108 @@
+// ===== Boutique wall: the same products under flat ceiling light vs track spots (24°, CRI 95) + linear LEDs under the shelves =====
+// shelving wall at z=0 (x -1.8..1.8), floor y=0, ceiling 3.0; the camera stands in the shop at z>0
+const SX = 1.8, SH = 3.0;
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#d8cfc4', roughness: .92 });
+marbleTex.repeat.set(3, 3);
+plane(8, 8, M.floor, [0, 0, 2.5], [-Math.PI / 2, 0, 0]);
+box(8, SH, .1, wallM, -4, 0, -.45);
+box(.1, SH, 7, wallM, -2.8, 0, -.45); box(.1, SH, 7, wallM, 2.7, 0, -.45);
+box(8, .1, 7, M.ceil, -4, SH, -.45, { cast: false });
+// shelving unit: dark wood frame, 4 shelves, back panel in warm oak
+const frameM = new THREE.MeshStandardMaterial({ color: '#2b211b', roughness: .5 });
+const backM = new THREE.MeshStandardMaterial({ map: oakTex, color: '#b48a62', roughness: .55 });
+box(SX * 2, 2.6, .04, backM, -SX, 0, -.36);
+for (const x of [-SX - .05, -.62, .58, SX]) box(.05, 2.6, .4, frameM, x, 0, -.36);
+const SHELVES = [.35, .95, 1.55, 2.15];
+const shelves = [];
+for (const y of SHELVES) {
+  box(SX * 2, .04, .4, frameM, -SX, y, -.36);
+  // linear LED under the shelf above (the bottom shelf is lit from the shelf at .95, the top one from the frame top)
+  const yl = y + .6 - .012;
+  const strip = new THREE.Mesh(new THREE.BoxGeometry(SX * 2 - .1, .01, .02), emis('#000', 0)); strip.position.set(0, yl, -.04); scene.add(strip);
+  const l = new THREE.RectAreaLight('#fff1dc', 0, SX * 2 - .1, .05); l.position.set(0, yl - .006, -.06); l.lookAt(0, yl - 1, -.1); scene.add(l);
+  shelves.push({ strip, l });
+}
+box(SX * 2 + .05, .06, .4, frameM, -SX - .05, 2.6, -.36);
+
+// ---- products (left column: bags · middle: perfumes / jewellery · right: shoes), one product family per shelf ----
+const leather = (c, r = .45) => new THREE.MeshStandardMaterial({ color: c, roughness: r });
+const goldM = new THREE.MeshStandardMaterial({ color: '#d4a64a', roughness: .25, metalness: 1 });
+function bag(x, y, c) {
+  box(.34, .24, .14, leather(c), x - .17, y, -.25, { r: .03 });
+  const h = new THREE.Mesh(new THREE.TorusGeometry(.09, .012, 10, 32, Math.PI), leather(c)); h.position.set(x, y + .24, -.18); h.castShadow = true; scene.add(h);
+  box(.06, .03, .01, goldM, x - .03, y + .16, -.115);
+}
+function perfume(x, y, c, s = 1) {
+  const g = new THREE.Mesh(new THREE.BoxGeometry(.08 * s, .13 * s, .05 * s), new THREE.MeshPhysicalMaterial({ color: c, roughness: .05, transmission: .6, thickness: .05, ior: 1.5 }));
+  g.position.set(x, y + .065 * s, -.15); g.castShadow = true; scene.add(g);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(.022 * s, .022 * s, .05 * s, 20), goldM); cap.position.set(x, y + .155 * s, -.15); cap.castShadow = true; scene.add(cap);
+}
+function clutch(x, y, c) { // standing clutch with a gold clasp
+  box(.24, .15, .05, leather(c, .3), x - .12, y, -.2, { r: .02 });
+  box(.05, .025, .01, goldM, x - .025, y + .09, -.152);
+}
+const ceramic = new THREE.MeshStandardMaterial({ color: '#e9e0d2', roughness: .5 });
+function vase(x, y) {
+  const pts = [[0, 0], [.05, 0], [.08, .06], [.09, .15], [.07, .24], [.035, .3], [.04, .33]].map(([r, h]) => new THREE.Vector2(r, h));
+  const v = new THREE.Mesh(new THREE.LatheGeometry(pts, 40), ceramic); v.position.set(x, y, -.2); v.castShadow = true; scene.add(v);
+}
+const BAGS = ['#a0602e', '#7d1d22', '#1b1918', '#c9a77c'];
+for (const [i, y] of SHELVES.entries()) { bag(-1.42, y + .04, BAGS[i]); bag(-1.0, y + .04, BAGS[(i + 2) % 4]); }
+for (const [i, y] of SHELVES.entries()) {
+  for (let j = 0; j < 5; j++) perfume(-.42 + j * .2, y + .04, ['#f2c46a', '#e48aa0', '#9fd0e8', '#f6e7c8', '#c36a3a'][(i + j) % 5], j % 2 ? 1.1 : .9);
+  for (let j = 0; j < 2; j++) clutch(.85 + j * .32, y + .04, ['#7a1c20', '#c79a68', '#151313', '#2e4a63', '#e7d9c4'][(i + j) % 5]);
+  vase(1.5, y + .04);
+}
+// display table in front with folded fabrics
+const tableM = new THREE.MeshStandardMaterial({ color: '#b9b0a3', roughness: .4 });
+box(1.2, .78, .6, tableM, -.6, 0, .7);
+const FAB = ['#c84b2f', '#e9d6b5', '#2e4a63', '#7c5a3c', '#a33a5a'];
+for (let i = 0; i < 5; i++) {
+  const fm = new THREE.MeshStandardMaterial({ map: fabricTex, color: FAB[i], roughness: .95 });
+  for (let k = 0; k < 3; k++) box(.18, .035, .26, fm, -.52 + i * .22, .78 + k * .036, .85, { r: .01 });
+}
+
+// ---- lights ----
+const hemi = new THREE.HemisphereLight('#eef3ff', '#3a3028', .05); scene.add(hemi);
+// flat: wide cold downlights in the middle of the shop (CRI ~80 look: colours slightly washed)
+const flat = [];
+for (const [x, z] of [[-1.2, 1.6], [1.2, 1.6], [-1.2, 3.2], [1.2, 3.2]]) {
+  const s = new THREE.SpotLight('#f1f5ff', 0, 10, 1.1, .9, 1.4); s.position.set(x, SH - .02, z); s.target.position.set(x, 0, z); scene.add(s, s.target);
+  if (z < 2) { s.castShadow = true; s.shadow.mapSize.set(1024, 1024); s.shadow.bias = -.0005; }
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, .01, 24), emis('#000', 0)); m.position.set(x, SH - .005, z); scene.add(m);
+  flat.push({ s, m });
+}
+// track: a black rail with narrow spots aimed at the product groups
+box(3.8, .04, .05, M.black, -1.9, SH - .05, 1.1, { cast: false });
+const track = [];
+const AIM = [[-1.22, 2.3], [-1.22, 1.1], [0, 1.65], [0, .45], [1.15, 1.7], [1.15, .55], [0, .9]];
+for (const [i, [x, y]] of AIM.entries()) {
+  const tx = x + (i % 2 ? .12 : -.12);
+  const z = i === 6 ? 1.5 : 1.12;
+  const s = new THREE.SpotLight('#ffe2bd', 0, 9, 12 * Math.PI / 180, .4, 1.5); s.position.set(tx, SH - .2, z);
+  s.target.position.set(x, y, i === 6 ? .95 : -.2); s.castShadow = i < 4; s.shadow.mapSize.set(1024, 1024); s.shadow.bias = -.0005; scene.add(s, s.target);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(.04, .045, .16, 20), M.black); body.position.copy(s.position); body.lookAt(s.target.position); body.rotateX(Math.PI / 2); scene.add(body);
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(.03, 20), emis('#000', 0)); scene.add(lens);
+  const dir = s.target.position.clone().sub(s.position).normalize(); lens.position.copy(s.position).addScaledVector(dir, .081); lens.lookAt(s.position.clone().addScaledVector(dir, 2));
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(.008, .008, .16, 8), M.black); stem.position.set(tx, SH - .11, z); scene.add(stem);
+  track.push({ s, lens });
+}
+
+const VIEWS = {
+  w: { pos: [0, 1.45, 3.4], tgt: [0, 1.3, -.3], fov: 62 },        // the whole wall
+  c: { pos: [-.65, 1.7, 1.75], tgt: [-.7, 1.55, -.3], fov: 60 },  // bags + perfumes close
+  s: { pos: [.75, 1.35, 1.5], tgt: [.95, 1.1, -.3], fov: 58 },    // clutches + vases close
+  u: { pos: [.6, 1.3, 2.4], tgt: [0, 2.85, 1.0], fov: 62 },       // looking up at the track spots
+};
+// state "flat:<0..1>|track:<0..1>|shelf:<0..1>"  presets: flat | lit | dark
+window.setState = (st) => {
+  const preset = { flat: 'flat:1', lit: 'flat:.15|track:1|shelf:1', dark: 'flat:0' }[st] ?? st;
+  const o = Object.fromEntries(preset.split('|').map(p => p.split(':')).map(([k, v]) => [k, +v]));
+  const F = o.flat ?? 0, T = o.track ?? 0, S = o.shelf ?? 0;
+  for (const f of flat) { f.s.intensity = 15 * F; f.s.color.set(F > .5 ? '#f1f5ff' : '#ffe9cf'); f.m.material = F ? emis('#f4f7ff', 3 * F) : emis('#000', 0); }
+  for (const t of track) { t.s.intensity = 14 * T; t.lens.material = T ? emis('#ffe2bd', 8 * T) : emis('#000', 0); }
+  for (const s of shelves) { s.l.intensity = 7 * S; s.strip.material = S ? emis('#fff1dc', 5 * S) : emis('#000', 0); }
+  hemi.intensity = F > .5 ? .45 : .06; hemi.color.set(F > .5 ? '#eef3ff' : '#ffe9d2');
+  scene.environmentIntensity = F > .5 ? .5 : .05;
+  renderer.toneMappingExposure = F > .5 ? .72 : 1.05;
+};
