@@ -57,12 +57,13 @@ const VIEWS = {
   t: { pos: [.35, 1.05, 2.6], tgt: [-.05, .55, 1.4], fov: 48 }, // the table + cushions close
   p: { pos: [PX, 1.3, 1.1], tgt: [PX, 1.05, 0], fov: 40 },      // the two fixtures
 };
-// state "cheap" | "good" | "off" | "prod"
-window.setState = (st) => {
+// state "cheap" | "good" | "off" | "prod", optionally "|dim:<0..1>"
+window.setState = (state) => {
+  const [st, ...rest] = state.split('|'); const dim = +(Object.fromEntries(rest.map(p => p.split(':'))).dim ?? 1); // "good|dim:.3"
   const good = st === 'good', on = st === 'good' || st === 'cheap', prod = st === 'prod';
-  spot.intensity = on ? (good ? 12 : 4.5) : 0; spot.color.set(good ? '#ffdcb0' : '#e4eef8'); spot.angle = (good ? 30 : 38) * Math.PI / 180; spot.penumbra = good ? .5 : .3;
-  lens.material = on ? emis(good ? '#ffdcb0' : '#e4eef8', good ? 6 : 4) : emis('#000', 0);
-  fill.intensity = on ? (good ? .35 : .2) : .05;
+  spot.intensity = on ? (good ? 12 : 4.5) * dim : 0; spot.color.set(good ? '#ffdcb0' : '#e4eef8'); spot.angle = (good ? 30 : 38) * Math.PI / 180; spot.penumbra = good ? .5 : .3;
+  lens.material = on ? emis(good ? '#ffdcb0' : '#e4eef8', (good ? 6 : 4) * Math.max(dim, .15)) : emis('#000', 0);
+  fill.intensity = on ? (good ? .35 : .2) * dim : .05;
   hemi.intensity = on ? .06 : .03; hemi.color.set(good ? '#ffe9d2' : '#eef2f0');
   key.intensity = prod ? 30 : 0; rim.intensity = prod ? 4 : 0; hemi.intensity = prod ? .25 : hemi.intensity;
   scene.environmentIntensity = prod ? .12 : on ? .05 : .02;
