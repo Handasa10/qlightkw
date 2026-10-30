@@ -1,0 +1,70 @@
+// ===== Two 12 W spots: the same living-room corner under a cheap spot vs a quality one, and the two fixtures side by side =====
+// back wall at z=0, floor y=0, ceiling 2.9; a sofa, a coffee table and a painting under one downlight at (0, 2.9, 1.6)
+const CH = 2.9;
+marbleTex.repeat.set(3, 3);
+const woodFloorTex = canvasTex(1024, 1024, (g, w, h) => { woodDraw('#7a5a3e', '45,28,14')(g, w, h); g.strokeStyle = 'rgba(25,14,6,.45)'; g.lineWidth = 3; for (let y = 0; y <= h; y += 128) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } }, [3, 3]);
+plane(8, 8, new THREE.MeshStandardMaterial({ map: woodFloorTex, roughness: .45 }), [0, 0, 2], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#d9cdbd', roughness: .92 });
+box(8, CH, .1, wallM, -4, 0, -.1); box(.1, CH, 8, wallM, -2.6, 0, -.1); box(.1, CH, 8, wallM, 2.6, 0, -.1);
+box(8, .1, 8, M.ceil, -4, CH, -.1, { cast: false });
+// sofa + cushions (colours that show CRI), coffee table, rug, painting, plant
+const sofaM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#b9a689', roughness: .95 });
+box(2.2, .42, .9, sofaM, -1.1, .1, .1, { r: .06 }); box(2.2, .5, .22, sofaM, -1.1, .5, .1, { r: .06 });
+box(.22, .32, .9, sofaM, -1.1, .45, .1, { r: .05 }); box(.22, .32, .9, sofaM, .88, .45, .1, { r: .05 });
+[['#b3262e', -.75], ['#e0a32a', -.15], ['#1f6f8b', .45]].forEach(([c, x]) => { const m = box(.42, .38, .14, new THREE.MeshStandardMaterial({ map: fabricTex, color: c, roughness: .9 }), x, .5, .3, { r: .07 }); m.rotation.x = -.2; });
+const table = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, .05, 48), new THREE.MeshStandardMaterial({ map: oakTex, color: '#8a5a36', roughness: .4 })); table.position.set(0, .42, 1.5); table.castShadow = table.receiveShadow = true; scene.add(table);
+const leg = new THREE.Mesh(new THREE.CylinderGeometry(.06, .08, .4, 24), M.brass); leg.position.set(0, .2, 1.5); scene.add(leg);
+const fruitCols = ['#d9381e', '#f2b134', '#7cb342', '#d9381e', '#f2b134'];
+const bowl = new THREE.Mesh(new THREE.SphereGeometry(.16, 32, 12, 0, 6.29, Math.PI / 2, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#f1ece4', roughness: .3, side: THREE.DoubleSide })); bowl.position.set(-.05, .6, 1.45); scene.add(bowl);
+fruitCols.forEach((c, i) => { const f = new THREE.Mesh(new THREE.SphereGeometry(.055, 20, 14), new THREE.MeshStandardMaterial({ color: c, roughness: .45 })); f.position.set(-.05 + Math.cos(i * 1.3) * .07, .5 + (i > 2 ? .06 : 0), 1.45 + Math.sin(i * 1.3) * .07); f.castShadow = true; scene.add(f); });
+plane(2.8, 2, M.rug, [0, .006, 1.4], [-Math.PI / 2, 0, 0]);
+const artTex = canvasTex(800, 600, (g, w, h) => { const bg = g.createLinearGradient(0, 0, w, h); bg.addColorStop(0, '#e9d8bf'); bg.addColorStop(1, '#c9a882'); g.fillStyle = bg; g.fillRect(0, 0, w, h); for (let i = 0; i < 7; i++) { g.fillStyle = ['#b3262e', '#1f6f8b', '#e0a32a', '#2e2a26', '#7cb342'][i % 5]; g.globalAlpha = .85; g.beginPath(); g.arc(120 + i * 95, 300 + Math.sin(i) * 120, 60 + (i % 3) * 25, 0, 7); g.fill(); } g.globalAlpha = 1; });
+box(1.3, .95, .04, M.black, -.65, 1.25, .0); plane(1.22, .87, new THREE.MeshStandardMaterial({ map: artTex, roughness: .7 }), [0, 1.725, .045], [0, 0, 0]);
+plant(1.9, .5, 1.5, .55);
+// the downlight in the ceiling
+const spot = new THREE.SpotLight('#ffe0b8', 0, 9, 30 * Math.PI / 180, .5, 1.5); spot.position.set(0, CH - .02, 1.3); spot.target.position.set(0, .5, 1.1);
+spot.castShadow = true; spot.shadow.mapSize.set(2048, 2048); spot.shadow.bias = -.0004; scene.add(spot, spot.target);
+const ring = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .012, 32), new THREE.MeshStandardMaterial({ color: '#f4f1ec', roughness: .4 })); ring.position.set(0, CH - .006, 1.3); scene.add(ring);
+const lens = new THREE.Mesh(new THREE.CircleGeometry(.032, 24), emis('#000', 0)); lens.rotation.x = Math.PI / 2; lens.position.set(0, CH - .013, 1.3); scene.add(lens);
+const hemi = new THREE.HemisphereLight('#ffe9d2', '#3a2c20', .06); scene.add(hemi);
+const fill = new THREE.PointLight('#ffd9a8', 0, 8, 2); fill.position.set(1.8, 1.4, 3.2); scene.add(fill);
+
+// ---- product display: the two fixtures on a dark plinth (shown in a separate view far from the room) ----
+const PX = 20;
+const plinth = box(1.6, .9, .7, new THREE.MeshStandardMaterial({ color: '#16120f', roughness: .6 }), PX - .8, 0, -.35);
+const backdrop = plane(6, 4, new THREE.MeshStandardMaterial({ color: '#0e0b09', roughness: 1 }), [PX, 2, -1], [0, 0, 0]);
+const alu = new THREE.MeshStandardMaterial({ color: '#b9bec4', roughness: .3, metalness: 1 });
+const plastic = new THREE.MeshStandardMaterial({ color: '#f2f0ea', roughness: .5 });
+function fixture(x, quality) { // a downlight lying on its side: trim ring + lens, then the body behind it
+  const g = new THREE.Group(); g.position.set(x, 1.05, 0); g.rotation.z = Math.PI / 2 * 0; scene.add(g);
+  const trim = new THREE.Mesh(new THREE.CylinderGeometry(.11, .11, .015, 48), quality ? alu : plastic); trim.rotation.x = Math.PI / 2; trim.position.z = .1; g.add(trim);
+  const ln = new THREE.Mesh(new THREE.CircleGeometry(.07, 32), emis('#fff1dc', quality ? 2.2 : 1.2)); ln.position.z = .109; g.add(ln);
+  if (quality) { // deep finned aluminium heat sink
+    const core = new THREE.Mesh(new THREE.CylinderGeometry(.065, .065, .14, 32), alu); core.rotation.x = Math.PI / 2; core.position.z = .02; g.add(core);
+    for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2; const fin = new THREE.Mesh(new THREE.BoxGeometry(.006, .045, .13), alu); fin.position.set(Math.cos(a) * .085, Math.sin(a) * .085, .02); fin.rotation.z = a + Math.PI / 2; g.add(fin); }
+  } else { // thin plastic body
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(.07, .06, .05, 32), plastic); body.rotation.x = Math.PI / 2; body.position.z = .07; g.add(body);
+  }
+  g.traverse(m => { if (m.isMesh) m.castShadow = true; });
+  g.rotation.y = -.55; return g;
+}
+fixture(PX - .35, false); fixture(PX + .35, true);
+const key = new THREE.SpotLight('#ffffff', 0, 8, .6, .6, 1.2); key.position.set(PX + .8, 2.0, 1.4); key.target.position.set(PX, 1.0, 0); scene.add(key, key.target);
+const rim = new THREE.PointLight('#ffb36b', 0, 5, 2); rim.position.set(PX - 1.2, 1.6, -.5); scene.add(rim);
+
+const VIEWS = {
+  r: { pos: [0, 1.35, 4.3], tgt: [0, 1.05, .4], fov: 62 },      // the room
+  t: { pos: [.35, 1.05, 2.6], tgt: [-.05, .55, 1.4], fov: 48 }, // the table + cushions close
+  p: { pos: [PX, 1.3, 1.1], tgt: [PX, 1.05, 0], fov: 40 },      // the two fixtures
+};
+// state "cheap" | "good" | "off" | "prod"
+window.setState = (st) => {
+  const good = st === 'good', on = st === 'good' || st === 'cheap', prod = st === 'prod';
+  spot.intensity = on ? (good ? 12 : 4.5) : 0; spot.color.set(good ? '#ffdcb0' : '#e4eef8'); spot.angle = (good ? 30 : 38) * Math.PI / 180; spot.penumbra = good ? .5 : .3;
+  lens.material = on ? emis(good ? '#ffdcb0' : '#e4eef8', good ? 6 : 4) : emis('#000', 0);
+  fill.intensity = on ? (good ? .35 : .2) : .05;
+  hemi.intensity = on ? .06 : .03; hemi.color.set(good ? '#ffe9d2' : '#eef2f0');
+  key.intensity = prod ? 30 : 0; rim.intensity = prod ? 4 : 0; hemi.intensity = prod ? .25 : hemi.intensity;
+  scene.environmentIntensity = prod ? .12 : on ? .05 : .02;
+  renderer.toneMappingExposure = 1.0;
+};
