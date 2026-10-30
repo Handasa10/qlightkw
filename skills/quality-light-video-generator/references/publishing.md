@@ -56,6 +56,11 @@ Optional `first_comment` for quiz videos («اكتب A ولا B 👇»).
 
 ## 5. Confirm
 `get_post` for each id after the slot: every chosen platform must have a `platform_results` entry with `success`;
-a platform missing from the results did not publish, so post it again on its own. Report platform results, the Kuwait time, and any warning. If a platform failed, show the error
+a platform missing from the results did not publish, so post it again on its own.
+Postora's Instagram and Threads publishing can hang in `processing` for hours or fail with "Container failed with status:
+ERROR", "Request timed out" or "Publishing was interrupted… Safe to retry" while Facebook and TikTok go out fine. Don't
+create a new post for it (it can double-post): once the post shows `failed`, `retry_failed_post` (confirm true) republishes
+only the failed platform, and it usually succeeds. A post stuck in `processing` is eventually marked failed by Postora;
+retry it then. Report platform results, the Kuwait time, and any warning. If a platform failed, show the error
 and offer `retry_failed_post`. To move or cancel later: `reschedule_post` / `cancel_scheduled_post` (cancel only when
 the owner asks).
