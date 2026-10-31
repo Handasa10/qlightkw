@@ -1,0 +1,64 @@
+// ===== Living room in three moods: guests (everything on), TV (cove + TV backlight only), evening (warm, low, dimmed) =====
+// TV wall at z=0 (x -3..3), floor y=0, ceiling 2.9 with a perimeter cove; sofa facing the TV at z≈3.2
+const CH = 2.9, RX = 3.2;
+const woodFloorTex = canvasTex(1024, 1024, (g, w, h) => { woodDraw('#8a6644', '50,30,15')(g, w, h); g.strokeStyle = 'rgba(25,14,6,.4)'; g.lineWidth = 3; for (let y = 0; y <= h; y += 128) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } }, [4, 4]);
+plane(7, 7, new THREE.MeshStandardMaterial({ map: woodFloorTex, roughness: .45 }), [0, 0, 2.5], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#e6ddd0', roughness: .92 });
+box(6.6, CH, .1, wallM, -3.3, 0, -.1); box(.1, CH, 7, wallM, -RX - .1, 0, -.1); box(.1, CH, 7, wallM, RX, 0, -.1);
+box(6.6, .1, 7, M.ceil, -3.3, CH, -.1, { cast: false });
+// TV wall: fluted wood panel, floating unit, TV
+box(3.4, 2.5, .06, M.fluted, -1.7, .25, 0);
+box(2.6, .3, .45, M.darkWood, -1.3, .35, .06);
+const tvScreen = new THREE.MeshStandardMaterial({ color: '#050608', roughness: .1, metalness: .5, emissive: '#000' });
+const tv = box(1.7, .98, .04, tvScreen, -.85, 1.2, .1);
+const tvBack = []; // backlight strip behind the TV
+for (const [w, h, x, y] of [[1.7, .02, -.85, 1.19], [1.7, .02, -.85, 2.18], [.02, 1, -.86, 1.19], [.02, 1, .85, 1.19]]) { const m = box(w, h, .01, emis('#000', 0), x, y, .09, { cast: false }); tvBack.push(m); }
+const tvGlow = new THREE.RectAreaLight('#ffd6a0', 0, 2.0, 1.3); tvGlow.position.set(0, 1.7, .08); tvGlow.lookAt(0, 1.7, -1); scene.add(tvGlow);
+// cove: perimeter drop 2.65 with a wash on the raised ceiling (additive bands)
+const washTex = canvasTex(256, 64, (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.35, 'rgba(255,255,255,.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }, [1, 1], false);
+const gyp = new THREE.MeshStandardMaterial({ color: '#f4f0ea', roughness: .95 });
+const coves = [];
+for (const [x, z, w, d, rot, len] of [[-RX, -.1, .5, 7, 0, 7], [RX - .5, -.1, .5, 7, Math.PI, 7], [-RX, -.1, 6.4, .5, -Math.PI / 2, 6.4]]) {
+  box(w, .1, d, gyp, x, CH - .3, z, { cast: false });
+}
+for (const [cx, cz, len, rz, ry] of [[-RX + 1.05, 3.4, 7, 0, 0], [RX - 1.05, 3.4, 7, Math.PI, 0], [0, .95, 6.4, 0, 1]]) {
+  const wm = new THREE.MeshBasicMaterial({ map: washTex, color: '#000', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+  const w = new THREE.Mesh(new THREE.PlaneGeometry(1.2, len), wm); w.rotation.x = Math.PI / 2; w.rotation.z = ry ? -Math.PI / 2 : rz; w.position.set(cx, CH - .005, cz); scene.add(w);
+  coves.push(wm);
+}
+const coveFill = new THREE.HemisphereLight('#ffcf96', '#000000', 0); scene.add(coveFill);
+// sofa, rug, coffee table, floor lamp, plant
+const sofaM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#cbbca5', roughness: .95 });
+box(2.6, .42, .95, sofaM, -1.3, .1, 3.0, { r: .06 }); box(2.6, .5, .22, sofaM, -1.3, .5, 3.73, { r: .06 });
+[['#9a3b2e', -.9], ['#2f5d6b', .35]].forEach(([c, x]) => { const m = box(.45, .4, .14, new THREE.MeshStandardMaterial({ map: fabricTex, color: c, roughness: .9 }), x, .5, 3.55, { r: .07 }); m.rotation.x = .25; });
+plane(3.2, 2.2, M.rug, [0, .006, 2.0], [-Math.PI / 2, 0, 0]);
+const ct = new THREE.Mesh(new THREE.CylinderGeometry(.55, .55, .06, 48), M.tableTop); ct.position.set(0, .4, 2.0); ct.castShadow = ct.receiveShadow = true; scene.add(ct);
+const ctl = new THREE.Mesh(new THREE.CylinderGeometry(.25, .3, .37, 32), M.darkWood); ctl.position.set(0, .185, 2.0); scene.add(ctl);
+const lampPole = box(.03, 1.5, .03, M.brass, -1.85, 0, 2.3); const shadeM = new THREE.MeshStandardMaterial({ color: '#f1e6d2', roughness: .8, side: THREE.DoubleSide, emissive: '#000' });
+const shade = new THREE.Mesh(new THREE.CylinderGeometry(.18, .24, .3, 32, 1, true), shadeM); shade.position.set(-1.835, 1.55, 2.315); scene.add(shade);
+const floorLamp = new THREE.PointLight('#ffb870', 0, 5, 2); floorLamp.position.set(-1.835, 1.5, 2.315); floorLamp.castShadow = true; floorLamp.shadow.mapSize.set(1024, 1024); scene.add(floorLamp);
+plant(-2.6, .6, 1.6, .55);
+// downlights over the seating
+const downs = [];
+for (const [x, z] of [[-1.6, 1.4], [1.6, 1.4], [-1.6, 3.0], [1.6, 3.0], [0, 2.2]]) {
+  const s = new THREE.SpotLight('#ffe0b8', 0, 8, 30 * Math.PI / 180, .5, 1.5); s.position.set(x, CH - .32, z); s.target.position.set(x, 0, z); scene.add(s, s.target);
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(.03, 20), emis('#000', 0)); lens.rotation.x = Math.PI / 2; lens.position.set(x, CH - .315, z); scene.add(lens);
+  downs.push({ s, lens });
+}
+const hemi = new THREE.HemisphereLight('#ffe9d2', '#3a2c20', .04); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [2.5, 1.85, 5.9], tgt: [-.5, .95, 1.2], fov: 66 },  // the room from behind the sofa, high on the right
+  t: { pos: [0, 1.3, 3.6], tgt: [0, 1.5, 0], fov: 55 },         // the TV wall from the sofa
+};
+// presets: off | guests | tv | evening
+window.setState = (st) => {
+  const P = { off: [0, 0, 0, 0, 0], guests: [1, 1, .8, 0, 1], tv: [0, .7, 0, 1, .15], evening: [0, .3, 1, 0, .05] }[st] ?? [0, 0, 0, 0, 0];
+  const [dn, cove, lamp, tvb, amb] = P;
+  downs.forEach((d) => { d.s.intensity = 9 * dn; d.lens.material = dn ? emis('#ffe0b8', 6 * dn) : emis('#000', 0); });
+  coves.forEach((m) => m.color.set(new THREE.Color('#c9a070').multiplyScalar(cove))); coveFill.intensity = .35 * cove;
+  floorLamp.intensity = 2.2 * lamp; shadeM.emissive.set(lamp ? '#ffb870' : '#000'); shadeM.emissiveIntensity = .9 * lamp;
+  tvScreen.emissive.set(st === 'tv' ? '#24476e' : '#000'); tvScreen.emissiveIntensity = st === 'tv' ? 1.1 : 0;
+  tvGlow.intensity = 3 * tvb; tvBack.forEach((m) => m.material = tvb ? emis('#ffd6a0', 5 * tvb) : emis('#000', 0));
+  hemi.intensity = .03 + .12 * amb; scene.environmentIntensity = .02 + .08 * amb;
+  renderer.toneMappingExposure = st === 'evening' ? 1.1 : 1.0;
+};
