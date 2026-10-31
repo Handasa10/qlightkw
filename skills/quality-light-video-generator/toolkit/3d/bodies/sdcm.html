@@ -1,0 +1,41 @@
+// ===== Colour consistency (SDCM): a row of "3000K" downlights washing a white wall, mixed batches vs matched =====
+// wall at z=0 (x -3.5..3.5), floor y=0, ceiling 2.8; five spots 0.5 m from the wall
+const CH = 2.8;
+marbleTex.repeat.set(3, 3);
+plane(9, 6, M.floor, [0, 0, 2.5], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#f3efe8', roughness: .9 });
+box(9, CH, .1, wallM, -4.5, 0, -.1);
+box(9, .1, 6, M.ceil, -4.5, CH, -.1, { cast: false });
+box(.1, CH, 6, wallM, -3.6, 0, -.1); box(.1, CH, 6, wallM, 3.5, 0, -.1);
+// a low console and two vases so the scene reads as a home
+const conM = new THREE.MeshStandardMaterial({ map: oakTex, color: '#6b4a30', roughness: .45 });
+box(3.2, .06, .4, conM, -1.6, .78, .05); box(3.2, .04, .38, conM, -1.6, .2, .06);
+for (const x of [-1.55, 1.5]) for (const z of [.07, .4]) box(.04, .78, .04, M.brass, x, 0, z);
+const ceramic = new THREE.MeshStandardMaterial({ color: '#e9e0d2', roughness: .5 });
+for (const [x, s] of [[-.9, 1], [.7, .8]]) { const pts = [[0, 0], [.07, 0], [.11, .1], [.12, .25], [.09, .38], [.05, .45], [.06, .5]].map(([r, h]) => new THREE.Vector2(r * s, h * s)); const v = new THREE.Mesh(new THREE.LatheGeometry(pts, 40), ceramic); v.position.set(x, .84, .25); v.castShadow = true; scene.add(v); }
+plant(2.8, .6, 1.5, .55);
+// five downlights; each gets its own tint in "mixed"
+const XS = [-2.4, -1.2, 0, 1.2, 2.4];
+const MIXED = ['#ffd38f', '#ffcfc8', '#e7f0c8', '#ffd9a6', '#f8c9d9']; // yellowish, pinkish, greenish, ok, pink
+const MATCHED = '#ffd8a8';
+const spots = XS.map((x) => {
+  const s = new THREE.SpotLight(MATCHED, 0, 7, 26 * Math.PI / 180, .55, 1.4); s.position.set(x, CH - .02, .5); s.target.position.set(x, .6, 0); s.castShadow = true; s.shadow.mapSize.set(1024, 1024); scene.add(s, s.target);
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .012, 28), new THREE.MeshStandardMaterial({ color: '#f4f1ec', roughness: .4 })); ring.position.set(x, CH - .006, .5); scene.add(ring);
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(.028, 24), emis('#000', 0)); lens.rotation.x = Math.PI / 2; lens.position.set(x, CH - .013, .5); scene.add(lens);
+  return { s, lens };
+});
+const hemi = new THREE.HemisphereLight('#fff4e6', '#3a3028', .05); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [0, 1.4, 4.6], tgt: [0, 1.35, 0], fov: 64 },      // the whole wall
+  u: { pos: [.4, 1.3, 2.6], tgt: [0, 2.6, .4], fov: 62 },      // looking up at the spots
+  c: { pos: [-.6, 1.5, 2.2], tgt: [-1.2, 1.6, 0], fov: 50 },   // two neighbouring pools close
+};
+// state "mixed" | "matched" | "off"
+window.setState = (st) => {
+  spots.forEach((p, i) => {
+    const on = st !== 'off', col = st === 'mixed' ? MIXED[i] : MATCHED;
+    p.s.color.set(col); p.s.intensity = on ? 9 : 0; p.lens.material = on ? emis(col, 6) : emis('#000', 0);
+  });
+  hemi.intensity = st === 'off' ? .15 : .05; scene.environmentIntensity = st === 'off' ? .12 : .04;
+  renderer.toneMappingExposure = 1.0;
+};
