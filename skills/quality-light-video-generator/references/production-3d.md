@@ -3,6 +3,18 @@
 `T` = this skill's `toolkit/` folder. `W` = a fresh scratch folder for this video. Tools needed: node + Playwright
 Chromium, ffmpeg, python3 with numpy and Pillow (all present in Claude Code cloud sessions).
 
+## Style rule (the owner's choice, 2026-11-03): like the first videos
+The owner wants every reel to look like the first 3D reels (stairs, colours, accent spot), not like a still background
+under a dark layer with 2D drawings on top:
+- **A 3D scene built for this topic.** Never reuse a room or render from a reel that was already published; if a body
+  fits, give it a new layout, views and states for this topic, or write a new body.
+- **The light changes inside the 3D scene**: render sequences (`grow:0.15…1`, `age:0.15…1`, step 1…14) and crossfade
+  them, so the viewer sees the room light up, age, get fixed. Many renders per reel (25–40), at least one per idea.
+- **The render stays bright and visible**: only the top/bottom `shade2` gradients; a full-frame dim is allowed only
+  behind the logo/offer and CTA scenes (≤ .55). No 2D diagram as the main picture: build the close-up in 3D (a
+  detail station far from the room, like `strip_bed`'s `PX` cove piece) and keep 2D to small labels and chips.
+- Text: one title at the top, one chip at the bottom (`title2`, `sub2`, `pop`), timed to the voice.
+
 ## 0. Once per session
 `cd $T/3d && npm install --silent` (three.js 0.170 for the 3D rooms).
 
@@ -22,7 +34,7 @@ with each idea (typically 10–12 scenes for 60–80 s).
 ## 3. 3D renders
 Rooms in `$T/3d/bodies/`: `living_colors` (sofa, leather chair, walnut table; states show/cold/warm/yellow/mixed),
 `accent_corner` (painting + console; mode dark/flat/spot, beam, pos good|bad, cct, cri, dim), `garden` (day/dusk/
-night + path/tree/wall/seat layers), `wardrobe` (doors, shelf/rail/drawer LEDs), `stairs`, `majlis`, `cove_hall` (gypsum cove, voltage drop 12v/24v; `new` white strip vs `aged` cheap strip a year later: yellow, dim, dead patches), `cafe` (flat panels vs pendants + bar spots + shelf LEDs; layer tokens `panels pend bar shelf wash`), `shop` (boutique wall: flat downlights vs track spots + under-shelf linear; tokens `flat track shelf`), `mirror` (vanity: downlight over the head vs side LED bars; tokens `top side bust`; draw faces as 2D diagrams, a sculpted 3D face reads uncanny), `gypsum` (ceiling before closing: grid, drivers + hatches, cables, cove channel, marked spots; presets `open closed hatch test done`). Each body
+night + path/tree/wall/seat layers), `wardrobe` (doors, shelf/rail/drawer LEDs), `stairs`, `majlis`, `cove_hall` (gypsum cove, voltage drop 12v/24v; `new` white strip vs `aged` cheap strip a year later: yellow, dim, dead patches), `cafe` (flat panels vs pendants + bar spots + shelf LEDs; layer tokens `panels pend bar shelf wash`), `shop` (boutique wall: flat downlights vs track spots + under-shelf linear; tokens `flat track shelf`), `mirror` (vanity: downlight over the head vs side LED bars; tokens `top side bust`; draw faces as 2D diagrams, a sculpted 3D face reads uncanny), `gypsum` (ceiling before closing: grid, drivers + hatches, cables, cove channel, marked spots; presets `open closed hatch test done`), `strip_bed` (master bedroom with a gypsum cove: `new`, `aged`, `age:<0..1>`, `grow:<0..1>`; detail station views `d`/`e`: `flat`, `burn:<0..1>`, `sag`, `prof`, `cover`). Each body
 defines `VIEWS` (cameras) and `window.setState(string)`; read the body to learn its states.
 
 Shoot: `node $T/3d/shoot.js <body> "view@state;view@state" 540 960 $W/test` (small test) → contact sheet with PIL

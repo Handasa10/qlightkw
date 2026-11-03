@@ -1,0 +1,127 @@
+// ===== Master bedroom with a gypsum cove (hidden LED strip) + a cut-away cove detail for the strip close-ups =====
+// room: back wall z=0 (x -2.8..2.8), floor y=0, perimeter drop ceiling at 2.7 (0.6 wide), raised centre at 3.0
+// detail station at x = PX: a piece of the gypsum cove with the strip glued on it, sagging, or in an aluminium profile
+const RW2 = 2.8, RD = 5.6, DROP = 2.7, RAISE = 3.0, LIP = .6, IN = RW2 - LIP;
+const woodFloorTex = canvasTex(1024, 1024, (g, w, h) => { woodDraw('#8d6a48', '55,32,16')(g, w, h); g.strokeStyle = 'rgba(25,14,6,.35)'; g.lineWidth = 3; for (let y = 0; y <= h; y += 128) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } }, [4, 4]);
+plane(7, 7, new THREE.MeshStandardMaterial({ map: woodFloorTex, roughness: .45 }), [0, 0, 2.8], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#e9e1d6', roughness: .92 });
+box(5.8, RAISE + .1, .1, wallM, -2.9, 0, -.1); box(.1, RAISE + .1, RD + .2, wallM, -RW2 - .1, 0, -.1); box(.1, RAISE + .1, RD + .2, wallM, RW2, 0, -.1);
+const gyp = new THREE.MeshStandardMaterial({ color: '#f3efe9', roughness: .95 });
+// drop ceiling band (back, left, right) with a lip on its inner edge hiding the strip, and the raised centre
+box(5.6, .08, LIP, gyp, -RW2, DROP, 0, { cast: false });
+box(LIP, .08, RD, gyp, -RW2, DROP, 0, { cast: false }); box(LIP, .08, RD, gyp, IN, DROP, 0, { cast: false });
+box(2 * IN, .03, .04, gyp, -IN, DROP + .08, LIP - .04); box(.04, .03, RD - LIP, gyp, -IN, DROP + .08, LIP); box(.04, .03, RD - LIP, gyp, IN - .04, DROP + .08, LIP);
+box(2 * IN, .06, RD - LIP + .1, gyp, -IN, RAISE, LIP - .1, { cast: false });
+box(.06, RAISE - DROP, RD, gyp, -IN - .03, DROP, LIP - .03, { cast: false }); box(.06, RAISE - DROP, RD, gyp, IN - .03, DROP, LIP - .03, { cast: false });
+box(2 * IN, RAISE - DROP, .06, gyp, -IN, DROP, LIP - .06, { cast: false });
+// headboard wall: upholstered panel, bed, night stands with lamps, bench, rug, curtain on the right
+const panelM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#c9b79c', roughness: .95 });
+for (let i = 0; i < 6; i++) box(.48, 1.25, .08, panelM, -1.5 + i * .5, .55, .02, { r: .03 });
+const bedM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#e8e1d5', roughness: .95 });
+box(1.9, .35, 2.1, new THREE.MeshStandardMaterial({ color: '#6b5240', roughness: .6 }), -.95, 0, .12, { r: .04 });
+box(1.84, .22, 2.0, bedM, -.92, .35, .16, { r: .08 });
+box(1.86, .06, 1.3, new THREE.MeshStandardMaterial({ map: fabricTex, color: '#8f7b63', roughness: .95 }), -.93, .56, .9, { r: .03 });
+[[-.55, '#f2ede4'], [.05, '#f2ede4'], [-.35, '#b08a4e'], [.25, '#b08a4e']].forEach(([x, c], i) => { const m = box(.5, .32, .14, new THREE.MeshStandardMaterial({ map: fabricTex, color: c, roughness: .9 }), x - (i > 1 ? .05 : .2), .57, .22 + (i > 1 ? .14 : 0), { r: .07 }); m.rotation.x = -.25; });
+for (const sx of [-1, 1]) {
+  box(.5, .5, .42, M.darkWood, sx * 1.35 - .25, 0, .1, { r: .02 });
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(.07, .09, .3, 24), M.brass); base.position.set(sx * 1.35, .65, .3); scene.add(base);
+  const sh = new THREE.Mesh(new THREE.CylinderGeometry(.13, .17, .22, 32, 1, true), new THREE.MeshStandardMaterial({ color: '#efe6d6', roughness: .8, side: THREE.DoubleSide })); sh.position.set(sx * 1.35, .88, .3); scene.add(sh);
+}
+box(1.4, .42, .4, new THREE.MeshStandardMaterial({ map: fabricTex, color: '#8f7b63', roughness: .95 }), -.7, 0, 2.35, { r: .05 });
+plane(3, 2.2, M.rug, [0, .006, 1.6], [-Math.PI / 2, 0, 0]);
+const curtM = new THREE.MeshStandardMaterial({ color: '#d8cfc2', roughness: 1, side: THREE.DoubleSide });
+for (let i = 0; i < 9; i++) { const c = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, DROP - .05, 12, 1, true), curtM); c.position.set(RW2 - .12, (DROP - .05) / 2, 2.4 + i * .1); scene.add(c); }
+plant(-2.35, 3.6, 1.4, .5);
+
+// ---- the strip: segments along the cove (back, left, right); each washes the raised ceiling with an additive band ----
+const washTex = canvasTex(64, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.3, 'rgba(255,255,255,.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }, [1, 1], false);
+const segs = []; // { m, wm, u } u = 0..1 along the run (left front → back → right front)
+const runs = [ // [x0,z0, x1,z1, inward dir]
+  [-IN + .1, RD - .1, -IN + .1, LIP + .1, [1, 0]],
+  [-IN + .1, LIP + .1, IN - .1, LIP + .1, [0, 1]],
+  [IN - .1, LIP + .1, IN - .1, RD - .1, [-1, 0]],
+];
+const total = runs.reduce((s, [a, b, c, d]) => s + Math.hypot(c - a, d - b), 0); let acc = 0;
+for (const [x0, z0, x1, z1, [ix, iz]] of runs) {
+  const len = Math.hypot(x1 - x0, z1 - z0), n = Math.round(len / .3);
+  for (let i = 0; i < n; i++) {
+    const f = (i + .5) / n, x = x0 + (x1 - x0) * f, z = z0 + (z1 - z0) * f, sl = len / n, along = Math.abs(x1 - x0) > .01;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(along ? sl * .99 : .025, .01, along ? .025 : sl * .99), emis('#000', 0)); m.position.set(x - ix * .08, DROP + .09, z - iz * .08); scene.add(m);
+    const wm = new THREE.MeshBasicMaterial({ map: washTex, color: '#000', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+    const w = new THREE.Mesh(new THREE.PlaneGeometry(sl, 1.3), wm); w.rotation.x = Math.PI / 2;
+    w.rotation.z = along ? 0 : Math.PI / 2; if (!along && ix < 0) w.rotation.z = -Math.PI / 2; if (along && iz < 0) w.rotation.z = Math.PI;
+    w.position.set(x + ix * .6, RAISE - .005, z + iz * .6); scene.add(w);
+    const v = new THREE.Mesh(new THREE.PlaneGeometry(sl, .3), wm); v.position.set(x - ix * .09 + ix * .0, DROP + .22, z - iz * .09); v.rotation.y = along ? 0 : (ix > 0 ? Math.PI / 2 : -Math.PI / 2); scene.add(v);
+    segs.push({ m, wm, u: (acc + f * len) / total, i: segs.length });
+  }
+  acc += len;
+}
+const bounce = [[-IN + .5, 3], [0, 1.2], [IN - .5, 3]].map(([x, z]) => { const l = new THREE.RectAreaLight('#fff1dc', 0, x === 0 ? 3.6 : .6, x === 0 ? .6 : 4.6); l.position.set(x, RAISE - .04, z); l.lookAt(x, 0, z); scene.add(l); return l; });
+const hemi = new THREE.HemisphereLight('#ffeedd', '#3a2c20', .05); scene.add(hemi);
+const night = new THREE.PointLight('#ffcf9a', 0, 6, 2); night.position.set(0, 1.6, 3.2); scene.add(night);
+
+// ---- detail station: a piece of the cove close up ----
+const PX = 30, dark = new THREE.MeshStandardMaterial({ color: '#0d0b0a', roughness: 1 });
+plane(8, 6, dark, [PX, 1, -1.2], [0, 0, 0]); plane(8, 8, dark, [PX, -.01, 1], [-Math.PI / 2, 0, 0]);
+const gypD = new THREE.MeshStandardMaterial({ color: '#a8a299', roughness: .95 });
+box(1.6, .9, .08, new THREE.MeshStandardMaterial({ color: '#6f6a63', roughness: .95 }), PX - .8, .6, -.33); // the cove's back face
+box(1.6, .1, .5, gypD, PX - .8, .5, -.25);                       // the gypsum ledge
+const ALU = new THREE.MeshStandardMaterial({ color: '#c3c8ce', roughness: .28, metalness: 1 });
+const pcbM = new THREE.MeshStandardMaterial({ color: '#f2efe8', roughness: .6 }), pcbBurnt = new THREE.MeshStandardMaterial({ color: '#8a6a3a', roughness: .7 });
+const D = { prof: new THREE.Group(), flat: new THREE.Group(), sag: new THREE.Group(), cover: null, chips: [], sagChips: [], profChips: [] };
+Object.values(D).forEach(g => g && g.isGroup && scene.add(g));
+const flatPcb = box(1.3, .006, .05, pcbM, PX - .65, .6, -.025, { parent: D.flat });
+for (let i = 0; i < 16; i++) D.chips.push(box(.035, .012, .03, emis('#000', 0), PX - .62 + i * .08, .606, -.015, { parent: D.flat }));
+// sagging strip: the middle has come off the gypsum and hangs over the edge
+for (let i = 0; i < 26; i++) { const f = i / 25, x = PX - .65 + f * 1.3, drop = Math.sin(f * Math.PI) ** 1.5 * .28, out = Math.sin(f * Math.PI) ** 1.5 * .32;
+  const seg = box(.052, .006, .05, pcbM, x - .026, .6 - drop, -.025 + out, { parent: D.sag }); seg.rotation.x = -Math.sin(f * Math.PI) * .9;
+  if (i % 2 === 0) D.sagChips.push(box(.035, .012, .03, emis('#000', 0), x - .017, .606 - drop, -.015 + out, { parent: D.sag })); }
+// aluminium U profile with the strip inside, and the frosted diffuser that clips on top
+box(1.4, .012, .07, ALU, PX - .7, .6, -.035, { parent: D.prof }); box(1.4, .05, .008, ALU, PX - .7, .6, -.035, { parent: D.prof }); box(1.4, .05, .008, ALU, PX - .7, .6, .027, { parent: D.prof });
+for (let k = 0; k < 5; k++) box(1.4, .006, .004, ALU, PX - .7, .58 - k * .0, -.035 + k * .016, { parent: D.prof }); // fins under the profile
+box(1.3, .006, .05, pcbM, PX - .65, .612, -.025, { parent: D.prof });
+for (let i = 0; i < 16; i++) D.profChips.push(box(.035, .012, .03, emis('#000', 0), PX - .62 + i * .08, .618, -.015, { parent: D.prof }));
+D.cover = box(1.4, .02, .066, new THREE.MeshStandardMaterial({ color: '#fff', emissive: '#fff4e4', emissiveIntensity: 0, roughness: .4, transparent: true, opacity: .92 }), PX - .7, .652, -.033, { parent: D.prof });
+const heatGlow = new THREE.PointLight('#ff4a1a', 0, 1.2, 2); heatGlow.position.set(PX, .7, .1); scene.add(heatGlow);
+const chipLight = new THREE.PointLight('#fff1dc', 0, 2.5, 2); chipLight.position.set(PX, .9, .25); scene.add(chipLight);
+const keyD = new THREE.SpotLight('#ffffff', 0, 6, .7, .7, 1.2); keyD.position.set(PX + 1.2, 1.9, 1.6); keyD.target.position.set(PX, .55, 0); scene.add(keyD, keyD.target);
+const rimD = new THREE.PointLight('#9fb8ff', 0, 4, 2); rimD.position.set(PX - 1.4, 1.2, -.6); scene.add(rimD);
+
+const VIEWS = {
+  w: { pos: [1.7, 1.55, 5.3], tgt: [-.4, 1.75, .6], fov: 72 },      // the bedroom from the door corner
+  c: { pos: [.9, 1.65, 3.4], tgt: [-1.6, 2.9, .7], fov: 60 },       // up at the cove corner over the bed
+  b: { pos: [0, 1.2, 3.6], tgt: [0, 1.6, 0], fov: 62 },             // the bed and headboard straight on
+  d: { pos: [PX + .9, 1.25, 1.55], tgt: [PX - .1, .52, 0], fov: 38 }, // the cove detail, three-quarter from above
+  e: { pos: [PX + .35, .92, .6], tgt: [PX - .15, .58, 0], fov: 34 },  // macro on the chips
+};
+const CNEW = new THREE.Color('#fff3e2'), CAGED = new THREE.Color('#ffb24a');
+const DEAD = new Set([3, 4, 9, 15, 16, 17, 24, 30, 31, 38, 44, 45]);
+// room states: off | new | aged | age:<0..1> (yellowing over a year) | grow:<0..1> (the strip lighting up along the run)
+// detail states: flat | burn:<0..1> | sag | prof | cover   (detail views only)
+window.setState = (state) => {
+  const [st, arg] = state.split(':'); const a = arg === undefined ? 1 : +arg;
+  const room = ['off', 'new', 'aged', 'age', 'grow'].includes(st);
+  const age = st === 'aged' ? 1 : st === 'age' ? a : 0;
+  for (const s of segs) {
+    let k = st === 'off' || !room ? 0 : st === 'grow' ? clampS((a * 1.15 - s.u) / .15) : 1;
+    const col = CNEW.clone().lerp(CAGED, age); col.lerp(new THREE.Color('#ff9a40'), age * ((s.i * 37) % 10) / 25);
+    if (age > 0) k *= DEAD.has(s.i) ? clampS(1 - (age - .35) / .3) : 1 - .45 * age * (.6 + .4 * Math.sin(s.i * 2.7) ** 2);
+    s.wm.color.copy(col).multiplyScalar(1.35 * k);
+    s.m.material = k > 0 ? emis('#' + col.getHexString(), 3 * k + .3) : emis('#000', 0);
+  }
+  const lit = room && st !== 'off' ? (st === 'grow' ? clampS(a) : 1) * (1 - .45 * age) : 0;
+  bounce.forEach(l => { l.intensity = 4 * lit; l.color.copy(CNEW.clone().lerp(CAGED, age)); });
+  night.intensity = room ? (st === 'off' ? .25 : .5) : 0; hemi.intensity = room ? (st === 'off' ? .12 : .07) : .02;
+  // detail station
+  const det = !room; D.flat.visible = det && (st === 'flat' || st === 'burn'); D.sag.visible = det && st === 'sag'; D.prof.visible = det && (st === 'prof' || st === 'cover');
+  const burn = st === 'burn' ? a : 0;
+  flatPcb.material = burn > .5 ? pcbBurnt : pcbM;
+  D.chips.forEach((c, i) => { const dead = burn > .6 && i % 5 === 2; const col = new THREE.Color('#fff3e2').lerp(new THREE.Color('#d08a2a'), burn); c.material = dead ? emis('#1a120a', .2) : emis('#' + col.getHexString(), 4 * (1 - .55 * burn)); });
+  D.sagChips.forEach(c => c.material = emis('#ffc070', 2.2));
+  D.profChips.forEach(c => c.material = emis('#fff3e2', st === 'cover' ? 1 : 4));
+  D.cover.visible = st === 'cover'; D.cover.material.emissiveIntensity = st === 'cover' ? 1.6 : 0;
+  heatGlow.intensity = det ? 1.6 * burn : 0; chipLight.intensity = det ? (st === 'cover' ? .35 : .22) : 0;
+  keyD.intensity = det ? .9 : 0; rimD.intensity = det ? .8 : 0;
+  scene.environmentIntensity = room ? .04 : .1; renderer.toneMappingExposure = 1.0;
+};
+function clampS(x) { return Math.max(0, Math.min(1, x)); }
