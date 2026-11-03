@@ -229,6 +229,7 @@ interface Question {
   status: string;
   selected: number[];
   message_id: number | null;
+  image_url?: string | null;
 }
 
 function questionText(q: Question) {
@@ -259,9 +260,14 @@ async function flushQuestions(s: Settings) {
         await send(s, q.question, null);
         await supabase.from('content_questions').update({ status: 'answered', sent_at: new Date().toISOString(), answered_at: new Date().toISOString() }).eq('id', q.id);
       } else {
-        const m = await tg<{ message_id: number }>('sendMessage', {
-          chat_id: s.telegram_chat_id, text: questionText(q), parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: questionKeyboard(q),
-        });
+        // a card can carry a picture (e.g. the cover candidates of a reel): sent as a photo with the question as its caption
+        const m = q.image_url
+          ? await tg<{ message_id: number }>('sendPhoto', {
+            chat_id: s.telegram_chat_id, photo: q.image_url, caption: questionText(q).slice(0, 1024), parse_mode: 'HTML', reply_markup: questionKeyboard(q),
+          })
+          : await tg<{ message_id: number }>('sendMessage', {
+            chat_id: s.telegram_chat_id, text: questionText(q), parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: questionKeyboard(q),
+          });
         await supabase.from('content_questions').update({ status: 'sent', sent_at: new Date().toISOString(), message_id: m.message_id }).eq('id', q.id);
       }
       sent++;

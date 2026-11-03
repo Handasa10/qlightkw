@@ -47,7 +47,8 @@ Pick the oldest item in this order of statuses: `script_approved` with an approv
 - voice approved → produce the video (`SKILL.md` §6 + `production-3d.md` / `production-footage.md`), check stills and
   frames, upload MP4 + preview (`publishing.md` §3), `studio.py update <id> {"status":"media_ready","media_url":…,
   "preview_url":…,"duration_sec":…}` and set `produced_at = now()` (SQL). The bot sends the preview with
-  ✅ وافق وجدول. Wait up to 25 minutes; if approved, schedule it right away (§1.1).
+  ✅ وافق وجدول. Send the cover card right after (3 real frames, `production-3d.md` §4b) and apply his pick (or
+  yours if unanswered) before scheduling on Postora. Wait up to 25 minutes; if approved, schedule it right away (§1.1).
 If time is left after one video (the whole run should stay under ~2 hours), advance the next item.
 
 ## 3b. The watcher

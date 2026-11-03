@@ -62,12 +62,20 @@ bottom-left from ~3 s until the logo scene. No subtitles.
 Arabic + Latin in one string can flip order ("15° – 24°", "CRI 90+", "+965…"): use `dir: 'ltr'` on pure-Latin
 texts, rephrase mixed ones («مؤشر ألوان 90 وفوق»), and always check the stills.
 
-## 4b. Cover (thumbnail)
-The first frame is the cover on Instagram, TikTok and Facebook, so every reel opens on a designed cover that holds
-0.35 s and dissolves into the hook: `drawCover(COVER)` in `draw(t)` while `t < .6` (alpha `1 - clamp((t - .35) / .25)`),
-with `COVER = { img | left+right + leftTag/rightTag, kicker, title: [question, answer], sub }` (title ≤ 2 short lines,
-the strongest render, split before/after when the video compares). Don't fade in from black at t = 0. Export the
-cover JPG with `node render.js stills 0` (→ `stills/s_0.00.jpg`) and upload it next to the video as `<slug>_cover.jpg`.
+## 4b. Cover (thumbnail): a real frame of the video, chosen by the owner
+The owner's reels that spread widest had a cover he picked himself: the first frame is a real frame of the video that
+says what it is about (with its on-screen text), not a designed card. So:
+- Don't call `drawCover` in `draw(t)`; the reel starts straight on the hook.
+- After the final render, pick the 3 strongest frames (the before/after or reveal moment with its title, the most
+  dramatic 3D close-up, the problem shown in the room) and make the numbered sheet:
+  `python3 $T/reel/thumbs.py sheet out/<slug>.mp4 t1 t2 t3 thumbs/sheet.jpg`, upload it
+  (`studio.py upload … reels/<slug>_covers.jpg`), and queue a card with the picture: insert into `content_questions`
+  (`header` «غلاف فيديو …», `question`, 3 `options` with a short label each, `recommended` 0 = your pick,
+  `image_url` = the sheet URL), then POST `{"action":"flush"}` to the function. Send it together with media_ready.
+- On his answer (the watcher returns it), or with your pick if it is still unanswered when you schedule:
+  `python3 $T/reel/thumbs.py apply out/<slug>.mp4 <t> out/<slug>_c.mp4 out/<slug>_cover.jpg` (holds that frame over
+  the first 0.6 s), make the Postora copy from `<slug>_c.mp4` and upload it. If the posts were already scheduled with
+  the old file, cancel those four and create them again with the new media (same time and captions).
 
 ## 5. Check stills
 `bash build.sh <duration>` then `node render.js stills "t1,t2,…"` (1–2 per scene, plus every tricky moment) → contact
