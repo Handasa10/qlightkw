@@ -1,0 +1,63 @@
+// ===== Company reception: flat ceiling panels everywhere vs a designed scheme (lit logo wall, hidden strip under the counter, linear pendant over the desk) =====
+// feature wall z=0 (x -3..3), floor y=0, ceiling 3.0; reception counter in front of the wall; waiting area on the right
+// the logo is a generic mark (not a real company)
+const CH = 3.0, RW = 3.2;
+marbleTex.repeat.set(4, 4);
+plane(8, 8, new THREE.MeshStandardMaterial({ map: marbleTex, color: '#e9e5de', roughness: .2 }), [0, 0, 3], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#e4e0da', roughness: .9 });
+box(6.4, CH, .1, wallM, -RW, 0, -.12); box(.1, CH, 7, wallM, -RW - .1, 0, -.12); box(.1, CH, 7, wallM, RW, 0, -.12);
+box(6.4, .1, 7, M.ceil, -RW, CH, -.12, { cast: false });
+// feature wall: vertical wood slats behind the counter, the logo in brushed metal letters
+const slatM = new THREE.MeshStandardMaterial({ map: oakTex, color: '#b8885a', roughness: .55 });
+for (let i = 0; i < 44; i++) box(.072, CH - .02, .05, slatM, -2.2 + i * .1, .01, .0);
+box(4.4, CH - .02, .02, new THREE.MeshStandardMaterial({ color: '#4a3626', roughness: .9 }), -2.2, .01, -.02);
+const logoM = new THREE.MeshStandardMaterial({ color: '#d9d4cc', metalness: .85, roughness: .25 });
+const ring = new THREE.Mesh(new THREE.TorusGeometry(.26, .045, 16, 64), logoM); ring.position.set(-.85, 2.3, .1); scene.add(ring);
+box(.09, .52, .05, logoM, -.895, 2.04, .07); // a simple monogram mark
+[[-.38, .5], [-.1, .5], [.18, .5], [.46, .5], [.74, .5]].forEach(([x], i) => box(.15, .28, .04, logoM, x, 2.16, .07));      // wordmark blocks
+const logoSpot = new THREE.SpotLight('#fff4e6', 0, 6, 20 * Math.PI / 180, .5, 1.3); logoSpot.position.set(.4, CH - .05, 1.3); logoSpot.target.position.set(.4, 2.25, 0); scene.add(logoSpot, logoSpot.target);
+const logoSpot2 = new THREE.SpotLight('#fff4e6', 0, 6, 20 * Math.PI / 180, .5, 1.3); logoSpot2.position.set(-.75, CH - .05, 1.3); logoSpot2.target.position.set(-.75, 2.25, 0); scene.add(logoSpot2, logoSpot2.target);
+// reception counter: solid body with an overhanging top; hidden strip under the overhang
+const counterM = new THREE.MeshStandardMaterial({ color: '#f1eee9', roughness: .5 });
+box(2.6, 1.05, .6, counterM, -1.3, 0, 1.25, { r: .02 });
+box(2.8, .05, .8, new THREE.MeshStandardMaterial({ map: marbleTex.clone(), color: '#4a4440', roughness: .2 }), -1.4, 1.05, 1.15);
+const ctrStrip = box(2.5, .01, .02, emis('#000', 0), -1.25, 1.03, 1.86, { cast: false });
+const ctrWash = new THREE.RectAreaLight('#ffe2c0', 0, 2.5, .06); ctrWash.position.set(0, 1.02, 1.88); ctrWash.lookAt(0, 0, 2.0); scene.add(ctrWash);
+// desk behind: monitor, chair (no person)
+box(1.6, .75, .6, M.darkWood, -.8, 0, .35); box(.5, .32, .03, M.black, -.25, .9, .5);
+// linear pendant over the desk
+const pend = box(1.6, .05, .06, new THREE.MeshStandardMaterial({ color: '#1b1b1d', metalness: .6, roughness: .4 }), -.8, 1.95, .62);
+for (const x of [-.75, .75]) box(.004, CH - 2.0, .004, M.black, x, 2.0, .65, { cast: false });
+const pendLens = box(1.56, .01, .04, emis('#000', 0), -.78, 1.94, .63, { cast: false });
+const pendL = new THREE.RectAreaLight('#fff1e0', 0, 1.5, .05); pendL.position.set(0, 1.93, .65); pendL.lookAt(0, 0, .65); scene.add(pendL);
+// waiting area: sofa + side table + plant on the right
+const sofaM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#4f5b66', roughness: .9 });
+box(.8, .42, 1.8, sofaM, 2.2, 0, 2.2, { r: .06 }); box(.2, .45, 1.8, sofaM, 2.85, .42, 2.2, { r: .05 });
+plant(2.6, 1.6, 1.8, .5);
+// ceiling: flat 60x60 panels in a grid (the "before") and a few small downlights (the designed scheme)
+const panels = [], panelOff = new THREE.MeshStandardMaterial({ color: '#cfd0d2', roughness: .6 });
+for (let ix = 0; ix < 4; ix++) for (let iz = 0; iz < 3; iz++) {
+  const x = -2.4 + ix * 1.6, z = .9 + iz * 1.7;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(.6, .6), panelOff); m.rotation.x = Math.PI / 2; m.position.set(x, CH - .005, z); scene.add(m);
+  const l = new THREE.RectAreaLight('#eef4ff', 0, .6, .6); l.position.set(x, CH - .01, z); l.lookAt(x, 0, z); scene.add(l);
+  panels.push({ m, l });
+}
+const downs = [[2.2, 2.6], [-2.2, 3.4], [.5, 3.4]].map(([x, z]) => { const s = new THREE.SpotLight('#ffe6c8', 0, 7, 30 * Math.PI / 180, .5, 1.4); s.position.set(x, CH - .03, z); s.target.position.set(x, 0, z); scene.add(s, s.target); return s; });
+const hemi = new THREE.HemisphereLight('#f4ecdf', '#3a3028', .05); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [1.2, 1.6, 6.2], tgt: [-.4, 1.4, .5], fov: 62 },     // the lobby from the entrance
+  c: { pos: [.8, 1.2, 3.0], tgt: [-.6, .85, 1.3], fov: 52 },    // the counter, close
+  l: { pos: [-.1, 1.85, 3.3], tgt: [-.1, 2.0, 0], fov: 50 },     // the logo wall
+};
+// tokens joined by '+':  off · panels (flat panels everywhere, cold) · logo · counter · linear · downs   (design = logo+counter+linear+downs)
+window.setState = (state) => {
+  const T = Object.fromEntries(state.replace('design', 'logo+counter+linear+downs').split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const pn = T.panels ?? 0, lg = T.logo ?? 0, ct = T.counter ?? 0, ln = T.linear ?? 0, dn = T.downs ?? 0;
+  panels.forEach(({ m, l }) => { l.intensity = 9 * pn; m.material = pn ? emis('#f4f8ff', 2.5) : panelOff; });
+  logoSpot.intensity = 30 * lg; logoSpot2.intensity = 30 * lg;
+  ctrStrip.material = ct ? emis('#ffe2c0', 5) : emis('#000', 0); ctrWash.intensity = 14 * ct;
+  pendLens.material = ln ? emis('#fff1e0', 5) : emis('#000', 0); pendL.intensity = 22 * ln;
+  downs.forEach((s) => s.intensity = 14 * dn);
+  hemi.intensity = .05 + .1 * pn + .05 * dn; scene.environmentIntensity = .03 + .08 * pn + .03 * dn;
+  renderer.toneMappingExposure = 1.0;
+};
