@@ -1,0 +1,52 @@
+// ===== Villa courtyard at night: a stacked-stone feature wall built from real 3D stones (so grazing light casts real shadows) =====
+// wall face at z=0 (x -3.2..3.2, height 3.0), paving y=0 in front (z>0); planters + a bench; night sky behind
+// lighting: 'top' = one flood from the front/top (flat, the texture disappears) · 'graze:<0..1>' = in-ground up-lights 15 cm from the wall, switching on left to right
+const WW = 6.4, WH = 3.0;
+const paveTex = canvasTex(1024, 1024, (g, w, h) => { g.fillStyle = '#9b9286'; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 128) for (let x = (y / 128 % 2) * 128; x < w; x += 256) { g.fillStyle = `rgb(${140 + R() * 30},${132 + R() * 28},${120 + R() * 25})`; g.fillRect(x + 3, y + 3, 250, 122); } }, [4, 4]);
+plane(12, 10, new THREE.MeshStandardMaterial({ map: paveTex, roughness: .8 }), [0, 0, 4], [-Math.PI / 2, 0, 0]);
+// backing wall then the stones, course by course, each with its own size, colour and how far it stands proud
+box(WW + .4, WH + .1, .2, new THREE.MeshStandardMaterial({ color: '#3a342d', roughness: 1 }), -WW / 2 - .2, 0, -.25);
+const stoneMats = ['#c9b79a', '#b9a587', '#d6c6ab', '#a99479', '#c2ae8e', '#d0bfa1'].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: .96 }));
+let y = 0;
+while (y < WH - .02) {
+  const ch = .09 + R() * .12; let x = -WW / 2;
+  while (x < WW / 2 - .02) {
+    const cw = Math.min(.18 + R() * .42, WW / 2 - x), depth = .06 + R() * .07;
+    const s = box(cw - .012, ch - .012, depth, stoneMats[Math.floor(R() * stoneMats.length)], x + .006, y + .006, -.05 + R() * .045, { r: .012 });
+    s.rotation.set((R() - .5) * .05, (R() - .5) * .05, (R() - .5) * .02);
+    x += cw;
+  }
+  y += ch;
+}
+box(WW + .4, .08, .3, new THREE.MeshStandardMaterial({ color: '#d9d2c6', roughness: .7 }), -WW / 2 - .2, WH, -.25); // coping
+// planters with plants, a stone bench, a lantern
+for (const x of [-2.4, 2.4]) { box(.9, .5, .55, new THREE.MeshStandardMaterial({ color: '#2f2b27', roughness: .8 }), x - .45, 0, .35); plant(x, .62, 1.6, .5); }
+box(1.6, .45, .45, new THREE.MeshStandardMaterial({ color: '#d4cdc1', roughness: .8 }), -.8, 0, 1.2, { r: .02 });
+// sky + a few distant lights
+const skyTex = canvasTex(1024, 512, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#04060d'); gr.addColorStop(1, '#1d2338'); g.fillStyle = gr; g.fillRect(0, 0, w, h); for (let i = 0; i < 140; i++) { g.fillStyle = `rgba(255,255,255,${R() * .6})`; g.fillRect(R() * w, R() * h * .6, 1.5, 1.5); } }, [1, 1]);
+plane(40, 20, new THREE.MeshBasicMaterial({ map: skyTex, toneMapped: false }), [0, 8, -12], [0, 0, 0]);
+// lights
+const flood = new THREE.SpotLight('#fff0dc', 0, 14, 40 * Math.PI / 180, .4, 1.2); flood.position.set(0, 4.2, 5.2); flood.target.position.set(0, 1.3, 0); flood.castShadow = true; flood.shadow.mapSize.set(2048, 2048); scene.add(flood, flood.target);
+const ups = [-2.7, -1.62, -.54, .54, 1.62, 2.7].map((x, i) => {
+  const s = new THREE.SpotLight('#ffd6a0', 0, 6, 26 * Math.PI / 180, .7, 1.0); s.position.set(x, .03, .28); s.target.position.set(x, 2.4, -.05);
+  s.castShadow = true; s.shadow.mapSize.set(1024, 1024); s.shadow.bias = -.0005; scene.add(s, s.target);
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .02, 24), new THREE.MeshStandardMaterial({ color: '#8f9399', metalness: 1, roughness: .3 })); ring.position.set(x, .01, .28); scene.add(ring);
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(.04, 20), emis('#000', 0)); lens.rotation.x = -Math.PI / 2; lens.position.set(x, .021, .28); scene.add(lens);
+  return { s, lens, u: i / 5 };
+});
+const hemi = new THREE.HemisphereLight('#7f93c0', '#2a2018', .06); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [0, 1.5, 6.0], tgt: [0, 1.4, 0], fov: 50 },         // the whole wall, straight on
+  a: { pos: [2.6, 1.3, 3.0], tgt: [-.8, 1.5, 0], fov: 56 },      // at an angle, the texture rakes
+  m: { pos: [.5, .9, 1.1], tgt: [-.2, 1.3, 0], fov: 46 },        // close on the stones above one up-light
+};
+// state tokens joined by '+':  off | top · graze:<0..1>
+window.setState = (state) => {
+  const T = Object.fromEntries(state.split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const top = T.top ?? 0, g = T.graze ?? 0;
+  flood.intensity = 70 * top;
+  ups.forEach(({ s, lens, u }) => { const k = Math.max(0, Math.min(1, (g * 1.12 - u) / .12)); s.intensity = 75 * k; lens.material = k ? emis('#ffe2b8', 6 * k) : emis('#000', 0); });
+  hemi.intensity = .05 + .05 * top;
+  scene.environmentIntensity = .03;
+  renderer.toneMappingExposure = 1.0;
+};

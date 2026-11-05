@@ -1,0 +1,83 @@
+// ===== Living room curtain wall with a gypsum pelmet: curtains in the dark, then a hidden LED strip washing them from the top =====
+// curtain wall at z=0 (x -2.7..2.7), floor y=0, ceiling 2.9; pelmet box z 0..0.28 at the top hides the strip; room runs to z=5.5
+// detail station at x = PX: the pelmet cut open (gypsum box, aluminium profile + strip, the folds below)
+const CH = 2.9, PW = 2.7, PD = .28, PB = 2.62; // pelmet depth and bottom
+const woodFloorTex = canvasTex(1024, 1024, (g, w, h) => { woodDraw('#8a6a4c', '50,30,15')(g, w, h); g.strokeStyle = 'rgba(25,14,6,.35)'; g.lineWidth = 3; for (let y = 0; y <= h; y += 128) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } }, [4, 4]);
+plane(7, 7, new THREE.MeshStandardMaterial({ map: woodFloorTex, roughness: .45 }), [0, 0, 2.6], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#e4dbcf', roughness: .92 });
+box(6, CH, .1, wallM, -3, 0, -.12); box(.1, CH, 6, wallM, -PW - .1, 0, -.12); box(.1, CH, 6, wallM, PW, 0, -.12);
+box(6, .1, 6, M.ceil, -3, CH, -.12, { cast: false });
+const gyp = new THREE.MeshStandardMaterial({ color: '#f2eee8', roughness: .95 });
+box(2 * PW, CH - PB, .05, gyp, -PW, PB, PD - .05, { cast: false }); // pelmet face
+box(2 * PW, .04, PD, gyp, -PW, CH - .04, 0, { cast: false });
+// curtains: heavy folds the full width, a sheer panel behind
+function folds(w, h, amp, n, mat, z, x0) {
+  const geo = new THREE.PlaneGeometry(w, h, 160, 1); const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) { const x = p.getX(i); p.setZ(i, Math.sin((x / w) * n * Math.PI * 2) * amp); }
+  geo.computeVertexNormals(); const m = new THREE.Mesh(geo, mat); m.position.set(x0, h / 2 + .02, z); m.receiveShadow = true; scene.add(m); return m;
+}
+const curtM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#d9cbb6', roughness: .95, side: THREE.DoubleSide });
+const sheerM = new THREE.MeshStandardMaterial({ color: '#efe9df', roughness: .9, transparent: true, opacity: .55, side: THREE.DoubleSide });
+folds(2 * PW - .1, PB - .04, .03, 26, sheerM, .05, 0);
+folds(1.5, PB - .04, .055, 9, curtM, .16, -PW + .8); folds(1.5, PB - .04, .055, 9, curtM, .16, PW - .8);
+// the wash: a soft gradient band over each curtain, strongest at the top (additive), plus area lights pointing down
+const washTex = canvasTex(64, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.35, 'rgba(255,255,255,.5)'); gr.addColorStop(1, 'rgba(255,255,255,.04)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }, [1, 1], false);
+const SEG = 18, washes = [];
+for (let i = 0; i < SEG; i++) {
+  const sw = 2 * PW / SEG, x = -PW + (i + .5) * sw;
+  const wm = new THREE.MeshBasicMaterial({ map: washTex, color: '#000', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(sw * 1.02, PB - .04), wm); m.position.set(x, (PB - .04) / 2 + .02, .24); scene.add(m);
+  const strip = box(sw * .98, .008, .02, emis('#000', 0), x - sw * .49, PB + .02, .13, { cast: false });
+  washes.push({ wm, strip, u: (i + .5) / SEG });
+}
+const areas = [-1.8, -.6, .6, 1.8].map((x) => { const l = new THREE.RectAreaLight('#ffdcb0', 0, 1.2, .1); l.position.set(x, PB - .02, .2); l.lookAt(x, 0, .5); scene.add(l); return l; });
+// room: sofa facing the window, armchair, coffee table, rug, floor lamp, plant; downlights in the ceiling
+const sofaM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#8f8577', roughness: .95 });
+box(2.4, .4, .9, sofaM, -1.2, .1, 3.6, { r: .06 }); box(2.4, .5, .22, sofaM, -1.2, .48, 4.3, { r: .06 });
+[['#c9a46a', -.8], ['#e8e1d4', .1], ['#c9a46a', .7]].forEach(([c, x]) => { const m = box(.44, .38, .13, new THREE.MeshStandardMaterial({ map: fabricTex, color: c, roughness: .9 }), x - .22, .48, 4.12, { r: .07 }); m.rotation.x = .25; });
+box(.85, .4, .85, new THREE.MeshStandardMaterial({ map: fabricTex, color: '#b7a58b', roughness: .95 }), 1.5, .1, 2.2, { r: .08 });
+plane(3.2, 2.2, M.rug, [0, .006, 2.7], [-Math.PI / 2, 0, 0]);
+const ct = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, .05, 48), M.tableTop); ct.position.set(-.1, .4, 2.7); ct.castShadow = ct.receiveShadow = true; scene.add(ct);
+const ctl = new THREE.Mesh(new THREE.CylinderGeometry(.06, .1, .38, 24), M.brass); ctl.position.set(-.1, .19, 2.7); scene.add(ctl);
+plant(-2.2, .7, 1.7, .5);
+const downs = [[-1.2, 1.6], [1.2, 1.6], [-1.2, 3.6], [1.2, 3.6]].map(([x, z]) => {
+  const s = new THREE.SpotLight('#ffe6c4', 0, 7, 32 * Math.PI / 180, .5, 1.5); s.position.set(x, CH - .03, z); s.target.position.set(x, 0, z); scene.add(s, s.target);
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(.035, 20), emis('#000', 0)); lens.rotation.x = Math.PI / 2; lens.position.set(x, CH - .002, z); scene.add(lens);
+  return { s, lens };
+});
+const fillL = new THREE.PointLight('#ffd9a8', 0, 6, 2); fillL.position.set(.5, 1.4, 1.2); scene.add(fillL);
+const hemi = new THREE.HemisphereLight('#ffe9d2', '#3a2c20', .04); scene.add(hemi);
+
+// ---- detail station: the pelmet cut open ----
+const PX = 30, dk = new THREE.MeshStandardMaterial({ color: '#0e0c0b', roughness: 1 });
+plane(6, 5, dk, [PX, 1.5, -.6], [0, 0, 0]);
+box(1.4, .5, .04, gyp, PX - .7, 1.6, .26, { cast: false });  // pelmet face (cut)
+box(1.4, .04, .3, gyp, PX - .7, 2.06, -.04, { cast: false }); // pelmet top
+const ALU = new THREE.MeshStandardMaterial({ color: '#c3c8ce', roughness: .28, metalness: 1 });
+box(1.3, .012, .05, ALU, PX - .65, 2.04, .08, { parent: G }); box(1.3, .03, .006, ALU, PX - .65, 2.01, .08); box(1.3, .03, .006, ALU, PX - .65, 2.01, .124);
+const dStrip = box(1.24, .01, .03, emis('#000', 0), PX - .62, 2.02, .09, { cast: false });
+const dDiff = box(1.3, .008, .05, new THREE.MeshStandardMaterial({ color: '#fff', emissive: '#fff1dc', emissiveIntensity: 0, transparent: true, opacity: .92 }), PX - .65, 2.0, .08, { cast: false });
+folds(1.3, 2.0, .05, 6, curtM, .02, PX);
+const dArea = new THREE.RectAreaLight('#ffdcb0', 0, 1.2, .05); dArea.position.set(PX, 1.99, .1); dArea.lookAt(PX, 0, .2); scene.add(dArea);
+const dKey = new THREE.PointLight('#bcc8e0', 0, 5, 2); dKey.position.set(PX + 1.2, 1.6, 1.8); scene.add(dKey);
+
+const VIEWS = {
+  w: { pos: [1.0, 1.55, 3.3], tgt: [-.2, 1.35, 0], fov: 70 },           // the whole curtain wall from the back of the room
+  c: { pos: [1.1, 1.2, 1.8], tgt: [-.6, 1.9, 0], fov: 58 },          // closer, looking up the folds to the pelmet
+  s: { pos: [-2.0, 1.3, 4.8], tgt: [.6, 1.0, 1.0], fov: 62 },        // the room with the sofa
+  d: { pos: [PX + 1.35, 2.05, .85], tgt: [PX + .55, 1.8, .1], fov: 46 }, // detail: pelmet cut open
+};
+// state tokens joined by '+':  off | room (ceiling downlights) · wash:<0..1> (strip lighting up across the width) · dim:<0..1> · det (detail station)
+window.setState = (state) => {
+  const T = Object.fromEntries(state.split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const room = T.room ?? 0, wash = T.wash ?? 0, dim = T.dim ?? 1, det = !!T.det;
+  washes.forEach(({ wm, strip, u }) => { const k = Math.max(0, Math.min(1, (wash * 1.15 - u) / .15)) * dim; wm.color.set(new THREE.Color('#ffd9a8').multiplyScalar(.75 * k)); strip.material = k ? emis('#ffe2b8', 4 * k) : emis('#000', 0); });
+  areas.forEach((l) => l.intensity = 5 * Math.min(1, wash) * dim);
+  downs.forEach(({ s, lens }) => { s.intensity = 9 * room; lens.material = room ? emis('#ffe6c4', 6) : emis('#000', 0); });
+  fillL.intensity = .25 + .9 * room + .5 * Math.min(1, wash) * dim;
+  hemi.intensity = .04 + .06 * room;
+  dStrip.material = det ? emis('#ffe2b8', 5) : emis('#000', 0); dDiff.material.emissiveIntensity = det ? 1.4 : 0;
+  dArea.intensity = det ? 6 : 0; dKey.intensity = det ? .8 : 0;
+  scene.environmentIntensity = det ? .06 : .03 + .05 * room;
+  renderer.toneMappingExposure = 1.0;
+};
