@@ -46,8 +46,8 @@ const downs = [[2.2, 2.6], [-2.2, 3.4], [.5, 3.4]].map(([x, z]) => { const s = n
 const hemi = new THREE.HemisphereLight('#f4ecdf', '#3a3028', .05); scene.add(hemi);
 const VIEWS = {
   w: { pos: [1.2, 1.6, 6.2], tgt: [-.4, 1.4, .5], fov: 62 },     // the lobby from the entrance
-  c: { pos: [.8, 1.2, 3.0], tgt: [-.6, .85, 1.3], fov: 52 },    // the counter, close
-  l: { pos: [-.1, 1.85, 3.3], tgt: [-.1, 2.0, 0], fov: 50 },     // the logo wall
+  c: { pos: [1.5, 1.35, 3.9], tgt: [-.7, 1.15, 1.0], fov: 56 },    // the counter, close
+  l: { pos: [-.1, 1.75, 4.6], tgt: [-.1, 1.85, 0], fov: 52 },     // the logo wall
 };
 // tokens joined by '+':  off · panels (flat panels everywhere, cold) · logo · counter · linear · downs   (design = logo+counter+linear+downs)
 window.setState = (state) => {
