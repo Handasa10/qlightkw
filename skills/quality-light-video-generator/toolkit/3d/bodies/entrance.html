@@ -1,0 +1,78 @@
+// ===== Villa entrance at night: a dark entrance vs up/down wall lights each side of the door, brick lights along the steps, a halo-lit house number; IP65 under rain =====
+// facade face z=0 (x -4.5..4.5, height 4.2), stone cladding frame around the door (x -1.7..1.7), landing y .51 (z 0..1.6), two steps down to the paving (z 1.6..2.3)
+// cheek walls each side of the steps (x ±1.6..1.9) carry the brick lights; house number on the plaster right of the cladding
+const paveTex = canvasTex(1024, 1024, (g, w, h) => { g.fillStyle = '#8e8579'; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 128) for (let x = (y / 128 % 2) * 64; x < w; x += 128) { const c = 125 + R() * 30; g.fillStyle = `rgb(${c},${c * .95},${c * .88})`; g.fillRect(x + 3, y + 3, 122, 122); } }, [6, 6]);
+plane(14, 12, new THREE.MeshStandardMaterial({ map: paveTex, roughness: .75 }), [0, 0, 4], [-Math.PI / 2, 0, 0]);
+for (const x of [-4.2, 4.2]) plane(3.6, 6, new THREE.MeshStandardMaterial({ color: '#2f4a2a', roughness: 1 }), [x, .004, 4.6], [-Math.PI / 2, 0, 0]);
+const facadeM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#e8dccb', roughness: .9 });
+box(9, 4.2, .3, facadeM, -4.5, 0, -.3);
+box(9.2, .25, .5, new THREE.MeshStandardMaterial({ color: '#d8ccb9', roughness: .8 }), -4.6, 4.2, -.35); // coping
+const cladTex = canvasTex(1024, 1024, (g, w, h) => { g.fillStyle = '#b8a487'; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 48) for (let x = -(y / 48 % 2) * 60; x < w; x += 120 + R() * 50) { const c = 150 + R() * 55; g.fillStyle = `rgb(${c},${c * .9},${c * .75})`; g.fillRect(x + 3, y + 3, 115 + R() * 40, 43); for (let k = 0; k < 30; k++) { g.fillStyle = `rgba(0,0,0,${R() * .14})`; g.fillRect(x + R() * 120, y + R() * 44, 3 + R() * 10, 2 + R() * 5); } } }, [1.5, 2]);
+const cladM = new THREE.MeshStandardMaterial({ map: cladTex, roughness: .95, bumpMap: cladTex, bumpScale: 3 });
+box(3.4, 3.69, .07, cladM, -1.7, .51, 0);
+// the door: tall double timber door with a slim handle
+const doorM = new THREE.MeshStandardMaterial({ map: flutedTex, color: '#7a5434', roughness: .55 });
+box(.89, 2.7, .08, doorM, -.9, .51, .07); box(.89, 2.7, .08, doorM, .01, .51, .07);
+for (const x of [-.06, .06]) box(.02, .7, .03, M.brass, x - .01, 1.5, .15);
+// landing, steps, cheek walls
+const stepM = new THREE.MeshStandardMaterial({ map: marbleTex.clone(), color: '#d9d2c6', roughness: .4 });
+box(3.2, .51, 1.6, stepM, -1.6, 0, 0); box(3.2, .34, .35, stepM, -1.6, 0, 1.6); box(3.2, .17, .35, stepM, -1.6, 0, 1.95);
+for (const x of [-1.9, 1.6]) box(.3, 1.0, 2.3, facadeM, x, 0, 0);
+// windows each side (dark glass, a faint warm room behind), planters
+const glassM = new THREE.MeshStandardMaterial({ color: '#0b0d10', emissive: '#ffcf9a', emissiveIntensity: .05, roughness: .1, metalness: .3 });
+for (const x of [-3.9, 2.7]) { box(1.2, 1.6, .04, glassM, x, 1.2, .0, { cast: false }); box(1.3, .06, .12, M.black, x - .05, 1.17, .0); }
+for (const x of [-2.6, 2.6]) { box(.6, .6, .6, new THREE.MeshStandardMaterial({ color: '#3a3532', roughness: .8 }), x - .3, 0, 1.2); plant(x, 1.5, 1.7, .6); }
+// up/down wall lights each side of the door (3000 K), each = a body + an up spot + a down spot
+const sconceM = new THREE.MeshStandardMaterial({ color: '#2b2724', metalness: .6, roughness: .4 });
+const sconces = [-1.35, 1.35].map((x) => {
+  box(.12, .32, .12, sconceM, x - .06, 2.26, .07);
+  const lensU = new THREE.Mesh(new THREE.CircleGeometry(.035, 20), emis('#000', 0)); lensU.rotation.x = -Math.PI / 2; lensU.position.set(x, 2.585, .13); scene.add(lensU);
+  const lensD = new THREE.Mesh(new THREE.CircleGeometry(.035, 20), emis('#000', 0)); lensD.rotation.x = Math.PI / 2; lensD.position.set(x, 2.255, .13); scene.add(lensD);
+  const up = new THREE.SpotLight('#ffd7a3', 0, 4, 16 * Math.PI / 180, .55, 1.2); up.position.set(x, 2.6, .16); up.target.position.set(x, 4.2, .05); scene.add(up, up.target);
+  const dn = new THREE.SpotLight('#ffd7a3', 0, 4, 18 * Math.PI / 180, .55, 1.2); dn.position.set(x, 2.24, .16); dn.target.position.set(x, .51, .1); dn.castShadow = true; scene.add(dn, dn.target);
+  return { up, dn, lensU, lensD };
+});
+const porch = new THREE.PointLight('#ffd7a3', 0, 5, 2); porch.position.set(0, 2.2, 1.0); scene.add(porch);
+// brick lights in the cheek walls, one per tread each side (bottom step first)
+const bricks = [];
+[[.17, 2.125], [.34, 1.775], [.51, 1.3]].forEach(([top, z], i) => {
+  for (const [x, ry, dx] of [[-1.6, Math.PI / 2, 1], [1.6, -Math.PI / 2, -1]]) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(.14, .05), emis('#000', 0)); m.position.set(x + .002 * dx, top + .2, z); m.rotation.y = ry; scene.add(m);
+    const l = new THREE.SpotLight('#ffd7a3', 0, 3, 1.05, .8, 1.3); l.position.set(x + .04 * dx, top + .2, z); l.target.position.set(x + 1.2 * dx, top, z); scene.add(l, l.target);
+    bricks.push({ m, l, u: i / 3 });
+  }
+});
+// house number, halo-lit: bronze digits on a stand-off over a glow
+const digits = (fill, blur) => canvasTex(512, 256, (g, w, h) => { g.clearRect(0, 0, w, h); g.filter = blur ? 'blur(14px)' : 'none'; g.fillStyle = fill; g.font = '900 200px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('17', w / 2, h / 2 + 8); }, [1, 1], true);
+const numM = new THREE.MeshStandardMaterial({ map: digits('#5a4632', false), transparent: true, metalness: .6, roughness: .35 });
+const num = plane(.56, .28, numM, [2.25, 2.35, .05], [0, 0, 0]);
+const haloM = new THREE.MeshBasicMaterial({ map: digits('#ffffff', true), color: '#000', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+plane(.7, .35, haloM, [2.25, 2.35, .012], [0, 0, 0]);
+const numL = new THREE.PointLight('#ffd7a3', 0, 1.2, 2); numL.position.set(2.25, 2.35, .06); scene.add(numL);
+// rain for the IP65 close-up
+const rainM = new THREE.MeshBasicMaterial({ color: '#dfe8ff', transparent: true, opacity: 0, depthWrite: false });
+const rain = new THREE.InstancedMesh(new THREE.BoxGeometry(.003, .18, .003), rainM, 500); const dm = new THREE.Object3D();
+for (let i = 0; i < 500; i++) { dm.position.set(.4 + R() * 2.4, .6 + R() * 3.4, .15 + R() * 1.6); dm.rotation.z = .08; dm.updateMatrix(); rain.setMatrixAt(i, dm.matrix); } scene.add(rain);
+// night sky behind and above
+const skyTex = canvasTex(1024, 512, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#05070f'); gr.addColorStop(1, '#1f2640'); g.fillStyle = gr; g.fillRect(0, 0, w, h); for (let i = 0; i < 140; i++) { g.fillStyle = `rgba(255,255,255,${R() * .6})`; g.fillRect(R() * w, R() * h * .6, 1.5, 1.5); } }, [1, 1]);
+plane(40, 20, new THREE.MeshBasicMaterial({ map: skyTex, toneMapped: false }), [0, 9, -8], [0, 0, 0]);
+const moon = new THREE.DirectionalLight('#9fb4e0', 0); moon.position.set(-4, 8, 6); scene.add(moon);
+const hemi = new THREE.HemisphereLight('#7f93c0', '#2a2018', .06); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [0, 1.6, 8.4], tgt: [0, 1.65, 0], fov: 54 },        // the whole entrance from the driveway
+  s: { pos: [1.3, .75, 4.3], tgt: [-.3, .45, 1.3], fov: 60 },    // low on the steps and the brick lights
+  n: { pos: [1.6, 2.0, 2.9], tgt: [1.75, 2.35, 0], fov: 50 },    // the house number and the right wall light
+  e: { pos: [2.2, 2.2, 1.9], tgt: [1.35, 2.45, 0], fov: 44 },    // the wall light close, in the rain
+};
+// state tokens joined by '+':  off · sconce:<0..1> · steps:<0..1> (bottom step first) · num · rain · all (= sconce+steps+num)
+window.setState = (state) => {
+  const T = Object.fromEntries(state.replace('all', 'sconce+steps+num').split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const sc = T.sconce ?? 0, st = T.steps ?? 0, nm = T.num ?? 0, rn = T.rain ?? 0;
+  sconces.forEach(({ up, dn, lensU, lensD }) => { up.intensity = 22 * sc; dn.intensity = 26 * sc; lensU.material = lensD.material = sc ? emis('#ffe2b8', 6 * sc) : emis('#000', 0); });
+  porch.intensity = 1.2 * sc;
+  bricks.forEach(({ m, l, u }) => { const k = Math.max(0, Math.min(1, (st * 1.1 - u) / .3)); l.intensity = 6 * k; m.material = k ? emis('#ffe2b8', 6 * k) : emis('#000', 0); });
+  haloM.color.set(new THREE.Color('#ffcf8f').multiplyScalar(1.4 * nm)); numL.intensity = .6 * nm;
+  rainM.opacity = .2 * rn; moon.intensity = .5;
+  hemi.intensity = .1; scene.environmentIntensity = .04;
+  renderer.toneMappingExposure = 1.0;
+};
