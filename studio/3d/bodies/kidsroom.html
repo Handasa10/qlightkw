@@ -1,0 +1,62 @@
+// ===== Kids' bedroom at night: harsh cold ceiling light vs a warm low night light near the floor + a dimmable reading light for the story =====
+// back wall z=0 (x -2.4..2.4), floor y=0, ceiling 2.8; bed against the back wall on the left, door to the bathroom on the right wall
+// no faces: the child is a shape under the duvet; the teddy and toys are simple forms
+const CH = 2.8, RW = 2.4;
+const floorTex = canvasTex(1024, 1024, (g, w, h) => { woodDraw('#b08a62', '70,45,22')(g, w, h); g.strokeStyle = 'rgba(60,35,15,.3)'; g.lineWidth = 3; for (let y = 0; y <= h; y += 128) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } }, [4, 4]);
+plane(6, 6, new THREE.MeshStandardMaterial({ map: floorTex, roughness: .5 }), [0, 0, 2.6], [-Math.PI / 2, 0, 0]);
+const wallTex = canvasTex(1024, 1024, (g, w, h) => { g.fillStyle = '#cfe0e6'; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(255,255,255,.55)'; for (let i = 0; i < 40; i++) { const x = R() * w, y = R() * h * .6, s = 6 + R() * 10; g.beginPath(); for (let k = 0; k < 10; k++) { const a = k * Math.PI / 5, r = k % 2 ? s * .45 : s; g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } g.fill(); } }, [2, 1]);
+const wallM = new THREE.MeshStandardMaterial({ map: wallTex, roughness: .9 });
+box(4.8, CH, .1, wallM, -RW, 0, -.1); box(.1, CH, 5.6, wallM, -RW - .1, 0, -.1); box(.1, CH, 5.6, wallM, RW, 0, -.1);
+box(4.8, .1, 5.6, M.ceil, -RW, CH, -.1, { cast: false });
+// window with a curtain on the left wall (moonlight)
+const winM = new THREE.MeshStandardMaterial({ color: '#000', emissive: '#7f9bd6', emissiveIntensity: 0 });
+box(.02, 1.2, 1.0, winM, -RW + .01, 1.0, 2.0, { cast: false });
+const moon = new THREE.SpotLight('#9fb8ff', 0, 8, .6, .7, 1.2); moon.position.set(-RW - .4, 1.8, 2.5); moon.target.position.set(.5, 0, 2.2); scene.add(moon, moon.target);
+// bed: wooden frame, mattress, duvet with the sleeping child (a soft shape), pillow, teddy
+const woodM = new THREE.MeshStandardMaterial({ map: oakTex, color: '#e8d8bf', roughness: .5 });
+box(1.1, .3, 2.0, woodM, -2.25, 0, .05, { r: .03 }); box(1.1, .9, .06, woodM, -2.25, .3, .02, { r: .03 });
+box(1.0, .18, 1.9, new THREE.MeshStandardMaterial({ color: '#f4f1ea', roughness: .9 }), -2.2, .3, .1, { r: .05 });
+const duvetM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#f2c38b', roughness: .95 });
+box(1.04, .1, 1.35, duvetM, -2.22, .46, .65, { r: .05 });
+const lump = new THREE.Mesh(new THREE.CapsuleGeometry(.16, .55, 8, 16), duvetM); lump.rotation.x = Math.PI / 2; lump.scale.set(1.1, 1, .6); lump.position.set(-1.72, .58, .9); lump.castShadow = true; scene.add(lump);
+box(.5, .12, .3, new THREE.MeshStandardMaterial({ map: fabricTex, color: '#ffffff', roughness: .9 }), -1.95, .48, .15, { r: .05 });
+const bearM = new THREE.MeshStandardMaterial({ color: '#a8754a', roughness: 1 });
+const bear = (x, y, z, s) => { [[0, 0, 0, .14], [0, .17, 0, .1], [-.07, .26, 0, .04], [.07, .26, 0, .04], [-.12, .03, .03, .05], [.12, .03, .03, .05]].forEach(([dx, dy, dz, r]) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r * s, 20, 14), bearM); m.position.set(x + dx * s, y + dy * s, z + dz * s); m.castShadow = true; scene.add(m); }); };
+bear(-1.35, .62, .35, 1);
+// nightstand with a small wall reading light above, a rug, toy blocks, a toy box, the door to the bathroom
+box(.45, .5, .4, woodM, -1.05, 0, .05, { r: .02 });
+const wlArm = box(.04, .04, .22, M.brass, -.85, 1.25, .0); const wlHead = new THREE.Mesh(new THREE.ConeGeometry(.07, .12, 24, 1, true), new THREE.MeshStandardMaterial({ color: '#f4efe6', roughness: .6, side: THREE.DoubleSide })); wlHead.position.set(-.83, 1.22, .24); wlHead.rotation.x = Math.PI; scene.add(wlHead);
+const readL = new THREE.SpotLight('#ffcf8a', 0, 3.5, 34 * Math.PI / 180, .7, 1.4); readL.position.set(-.83, 1.18, .24); readL.target.position.set(-1.55, .45, .55); readL.castShadow = true; scene.add(readL, readL.target);
+const readLens = new THREE.Mesh(new THREE.CircleGeometry(.05, 20), emis('#000', 0)); readLens.rotation.x = Math.PI / 2; readLens.position.set(-.83, 1.165, .24); scene.add(readLens);
+plane(2.2, 1.6, new THREE.MeshStandardMaterial({ color: '#9cc7c9', roughness: 1 }), [-.3, .006, 2.0], [-Math.PI / 2, 0, 0]);
+[['#e85d4a', 0], ['#f2b134', .13], ['#4aa3c9', .26], ['#7cb342', .065]].forEach(([c, dx], i) => box(.1, .1, .1, new THREE.MeshStandardMaterial({ color: c, roughness: .6 }), .1 + dx, i === 3 ? .1 : 0, 1.9 + (i % 2) * .05));
+box(.7, .45, .45, new THREE.MeshStandardMaterial({ color: '#f2efe8', roughness: .7 }), 1.4, 0, .05, { r: .03 });
+box(.05, 2.1, .9, M.darkWood, RW - .06, 0, 2.6); // the door, right wall
+// lights: the harsh cold ceiling light, and the warm low night lights (step lights in the wall near the floor + under-bed glow)
+const ceilLamp = new THREE.Mesh(new THREE.CylinderGeometry(.28, .28, .05, 40), emis('#000', 0)); ceilLamp.position.set(0, CH - .03, 2.2); scene.add(ceilLamp);
+const ceilL = new THREE.PointLight('#e6f0ff', 0, 10, 1.6); ceilL.position.set(0, CH - .2, 2.2); ceilL.castShadow = true; scene.add(ceilL);
+const steps = [];
+for (const [x, z, ry] of [[RW - .02, 1.4, -Math.PI / 2], [RW - .02, 3.8, -Math.PI / 2], [-.4, -.04, 0], [.9, -.04, 0]]) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(.14, .06), emis('#000', 0)); m.position.set(x, .25, z + (ry ? 0 : .06)); m.rotation.y = ry; scene.add(m);
+  const l = new THREE.SpotLight('#ffb15c', 0, 3.2, 1.1, .9, 1.2); l.position.set(x - (ry ? .05 : 0), .26, z + (ry ? 0 : .1)); l.target.position.set(x - (ry ? .8 : 0), 0, z + (ry ? 0 : .8)); scene.add(l, l.target);
+  steps.push({ m, l });
+}
+const underBed = new THREE.RectAreaLight('#ffb15c', 0, 1.0, 1.8); underBed.position.set(-1.7, .04, 1.05); underBed.lookAt(-1.7, -1, 1.05); scene.add(underBed);
+const hemi = new THREE.HemisphereLight('#c8d6ff', '#2a2018', .03); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [1.7, 1.55, 4.6], tgt: [-.8, .8, .9], fov: 64 },    // the room from the doorway corner
+  b: { pos: [-.2, 1.1, 2.2], tgt: [-1.6, .6, .5], fov: 56 },     // the bed with the child and the teddy
+  f: { pos: [.6, .45, 4.2], tgt: [1.4, .1, 2.0], fov: 60 },      // low: the night lights along the floor to the door
+};
+// state tokens joined by '+':  off · cold (the harsh white ceiling light) · night:<0..1> (warm low night lights one by one) · read:<0..1> (the reading light, dimmable)
+window.setState = (state) => {
+  const T = Object.fromEntries(state.split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const cold = T.cold ?? 0, night = T.night ?? 0, read = T.read ?? 0;
+  ceilL.intensity = 14 * cold; ceilLamp.material = cold ? emis('#f2f7ff', 3) : emis('#000', 0);
+  steps.forEach(({ m, l }, i) => { const k = Math.max(0, Math.min(1, (night * 1.2 - i / 4) / .25)); l.intensity = 7 * k; m.material = k ? emis('#ffb15c', 6 * k) : emis('#000', 0); });
+  underBed.intensity = 5 * Math.min(1, night);
+  readL.intensity = 11 * read; readLens.material = read ? emis('#ffcf8a', 5 * read) : emis('#000', 0);
+  moon.intensity = cold ? 0 : 3; winM.emissiveIntensity = cold ? .1 : .35; hemi.intensity = .03 + .12 * cold;
+  scene.environmentIntensity = .02 + .1 * cold;
+  renderer.toneMappingExposure = 1.0;
+};
