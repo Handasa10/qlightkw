@@ -45,10 +45,10 @@ const bricks = [];
 // house number, halo-lit: bronze digits on a stand-off over a glow
 const digits = (fill, blur) => canvasTex(512, 256, (g, w, h) => { g.clearRect(0, 0, w, h); g.filter = blur ? 'blur(14px)' : 'none'; g.fillStyle = fill; g.font = '900 200px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('17', w / 2, h / 2 + 8); }, [1, 1], true);
 const numM = new THREE.MeshStandardMaterial({ map: digits('#5a4632', false), transparent: true, metalness: .6, roughness: .35 });
-const num = plane(.56, .28, numM, [2.25, 2.35, .05], [0, 0, 0]);
+const num = plane(.56, .28, numM, [2.02, 2.35, .05], [0, 0, 0]);
 const haloM = new THREE.MeshBasicMaterial({ map: digits('#ffffff', true), color: '#000', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
-plane(.7, .35, haloM, [2.25, 2.35, .012], [0, 0, 0]);
-const numL = new THREE.PointLight('#ffd7a3', 0, 1.2, 2); numL.position.set(2.25, 2.35, .06); scene.add(numL);
+plane(.7, .35, haloM, [2.02, 2.35, .012], [0, 0, 0]);
+const numL = new THREE.PointLight('#ffd7a3', 0, 1.2, 2); numL.position.set(2.02, 2.35, .06); scene.add(numL);
 // rain for the IP65 close-up
 const rainM = new THREE.MeshBasicMaterial({ color: '#dfe8ff', transparent: true, opacity: 0, depthWrite: false });
 const rain = new THREE.InstancedMesh(new THREE.BoxGeometry(.003, .18, .003), rainM, 500); const dm = new THREE.Object3D();
@@ -59,9 +59,9 @@ plane(40, 20, new THREE.MeshBasicMaterial({ map: skyTex, toneMapped: false }), [
 const moon = new THREE.DirectionalLight('#9fb4e0', 0); moon.position.set(-4, 8, 6); scene.add(moon);
 const hemi = new THREE.HemisphereLight('#7f93c0', '#2a2018', .06); scene.add(hemi);
 const VIEWS = {
-  w: { pos: [0, 1.6, 8.4], tgt: [0, 1.65, 0], fov: 54 },        // the whole entrance from the driveway
+  w: { pos: [.1, 1.6, 8.6], tgt: [.1, 1.65, 0], fov: 58 },        // the whole entrance from the driveway
   s: { pos: [1.3, .75, 4.3], tgt: [-.3, .45, 1.3], fov: 60 },    // low on the steps and the brick lights
-  n: { pos: [1.6, 2.0, 2.9], tgt: [1.75, 2.35, 0], fov: 50 },    // the house number and the right wall light
+  n: { pos: [1.4, 2.0, 2.9], tgt: [1.65, 2.35, 0], fov: 52 },    // the house number and the right wall light
   e: { pos: [2.2, 2.2, 1.9], tgt: [1.35, 2.45, 0], fov: 44 },    // the wall light close, in the rain
 };
 // state tokens joined by '+':  off · sconce:<0..1> · steps:<0..1> (bottom step first) · num · rain · all (= sconce+steps+num)
