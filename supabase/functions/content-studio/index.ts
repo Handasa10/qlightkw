@@ -347,7 +347,8 @@ interface Voice {
 // TTS models to try in order: STUDIO_TTS_MODEL first if set, then pro before flash, newest first
 async function ttsModels(): Promise<string[]> {
   const res = await fetch(`${GEMINI}/models?pageSize=1000`, { headers: { 'x-goog-api-key': GOOGLE_KEY } });
-  const names: string[] = ((await res.json()).models ?? []).map((m: { name: string }) => m.name.split('/').pop()).filter((n: string) => n.includes('tts'));
+  // 'lite' TTS models sound noticeably flatter: never fall back to them (the owner rejected a reel voiced by one)
+  const names: string[] = ((await res.json()).models ?? []).map((m: { name: string }) => m.name.split('/').pop()).filter((n: string) => n.includes('tts') && !n.includes('lite'));
   names.sort((a, b) => (Number(b.includes('pro')) - Number(a.includes('pro'))) || b.localeCompare(a));
   const fixed = Deno.env.get('STUDIO_TTS_MODEL');
   const list = fixed ? [fixed, ...names.filter((n) => n !== fixed)] : names;
