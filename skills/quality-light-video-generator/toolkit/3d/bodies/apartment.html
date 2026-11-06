@@ -1,0 +1,64 @@
+// ===== Rented apartment living room: one cold ceiling lamp vs no-drill lighting (plug-in wall sconce with its cord to the socket, floor lamp by the sofa, smart table lamp; smart bulbs change colour) =====
+// back wall z=0 (x -2.4..2.4) with the sofa, right wall x=2.4 carries the plug-in sconce over a side table, floor lamp at the left end of the sofa, window with curtains on the left wall
+const CH = 2.7, RW = 2.4, RD = 5.0;
+const floorTex = canvasTex(1024, 1024, (g, w, h) => { woodDraw('#a88462', '70,45,22')(g, w, h); g.strokeStyle = 'rgba(60,35,15,.3)'; g.lineWidth = 3; for (let y = 0; y <= h; y += 128) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } }, [4, 4]);
+plane(RW * 2, RD, new THREE.MeshStandardMaterial({ map: floorTex, roughness: .5 }), [0, 0, RD / 2], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#ece5da', roughness: .9 });
+box(RW * 2, CH, .1, wallM, -RW, 0, -.1); box(.1, CH, RD + .1, wallM, -RW - .1, 0, -.1); box(.1, CH, RD + .1, wallM, RW, 0, -.1);
+box(RW * 2 + .2, .1, RD + .1, M.ceil, -RW - .1, CH, -.1, { cast: false });
+box(RW * 2, .08, .015, new THREE.MeshStandardMaterial({ color: '#f6f2ec' }), -RW, 0, 0); // skirting
+// window with curtains on the left wall (night outside)
+box(.02, 1.4, 1.2, new THREE.MeshStandardMaterial({ color: '#0b0f18', emissive: '#1a2440', emissiveIntensity: .4, roughness: .1 }), -RW + .005, .8, 2.2, { cast: false });
+const curM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#cfc3ae', roughness: .95 });
+for (const z of [1.85, 3.45]) box(.08, 2.3, .4, curM, -RW + .02, .25, z, { r: .03 });
+// sofa, cushions, rug, coffee table, art, plant
+const sofaM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#8d939a', roughness: .95 });
+box(2.2, .42, .9, sofaM, -1.3, .1, .1, { r: .06 }); box(2.2, .45, .22, sofaM, -1.3, .48, .1, { r: .06 });
+for (const x of [-1.42, .82]) box(.2, .6, .9, sofaM, x, .1, .1, { r: .06 });
+[['#d9a65b', -.9], ['#ece6dc', -.25], ['#5c7f86', .35]].forEach(([c, x]) => { const m = box(.42, .38, .12, new THREE.MeshStandardMaterial({ map: fabricTex, color: c, roughness: .9 }), x - .21, .5, .3, { r: .06 }); m.rotation.x = -.2; });
+plane(2.6, 1.8, M.rug, [-.2, .006, 1.9], [-Math.PI / 2, 0, 0]);
+box(1.0, .06, .55, M.oak, -.7, .38, 1.65, { r: .02 }); for (const [x, z] of [[-.65, 1.7], [.22, 1.7], [-.65, 2.12], [.22, 2.12]]) box(.04, .38, .04, M.black, x, 0, z);
+box(1.1, .7, .03, new THREE.MeshStandardMaterial({ color: '#2b2b2b', roughness: .5 }), -.75, 1.35, .01);
+box(1.0, .6, .01, new THREE.MeshStandardMaterial({ color: '#c97a54', roughness: .9 }), -.7, 1.4, .04, { cast: false });
+plant(2.0, 3.6, 1.5, .45);
+// side table on the right with the smart table lamp
+box(.45, .55, .45, M.oak, 1.7, 0, .25, { r: .02 });
+const shadeM = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: .8, side: THREE.DoubleSide, transparent: true, opacity: .96 });
+const tShadeM = shadeM('#efe7da'); const tShade = new THREE.Mesh(new THREE.CylinderGeometry(.12, .16, .2, 32, 1, true), tShadeM); tShade.position.set(1.92, .93, .47); scene.add(tShade);
+box(.04, .25, .04, M.brass, 1.9, .55, .45); box(.14, .02, .14, M.brass, 1.85, .55, .4);
+const tableL = new THREE.PointLight('#ffcf96', 0, 4, 2); tableL.position.set(1.92, .92, .47); scene.add(tableL);
+// plug-in wall sconce on the right wall: arm + shade, the cord runs down the wall to the socket (no drilling into wiring)
+const scX = RW - .02, scY = 1.75, scZ = .62;
+box(.04, .14, .1, M.black, scX - .04, scY - .07, scZ - .05); box(.26, .025, .025, M.brass, scX - .28, scY + .02, scZ - .012);
+const sShadeM = shadeM('#f3ece0'); const sShade = new THREE.Mesh(new THREE.ConeGeometry(.12, .16, 32, 1, true), sShadeM); sShade.position.set(scX - .3, scY - .02, scZ); sShade.rotation.x = Math.PI; scene.add(sShade);
+const scLight = new THREE.SpotLight('#ffcf96', 0, 4, 55 * Math.PI / 180, .7, 1.4); scLight.position.set(scX - .3, scY - .06, scZ); scLight.target.position.set(scX - .5, 0, scZ + .2); scLight.castShadow = true; scene.add(scLight, scLight.target);
+const scGlow = new THREE.PointLight('#ffcf96', 0, 2, 2); scGlow.position.set(scX - .2, scY + .1, scZ); scene.add(scGlow);
+const cordM = new THREE.MeshStandardMaterial({ color: '#efe9e0', roughness: .6 });
+box(.012, scY - .45, .012, cordM, scX - .014, .4, scZ - .006, { cast: false }); box(.012, .012, .32, cordM, scX - .014, .4, scZ - .006, { cast: false });
+box(.02, .12, .08, new THREE.MeshStandardMaterial({ color: '#f7f5f1', roughness: .4 }), scX - .02, .32, scZ + .27); // socket plate + plug
+box(.03, .05, .04, cordM, scX - .045, .35, scZ + .29);
+// floor lamp at the left end of the sofa (smart bulb)
+box(.3, .03, .3, M.black, -2.05, 0, .3); box(.025, 1.45, .025, M.black, -1.913, .03, .44);
+const fShadeM = shadeM('#efe7da'); const fShade = new THREE.Mesh(new THREE.CylinderGeometry(.2, .24, .3, 32, 1, true), fShadeM); fShade.position.set(-1.9, 1.55, .45); scene.add(fShade);
+const floorL = new THREE.PointLight('#ffcf96', 0, 5, 2); floorL.position.set(-1.9, 1.5, .45); floorL.castShadow = true; scene.add(floorL);
+// the one cold ceiling lamp (flush, middle of the room)
+const ceilLamp = new THREE.Mesh(new THREE.CylinderGeometry(.22, .22, .05, 40), emis('#000', 0)); ceilLamp.position.set(0, CH - .03, 2.0); scene.add(ceilLamp);
+const ceilL = new THREE.PointLight('#eef4ff', 0, 10, 1.6); ceilL.position.set(0, CH - .2, 2.0); ceilL.castShadow = true; scene.add(ceilL);
+const hemi = new THREE.HemisphereLight('#f4ecdf', '#2a2018', .04); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [-.35, 1.5, 4.7], tgt: [.55, 1.05, .5], fov: 68 },    // the living room
+  s: { pos: [1.25, 1.35, 2.3], tgt: [2.25, 1.05, .8], fov: 56 },   // the plug-in sconce and its cord to the socket
+  f: { pos: [-.4, 1.2, 2.5], tgt: [-1.75, 1.0, .5], fov: 58 },     // the floor lamp by the sofa
+};
+// state tokens joined by '+':  off · ceil (one cold ceiling lamp) · sconce · floor · table · cozy (= sconce+floor+table) · tint:<0..1> (smart bulbs in floor+table lamps change hue)
+window.setState = (state) => {
+  const T = Object.fromEntries(state.replace('cozy', 'sconce+floor+table').split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const ce = T.ceil ?? 0, sc = T.sconce ?? 0, fl = T.floor ?? 0, tb = T.table ?? 0;
+  const smart = T.tint !== undefined ? new THREE.Color().setHSL(T.tint, .85, .6) : new THREE.Color('#ffcf96');
+  ceilL.intensity = 12 * ce; ceilLamp.material = ce ? emis('#f2f7ff', 3) : emis('#000', 0);
+  scLight.intensity = 15 * sc; scGlow.intensity = .5 * sc; sShadeM.emissive = new THREE.Color('#ffcf96'); sShadeM.emissiveIntensity = .8 * sc;
+  floorL.intensity = 9 * fl; floorL.color.copy(smart); fShadeM.emissive = smart.clone(); fShadeM.emissiveIntensity = .9 * fl;
+  tableL.intensity = 4.5 * tb; tableL.color.copy(smart); tShadeM.emissive = smart.clone(); tShadeM.emissiveIntensity = .9 * tb;
+  hemi.intensity = .04 + .1 * ce + .04 * Math.max(sc, fl, tb); scene.environmentIntensity = .03 + .08 * ce;
+  renderer.toneMappingExposure = 1.0;
+};
