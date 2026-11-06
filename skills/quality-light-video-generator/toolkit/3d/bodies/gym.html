@@ -1,0 +1,77 @@
+// ===== Home gym: one yellow bulb in the middle (sleepy, shadows on the mirror, glare when lying on the bench) vs recessed 4000 K anti-glare linear rows + side lights at the mirror =====
+// back wall z=0 (x -2.6..2.6), mirror on the left wall x=-2.6, floor y=0 (rubber tiles), ceiling 2.9; bench in the middle along z, dumbbell rack on the back wall, treadmill on the right
+// no faces: the person at the mirror is a plain faceless figure
+const CH = 2.9, RW = 2.6, RD = 5.4;
+const rubberTex = canvasTex(1024, 1024, (g, w, h) => { g.fillStyle = '#1c1d1f'; g.fillRect(0, 0, w, h); for (let i = 0; i < 14000; i++) { const c = 30 + R() * 30; g.fillStyle = `rgba(${c},${c},${c + 4},.5)`; g.fillRect(R() * w, R() * h, 2, 2); } g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 4; for (let p = 0; p <= w; p += 256) { g.beginPath(); g.moveTo(p, 0); g.lineTo(p, h); g.stroke(); g.beginPath(); g.moveTo(0, p); g.lineTo(w, p); g.stroke(); } }, [3, 3]);
+plane(RW * 2, RD, new THREE.MeshStandardMaterial({ map: rubberTex, roughness: .9 }), [0, 0, RD / 2], [-Math.PI / 2, 0, 0]);
+const sideM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#d9dbdd', roughness: .9 });
+const backM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#55595e', roughness: .85 });
+box(RW * 2, CH, .1, backM, -RW, 0, -.1); box(.1, CH, RD + .1, sideM, -RW - .1, 0, -.1); box(.1, CH, RD + .1, sideM, RW, 0, -.1);
+box(RW * 2 + .2, .1, RD + .1, M.ceil, -RW - .1, CH, -.1, { cast: false });
+// mirror wall on the left (x = -RW), framed in black
+const cubeRT = new THREE.WebGLCubeRenderTarget(512); const cubeCam = new THREE.CubeCamera(.05, 20, cubeRT); cubeCam.position.set(-RW + 1.6, 1.4, 2.5); scene.add(cubeCam);
+const mirrorM = new THREE.MeshStandardMaterial({ color: '#dfe4e8', metalness: 1, roughness: .02, envMap: cubeRT.texture, envMapIntensity: 1 });
+const mirror = box(.02, 2.0, 3.0, mirrorM, -RW + .005, .35, 1.0, { cast: false });
+box(.03, 2.06, .03, M.black, -RW, .32, .97); box(.03, 2.06, .03, M.black, -RW, .32, 4.0);
+// dumbbell rack on the back wall
+const steel = new THREE.MeshStandardMaterial({ color: '#2a2b2e', metalness: .7, roughness: .35 });
+const chrome = new THREE.MeshStandardMaterial({ color: '#c9ccd0', metalness: 1, roughness: .2 });
+box(2.2, .06, .45, steel, -1.1, .55, .1); box(2.2, .06, .45, steel, -1.1, .2, .1);
+for (const x of [-1.1, 1.04]) box(.06, .62, .45, steel, x, 0, .1);
+for (let i = 0; i < 6; i++) for (const [y, s] of [[.62, .8], [.27, 1.1]]) {
+  const x = -.9 + i * .36, r = .055 * s * (1 + i * .08);
+  for (const dz of [.16, .42]) { const pl = new THREE.Mesh(new THREE.CylinderGeometry(r, r, .05, 24), steel); pl.rotation.x = Math.PI / 2; pl.position.set(x, y + r, dz); pl.castShadow = true; scene.add(pl); }
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, .22, 12), chrome); bar.rotation.x = Math.PI / 2; bar.position.set(x, y + r, .29); scene.add(bar);
+}
+// adjustable bench in the middle (along z), kettlebells, a treadmill on the right, a yoga mat
+const padM = new THREE.MeshStandardMaterial({ color: '#141416', roughness: .6 });
+box(.32, .1, 1.25, padM, -.06, .42, 1.8, { r: .03 }); box(.06, .42, .06, steel, .07, 0, 1.9); box(.06, .42, .06, steel, .07, 0, 2.9); box(.3, .05, 1.2, steel, -.05, .05, 1.82);
+for (const [x, z, s] of [[.8, 1.2, 1], [1.0, 1.25, .8], [-.9, 3.3, 1.1]]) { const kb = new THREE.Mesh(new THREE.SphereGeometry(.11 * s, 24, 16), steel); kb.position.set(x, .11 * s, z); kb.castShadow = true; scene.add(kb); const h = new THREE.Mesh(new THREE.TorusGeometry(.07 * s, .015, 10, 24, Math.PI), steel); h.position.set(x, .2 * s, z); scene.add(h); }
+box(.8, .18, 1.9, steel, 1.55, 0, 1.4, { r: .03 }); box(.7, .02, 1.5, padM, 1.6, .18, 1.6);
+box(.06, 1.1, .06, steel, 1.6, .18, 1.42); box(.06, 1.1, .06, steel, 2.24, .18, 1.42); box(.7, .25, .12, steel, 1.58, 1.25, 1.36, { r: .02 });
+plane(.6, 1.7, new THREE.MeshStandardMaterial({ color: '#2f6f73', roughness: .9 }), [-1.8, .005, 2.6], [-Math.PI / 2, 0, 0]);
+// the faceless figure at the mirror (plain shapes)
+const figM = new THREE.MeshStandardMaterial({ color: '#8a8f96', roughness: .7 });
+const fig = (x, z) => {
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(.17, .55, 8, 16), figM); body.position.set(x, 1.12, z); body.castShadow = true; scene.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(.12, 24, 16), figM); head.position.set(x, 1.67, z); head.castShadow = true; scene.add(head);
+  for (const dz of [-.09, .09]) { const leg = new THREE.Mesh(new THREE.CapsuleGeometry(.07, .6, 6, 12), figM); leg.position.set(x, .38, z + dz); leg.castShadow = true; scene.add(leg); }
+  for (const dz of [-.23, .23]) { const arm = new THREE.Mesh(new THREE.CapsuleGeometry(.05, .45, 6, 12), figM); arm.position.set(x + .05, 1.15, z + dz); arm.rotation.z = .15; arm.castShadow = true; scene.add(arm); }
+};
+fig(-1.75, 2.4);
+// BEFORE: one bare yellow bulb on a cord in the middle
+const bulbM = emis('#000', 0); const bulb = new THREE.Mesh(new THREE.SphereGeometry(.06, 24, 16), bulbM); bulb.position.set(0, 2.55, 2.2); scene.add(bulb);
+box(.006, CH - 2.6, .006, M.black, -.003, 2.6, 2.197, { cast: false });
+const bulbL = new THREE.PointLight('#ffb35c', 0, 9, 1.6); bulbL.position.set(0, 2.5, 2.2); bulbL.castShadow = true; bulbL.shadow.mapSize.set(1024, 1024); scene.add(bulbL);
+// AFTER: three recessed 4000 K linear rows with deep anti-glare channels (lens set back, black baffles)
+const rows = [-1.3, 0, 1.3].map((x, i) => {
+  box(.1, .06, 3.6, M.black, x - .05, CH - .06, .9, { cast: false });
+  const lens = box(.05, .005, 3.5, emis('#000', 0), x - .025, CH - .045, .95, { cast: false });
+  const l = new THREE.RectAreaLight('#fff6ec', 0, .06, 3.5); l.position.set(x, CH - .05, 2.7); l.lookAt(x, 0, 2.7); scene.add(l);
+  return { lens, l, u: i / 3 };
+});
+// mirror side lights: two vertical bars beside the mirror, lighting the figure from the front-side
+const mBars = [.88, 4.12].map((z) => {
+  const m = box(.02, 1.7, .05, emis('#000', 0), -RW + .01, .5, z - .025, { cast: false });
+  const l = new THREE.RectAreaLight('#fff6ec', 0, .05, 1.7); l.position.set(-RW + .04, 1.35, z); l.lookAt(0, 1.35, z); scene.add(l);
+  return { m, l };
+});
+const fill = new THREE.PointLight('#fff6ec', 0, 8, 2); fill.position.set(0, 2.0, 3.5); scene.add(fill);
+const hemi = new THREE.HemisphereLight('#dfe6ee', '#202022', .04); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [1.9, 1.65, 5.2], tgt: [-.6, 1.15, 1.4], fov: 64 },   // the gym from the door corner
+  b: { pos: [.11, .8, 3.1], tgt: [.25, 2.9, 1.0], fov: 78 },     // lying on the bench, looking up
+  m: { pos: [-.1, 1.55, 3.6], tgt: [-2.2, 1.25, 1.9], fov: 56 },   // the figure at the mirror
+};
+// state tokens joined by '+':  off · bulb (one yellow bulb) · linear:<0..1> (rows on one by one) · mirror · all (= linear+mirror)
+window.setState = (state) => {
+  const T = Object.fromEntries(state.replace('all', 'linear+mirror').split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const bu = T.bulb ?? 0, ln = T.linear ?? 0, mr = T.mirror ?? 0;
+  bulbL.intensity = 5 * bu; bulb.material = bu ? emis('#ffc070', 12) : emis('#000', 0);
+  rows.forEach(({ lens, l, u }) => { const k = Math.max(0, Math.min(1, (ln * 1.1 - u) / .3)); l.intensity = 70 * k; lens.material = k ? emis('#fff4e8', 4 * k) : emis('#000', 0); });
+  mBars.forEach(({ m, l }) => { l.intensity = 22 * mr; m.material = mr ? emis('#fff4e8', 5) : emis('#000', 0); });
+  fill.intensity = 1.5 * Math.min(1, ln);
+  hemi.intensity = .04 + .05 * Math.min(1, ln); scene.environmentIntensity = .03 + .06 * Math.min(1, ln);
+  renderer.toneMappingExposure = 1.0;
+  mirror.visible = false; cubeCam.update(renderer, scene); mirror.visible = true;
+};
