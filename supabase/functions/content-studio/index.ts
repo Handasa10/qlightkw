@@ -230,6 +230,7 @@ interface Question {
   selected: number[];
   message_id: number | null;
   image_url?: string | null;
+  answer_text?: string | null;
 }
 
 function questionText(q: Question) {
@@ -315,13 +316,26 @@ async function handleQuestionText(s: Settings, typed: string, replyTo?: number):
   const text = typed.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x660)); // Arabic-Indic digits
   let q: Question | null = null;
   if (replyTo) {
-    const { data } = await supabase.from('content_questions').select('*').eq('message_id', replyTo).eq('status', 'sent').maybeSingle();
+    const { data } = await supabase.from('content_questions').select('*').eq('message_id', replyTo).maybeSingle();
     q = data as Question | null;
   } else {
     const { data } = await supabase.from('content_questions').select('*').eq('status', 'sent').order('id', { ascending: false }).limit(1);
     q = (data?.[0] as Question) ?? null;
+    if (!q) { // a note typed right after picking an option such as «حاجة تانية (اكتبها كـ Reply)»
+      const since = new Date(Date.now() - 3 * 3600e3).toISOString();
+      const { data: d2 } = await supabase.from('content_questions').select('*').eq('status', 'answered').is('answer_text', null)
+        .gte('answered_at', since).order('answered_at', { ascending: false }).limit(1);
+      const last = (d2?.[0] as Question) ?? null;
+      if (last && last.selected?.some((i) => /reply/i.test(last.options[i]?.description ?? '') || /تانية|أخرى/.test(last.options[i]?.label ?? ''))) q = last;
+    }
   }
   if (!q) return false;
+  if (q.status === 'answered') { // already answered with buttons: keep the picks and add the typed note
+    const note = q.answer_text ? `${q.answer_text}\n${typed}` : typed;
+    await supabase.from('content_questions').update({ answer_text: note, answered_at: new Date().toISOString() }).eq('id', q.id);
+    await send(s, `✅ وصلتني ملاحظتك: ${esc(typed)}`, null, q.message_id ? { reply_to_message_id: q.message_id } : {});
+    return true;
+  }
   const nums = (text.match(/\d+/g) ?? []).map(Number).filter((n) => n >= 1 && n <= q!.options.length);
   const onlyNumbers = /^[\d\s,،+و]+$/.test(text) && nums.length > 0;
   await answerQuestion(s, q, onlyNumbers ? nums.map((n) => n - 1) : [], onlyNumbers ? null : text);
