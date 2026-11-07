@@ -1,0 +1,79 @@
+// ===== Warehouse: weak old yellow lamps (dim aisles, a worker can't read the labels) vs LED high-bays switching on row by row; dust in the air for the IP65 point =====
+// floor y=0 (concrete), roof 8.0 high; three aisles of pallet racks along z (racks at x = -4.5, -1.5, 1.5, 4.5), building x -6.5..6.5, z -1..22; camera looks down the middle aisle
+const CH = 8.0, BX = 6.5, BZ0 = -1, BZ1 = 22;
+const concTex = canvasTex(1024, 1024, (g, w, h) => { g.fillStyle = '#8d8a84'; g.fillRect(0, 0, w, h); for (let i = 0; i < 16000; i++) { const c = 110 + R() * 50; g.fillStyle = `rgba(${c},${c},${c - 4},.35)`; g.fillRect(R() * w, R() * h, 2, 2); } g.strokeStyle = 'rgba(40,40,40,.35)'; g.lineWidth = 3; for (let p = 0; p <= w; p += 341) { g.beginPath(); g.moveTo(p, 0); g.lineTo(p, h); g.stroke(); g.beginPath(); g.moveTo(0, p); g.lineTo(w, p); g.stroke(); } }, [6, 10]);
+plane(BX * 2, BZ1 - BZ0, new THREE.MeshStandardMaterial({ map: concTex, roughness: .7 }), [0, 0, (BZ0 + BZ1) / 2], [-Math.PI / 2, 0, 0]);
+for (const x of [-.75, .75]) plane(.1, BZ1 - BZ0, new THREE.MeshStandardMaterial({ color: '#e0b72a', roughness: .6 }), [x, .003, (BZ0 + BZ1) / 2], [-Math.PI / 2, 0, 0]); // aisle lines
+const shellM = new THREE.MeshStandardMaterial({ color: '#b9bcbf', roughness: .8, metalness: .3 });
+box(BX * 2, CH, .2, shellM, -BX, 0, BZ0 - .2); box(.2, CH, BZ1 - BZ0, shellM, -BX - .2, 0, BZ0); box(.2, CH, BZ1 - BZ0, shellM, BX, 0, BZ0);
+box(BX * 2 + .4, .2, BZ1 - BZ0, new THREE.MeshStandardMaterial({ color: '#8f9396', roughness: .8, metalness: .4 }), -BX - .2, CH, BZ0, { cast: false });
+const trussM = new THREE.MeshStandardMaterial({ color: '#5a5e62', roughness: .5, metalness: .6 });
+for (let z = BZ0 + 2; z < BZ1; z += 4) box(BX * 2, .25, .15, trussM, -BX, CH - .6, z, { cast: false });
+// pallet racks: orange beams, blue uprights, boxes and wrapped pallets on 4 levels
+const uprM = new THREE.MeshStandardMaterial({ color: '#2d5d9f', roughness: .5, metalness: .4 });
+const beamM = new THREE.MeshStandardMaterial({ color: '#e46a1c', roughness: .5, metalness: .3 });
+const boxMs = ['#c9a676', '#b8925f', '#d5b788', '#a9804f'].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: .9 }));
+const wrapM = new THREE.MeshStandardMaterial({ color: '#dfe4e8', roughness: .3, transparent: true, opacity: .85 });
+const labelTex = canvasTex(256, 128, (g, w, h) => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h); g.fillStyle = '#111'; g.font = '900 56px Arial'; g.fillText('A-' + Math.floor(R() * 90 + 10), 18, 70); for (let i = 0; i < 26; i++) g.fillRect(18 + i * 8, 86, R() > .4 ? 4 : 2, 30); }, [1, 1]);
+const labelM = new THREE.MeshStandardMaterial({ map: labelTex, roughness: .6 });
+for (const rx of [-4.5, -1.5, 1.5, 4.5]) {
+  const side = rx < 0 ? 1 : -1;
+  for (let z = 0; z < 20; z += 2.6) {
+    for (const dz of [0, 2.5]) box(.1, 6.2, .1, uprM, rx - .55, 0, z + dz); for (const dz of [0, 2.5]) box(.1, 6.2, .1, uprM, rx + .45, 0, z + dz);
+    for (const y of [.1, 1.6, 3.1, 4.6]) {
+      box(1.1, .12, .08, beamM, rx - .55, y, z); box(1.1, .12, .08, beamM, rx - .55, y, z + 2.5);
+      box(.08, .12, 2.6, beamM, rx - .55, y, z); box(.08, .12, 2.6, beamM, rx + .47, y, z);
+      if (R() < .85) {
+        const hh = .7 + R() * .5;
+        if (R() < .5) box(.95, hh, 1.05, boxMs[Math.floor(R() * 4)], rx - .48, y + .12, z + .15 + R() * .1); else box(.95, hh, 1.05, wrapM, rx - .48, y + .12, z + .15, { cast: false });
+        box(.95, hh * .9, 1.05, boxMs[Math.floor(R() * 4)], rx - .48, y + .12, z + 1.35);
+        plane(.22, .11, labelM, [rx + side * .53, y + .3, z + 1.25], [0, side * Math.PI / 2, 0]);
+      }
+    }
+  }
+}
+// a forklift (simple shapes) and a pallet jack in the main aisle
+const fkM = new THREE.MeshStandardMaterial({ color: '#f2b705', roughness: .5, metalness: .2 });
+box(1.0, .9, 1.6, fkM, -.5, .2, 7.0, { r: .05 }); box(.9, 1.1, .08, M.black, -.45, 1.1, 7.0); box(.06, 2.2, .06, M.black, -.4, .2, 6.85); box(.06, 2.2, .06, M.black, .34, .2, 6.85);
+box(.8, .04, .9, M.black, -.4, .25, 6.0); for (const [x, z] of [[-.45, 7.2], [.35, 7.2], [-.45, 8.3], [.35, 8.3]]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.22, .22, .16, 20), M.black); w.rotation.z = Math.PI / 2; w.position.set(x, .22, z); scene.add(w); }
+box(1.0, .14, 1.2, new THREE.MeshStandardMaterial({ color: '#a2774a', roughness: .9 }), -.5, 0, 12); box(.9, .9, 1.0, boxMs[0], -.45, .14, 12.1);
+// BEFORE: old yellow lamps (weak, warm, orange)
+const oldLamps = [];
+for (let z = 1; z < 21; z += 4) for (const x of [-3, 0, 3]) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(.25, .35, .4, 20, 1, true), new THREE.MeshStandardMaterial({ color: '#4a4a48', metalness: .5, roughness: .5, side: THREE.DoubleSide })); m.position.set(x, CH - 1.2, z); scene.add(m);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(.12, 16, 12), emis('#000', 0)); bulb.position.set(x, CH - 1.35, z); scene.add(bulb);
+  box(.02, 1.0, .02, M.black, x - .01, CH - 1.0, z - .01, { cast: false });
+  const l = new THREE.PointLight('#ff9a3c', 0, 14, 1.8); l.position.set(x, CH - 1.5, z); scene.add(l);
+  oldLamps.push({ bulb, l });
+}
+// AFTER: LED high-bays (round UFO type) over each aisle, rows switching on from the camera end
+const hbs = [];
+const hbM = new THREE.MeshStandardMaterial({ color: '#2c2f33', metalness: .7, roughness: .35 });
+for (let z = 1.8; z < 21; z += 4) for (const x of [-3, 0, 3]) {
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(.28, .3, .16, 32), hbM); body.position.set(x, CH - 1.0, z); scene.add(body);
+  const fins = new THREE.Mesh(new THREE.CylinderGeometry(.22, .26, .1, 24), hbM); fins.position.set(x, CH - .88, z); scene.add(fins);
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(.27, 32), emis('#000', 0)); lens.rotation.x = Math.PI / 2; lens.position.set(x, CH - 1.081, z); scene.add(lens);
+  const s = new THREE.SpotLight('#f4f7ff', 0, 20, 58 * Math.PI / 180, .6, 1.2); s.position.set(x, CH - 1.1, z); s.target.position.set(x, 0, z); scene.add(s, s.target);
+  hbs.push({ lens, s, u: (z - 1.8) / 20 });
+}
+// dust in the air (for IP65): small specks, visible in the light
+const dustM = new THREE.MeshBasicMaterial({ color: '#fff3dc', transparent: true, opacity: 0, depthWrite: false });
+const dust = new THREE.InstancedMesh(new THREE.SphereGeometry(.006, 6, 4), dustM, 700); const dd = new THREE.Object3D();
+for (let i = 0; i < 700; i++) { dd.position.set((R() - .5) * 2.4, CH - 1.0 - R() * 3.5, 1.8 + 4 * 1 + (R() - .5) * 2.4); dd.updateMatrix(); dust.setMatrixAt(i, dd.matrix); } scene.add(dust);
+const hemi = new THREE.HemisphereLight('#c8ccd2', '#3a342c', .05); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [0, 1.8, -.5], tgt: [0, 2.2, 12], fov: 62 },         // down the main aisle
+  u: { pos: [.3, 1.5, 2.8], tgt: [-.2, CH - 1.2, 7.5], fov: 66 },  // looking up at the fixtures
+  r: { pos: [.0, 1.4, 4.0], tgt: [1.0, 1.0, 6.0], fov: 55 },      // close on a rack: can you read the labels?
+  d: { pos: [1.3, CH - 1.6, 4.3], tgt: [0, CH - 1.1, 5.8], fov: 46 }, // one high-bay close, dust in the air
+};
+// state tokens joined by '+':  off · old (old yellow lamps) · hb:<0..1> (LED high-bays row by row) · dust
+window.setState = (state) => {
+  const T = Object.fromEntries(state.split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const old = T.old ?? 0, hb = T.hb ?? 0, du = T.dust ?? 0;
+  oldLamps.forEach(({ bulb, l }) => { l.intensity = 5 * old; bulb.material = old ? emis('#ffa040', 4) : emis('#000', 0); });
+  hbs.forEach(({ lens, s, u }) => { const k = Math.max(0, Math.min(1, (hb * 1.15 - u) / .15)); s.intensity = 38 * k; lens.material = k ? emis('#f8fbff', 5 * k) : emis('#000', 0); });
+  dustM.opacity = .4 * du;
+  hemi.intensity = .04 + .08 * Math.min(1, hb); scene.environmentIntensity = .03 + .06 * Math.min(1, hb);
+  renderer.toneMappingExposure = 1.0;
+};
