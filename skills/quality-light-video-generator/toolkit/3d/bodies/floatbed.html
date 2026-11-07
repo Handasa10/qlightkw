@@ -1,0 +1,50 @@
+// ===== Floating bed: a plain bedroom under one ceiling lamp vs a hidden warm strip under a raised bed (the bed "floats") and a motion-sensor night glow toward the door =====
+// back wall z=0 (x -2.6..2.6) with a padded headboard; bed against it (x -1..1, z 0.05..2.15) on a recessed plinth; door on the right wall near the front; ceiling 2.8
+const CH = 2.8, RW = 2.6, RD = 5.0;
+const floorTex = canvasTex(1024, 1024, (g, w, h) => { woodDraw('#a58460', '70,45,22')(g, w, h); }, [3, 3]);
+plane(RW * 2, RD, new THREE.MeshStandardMaterial({ map: floorTex, roughness: .45 }), [0, 0, RD / 2], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#e6ddd0', roughness: .9 });
+box(RW * 2, CH, .1, wallM, -RW, 0, -.1); box(.1, CH, RD, wallM, -RW - .1, 0, -.1); box(.1, CH, RD, wallM, RW, 0, -.1);
+box(RW * 2 + .2, .1, RD, M.ceil, -RW - .1, CH, -.1, { cast: false });
+// headboard wall panel (fabric) + art
+const hbM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#8f7d6a', roughness: .95 });
+box(2.6, 1.3, .08, hbM, -1.3, .45, .0, { r: .03 });
+box(1.2, .7, .03, new THREE.MeshStandardMaterial({ color: '#c8b79c', roughness: .9 }), -.6, 1.95, .02);
+// the bed: a recessed dark plinth (set back 25 cm) carrying the mattress frame, so the frame overhangs and "floats"
+box(1.5, .14, 1.6, new THREE.MeshStandardMaterial({ color: '#141210', roughness: .8 }), -.75, 0, .3);
+const bedM = new THREE.MeshStandardMaterial({ map: oakTex, color: '#6d5240', roughness: .5 });
+box(2.0, .16, 2.1, bedM, -1.0, .14, .08, { r: .02 });
+box(1.9, .22, 2.0, new THREE.MeshStandardMaterial({ color: '#f3efe8', roughness: .9 }), -.95, .3, .12, { r: .06 });
+box(1.96, .08, 1.3, new THREE.MeshStandardMaterial({ map: fabricTex, color: '#d8c7ae', roughness: .95 }), -.98, .5, .85, { r: .04 });
+for (const x of [-.55, .15]) box(.55, .14, .32, new THREE.MeshStandardMaterial({ map: fabricTex, color: '#f6f2ea', roughness: .9 }), x, .52, .2, { r: .06 });
+// nightstands with lamps (off), rug, wardrobe, door
+for (const x of [-1.6, 1.15]) box(.45, .5, .4, bedM, x, 0, .1, { r: .02 });
+plane(2.8, 1.6, M.rug, [0, .006, 2.9], [-Math.PI / 2, 0, 0]);
+box(.6, 2.3, 1.6, new THREE.MeshStandardMaterial({ color: '#efe9df', roughness: .7 }), -RW, 0, 2.6, { r: .02 });
+box(.05, 2.1, .9, M.darkWood, RW - .06, 0, 3.6);
+// BEFORE: one ceiling lamp
+const ceilLamp = new THREE.Mesh(new THREE.CylinderGeometry(.25, .25, .05, 40), emis('#000', 0)); ceilLamp.position.set(0, CH - .03, 2.4); scene.add(ceilLamp);
+const ceilL = new THREE.PointLight('#f2f4ff', 0, 10, 1.6); ceilL.position.set(0, CH - .2, 2.4); ceilL.castShadow = true; scene.add(ceilL);
+// AFTER: hidden warm strip under the overhang (front + both sides) washing the floor
+const stripM = [];
+for (const [w, d, x, z] of [[1.9, .01, -.95, 2.12], [.01, 1.95, -.97, .12], [.01, 1.95, .97, .12]]) { const m = box(w, .008, d, emis('#000', 0), x, .13, z, { cast: false }); stripM.push(m); }
+const glows = [[0, 2.25, 1.9, .3], [-1.15, 1.1, .3, 1.9], [1.15, 1.1, .3, 1.9]].map(([x, z, w, d]) => { const l = new THREE.RectAreaLight('#ffbe7a', 0, w, d); l.position.set(x, .12, z); l.lookAt(x, 0, z); scene.add(l); return l; });
+// motion-sensor night path: two small floor-level lights from the bed toward the door
+const sensor = box(.05, .03, .03, M.black, .9, .12, 2.13, { cast: false });
+const path = [[1.6, 2.6], [2.3, 3.3]].map(([x, z]) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(.12, .05), emis('#000', 0)); m.position.set(RW - .002, .25, z); m.rotation.y = -Math.PI / 2; scene.add(m); const l = new THREE.SpotLight('#ffb15c', 0, 2.5, 1.1, .9, 1.3); l.position.set(RW - .05, .26, z); l.target.position.set(RW - .9, 0, z); scene.add(l, l.target); return { m, l }; });
+const hemi = new THREE.HemisphereLight('#d8dcf0', '#2a2018', .03); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [1.7, 1.55, 4.6], tgt: [-.3, .6, .9], fov: 62 },      // the bedroom
+  f: { pos: [1.6, .35, 3.2], tgt: [-.2, .2, 1.4], fov: 55 },       // low: the gap under the bed and the glow
+  n: { pos: [-1.6, 1.4, 4.4], tgt: [1.2, .4, 2.4], fov: 64 },      // night: from the bed side toward the door
+};
+// state tokens joined by '+':  off · ceil (one ceiling lamp) · glow:<0..1> (under-bed strip) · path (motion-sensor lights to the door)
+window.setState = (state) => {
+  const T = Object.fromEntries(state.split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const ce = T.ceil ?? 0, gl = T.glow ?? 0, pa = T.path ?? 0;
+  ceilL.intensity = 12 * ce; ceilLamp.material = ce ? emis('#f2f7ff', 3) : emis('#000', 0);
+  glows.forEach((l) => l.intensity = 16 * gl); stripM.forEach((m) => m.material = gl ? emis('#ffd09a', 6 * gl) : emis('#000', 0));
+  path.forEach(({ m, l }) => { l.intensity = 6 * pa; m.material = pa ? emis('#ffb15c', 6) : emis('#000', 0); });
+  hemi.intensity = .03 + .1 * ce + .03 * gl; scene.environmentIntensity = .02 + .08 * ce;
+  renderer.toneMappingExposure = 1.0;
+};
