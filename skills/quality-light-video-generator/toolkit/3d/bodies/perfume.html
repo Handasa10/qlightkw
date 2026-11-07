@@ -1,0 +1,60 @@
+// ===== Perfume shop: one flat ceiling panel (glass looks dead) vs hidden light under every shelf + backlit glass + a narrow 15° spot on the hero bottle =====
+// display wall z=0 (x -2..2): 4 glass shelves with backlit panel behind, bottles on each; a hero plinth in front centre with the star bottle; ceiling 3.0
+const CH = 3.0, RW = 2.6, RD = 5.0;
+plane(RW * 2, RD, new THREE.MeshStandardMaterial({ map: marbleTex, color: '#e7e1d8', roughness: .15 }), [0, 0, RD / 2], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#2b2622', roughness: .8 });
+box(RW * 2, CH, .1, wallM, -RW, 0, -.1); box(.1, CH, RD, new THREE.MeshStandardMaterial({ map: plasterTex, color: '#d8cfc2', roughness: .9 }), -RW - .1, 0, -.1); box(.1, CH, RD, new THREE.MeshStandardMaterial({ map: plasterTex, color: '#d8cfc2', roughness: .9 }), RW, 0, -.1);
+box(RW * 2 + .2, .1, RD, M.ceil, -RW - .1, CH, -.1, { cast: false });
+// display unit: dark wood frame, backlit panel, glass shelves with a hidden strip under the front edge of each
+const frameM = new THREE.MeshStandardMaterial({ color: '#3a2a1e', roughness: .45 });
+box(4.2, 2.5, .05, frameM, -2.1, .3, .0); box(.1, 2.5, .4, frameM, -2.1, .3, 0); box(.1, 2.5, .4, frameM, 2.0, .3, 0); box(4.2, .3, .45, frameM, -2.1, 0, 0);
+const backM = new THREE.MeshStandardMaterial({ color: '#f3ead9', emissive: '#ffe2b8', emissiveIntensity: 0, roughness: .6 });
+const back = box(4.0, 2.3, .02, backM, -2.0, .4, .05, { cast: false });
+const glassM = new THREE.MeshPhysicalMaterial({ color: '#e8f0f2', roughness: .02, transmission: .9, transparent: true, opacity: .35, thickness: .01 });
+const shelfYs = [.75, 1.25, 1.75, 2.25];
+const shelfStrips = [], shelfLights = [];
+for (const y of shelfYs) {
+  box(3.9, .015, .34, glassM, -1.95, y, .06, { cast: false });
+  const st = box(3.8, .006, .012, emis('#000', 0), -1.9, y - .01, .36, { cast: false }); shelfStrips.push(st);
+  const l = new THREE.RectAreaLight('#ffe6c4', 0, 3.8, .04); l.position.set(0, y - .02, .3); l.lookAt(0, y - 1, .15); scene.add(l); shelfLights.push(l);
+}
+// perfume bottles: faceted glass bodies with metal caps, amber / clear / rose
+const tints = ['#d9a24a', '#f2efe8', '#d78aa0', '#7fb3a6', '#2a2a2a', '#c9b37a'];
+const capM = new THREE.MeshStandardMaterial({ color: '#c9a063', metalness: 1, roughness: .2 });
+const bottle = (x, y, z, s, tint) => {
+  const m = new THREE.MeshPhysicalMaterial({ color: tint, roughness: .03, transmission: .75, thickness: .05, ior: 1.5, transparent: true, opacity: .92, clearcoat: 1 });
+  const b = new THREE.Mesh(new THREE.CylinderGeometry(.045 * s, .05 * s, .12 * s, 8), m); b.position.set(x, y + .06 * s, z); b.castShadow = true; scene.add(b);
+  const c = new THREE.Mesh(new THREE.CylinderGeometry(.022 * s, .022 * s, .045 * s, 16), capM); c.position.set(x, y + .14 * s, z); scene.add(c);
+};
+shelfYs.forEach((y, r) => { for (let i = 0; i < 9; i++) bottle(-1.7 + i * .42 + (r % 2) * .1, y + .015, .2, 1 + R() * .3, tints[(i + r) % tints.length]); });
+// hero plinth with the star bottle and a small box
+box(.6, 1.0, .6, new THREE.MeshStandardMaterial({ color: '#f2ede4', roughness: .3 }), -.3, 0, 1.4, { r: .02 });
+bottle(0, 1.0, 1.7, 2.6, '#d9a24a');
+box(.22, .14, .1, new THREE.MeshStandardMaterial({ color: '#1d1a17', roughness: .5 }), .08, 1.0, 1.55, { r: .01 });
+// counter on the right, a mirror and a plant
+box(1.4, .95, .6, frameM, 1.0, 0, 3.0, { r: .02 }); box(1.45, .04, .65, new THREE.MeshStandardMaterial({ map: marbleTex.clone(), color: '#efe9e0', roughness: .2 }), .98, .95, 2.98);
+plant(-2.2, 2.6, 1.6, .5);
+// BEFORE: one flat cold ceiling panel
+const panel = new THREE.Mesh(new THREE.PlaneGeometry(1.2, .6), emis('#000', 0)); panel.rotation.x = Math.PI / 2; panel.position.set(0, CH - .005, 2.0); scene.add(panel);
+const panelL = new THREE.RectAreaLight('#eef4ff', 0, 1.2, .6); panelL.position.set(0, CH - .01, 2.0); panelL.lookAt(0, 0, 2.0); scene.add(panelL);
+// AFTER: a narrow 15° spot on the hero bottle (from a track on the ceiling)
+box(3.0, .04, .04, M.black, -1.5, CH - .04, 2.2, { cast: false });
+const head = new THREE.Mesh(new THREE.CylinderGeometry(.04, .05, .16, 20), M.black); head.position.set(0, CH - .14, 2.2); head.rotation.x = -.5; scene.add(head);
+const hero = new THREE.SpotLight('#fff0dc', 0, 5, 12 * Math.PI / 180, .3, 1.0); hero.position.set(0, CH - .2, 2.15); hero.target.position.set(0, 1.3, 1.7); hero.castShadow = true; scene.add(hero, hero.target);
+const hemi = new THREE.HemisphereLight('#f4ecdf', '#2a2018', .04); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [1.2, 1.6, 4.6], tgt: [-.2, 1.3, .6], fov: 60 },     // the shop wall and the plinth
+  s: { pos: [.6, 1.45, 1.4], tgt: [-.3, 1.5, .1], fov: 55 },       // close on the shelves
+  h: { pos: [.5, 1.35, 2.6], tgt: [0, 1.2, 1.7], fov: 42 },        // the hero bottle on the plinth
+};
+// state tokens joined by '+':  off · panel (flat ceiling panel) · shelves:<0..1> (shelf strips bottom to top + backlight) · hero (15° spot) · all (= shelves+hero)
+window.setState = (state) => {
+  const T = Object.fromEntries(state.replace('all', 'shelves+hero').split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const pa = T.panel ?? 0, sh = T.shelves ?? 0, he = T.hero ?? 0;
+  panelL.intensity = 14 * pa; panel.material = pa ? emis('#f4f8ff', 2.5) : emis('#000', 0);
+  shelfLights.forEach((l, i) => { const k = Math.max(0, Math.min(1, (sh * 1.1 - i / 4) / .3)); l.intensity = 9 * k; shelfStrips[i].material = k ? emis('#ffe2b8', 6 * k) : emis('#000', 0); });
+  backM.emissiveIntensity = .35 * Math.min(1, sh);
+  hero.intensity = 70 * he;
+  hemi.intensity = .04 + .08 * pa + .03 * Math.max(sh, he); scene.environmentIntensity = .03 + .06 * pa + .03 * Math.max(sh, he);
+  renderer.toneMappingExposure = 1.0;
+};
