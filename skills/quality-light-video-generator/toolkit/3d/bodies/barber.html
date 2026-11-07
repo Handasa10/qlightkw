@@ -1,0 +1,71 @@
+// ===== Barber shop: one spot over the client's head (hard shadow down the face) vs 4000 K CRI 90 light bars each side of the mirror + a ceiling linear =====
+// back wall z=0 with two stations (mirrors centred at x = -1.2 and 1.2), chairs in front at z ~1.05, checker floor, ceiling 3.0
+// no faces: the client is a plain faceless figure under a cape; the mirror reflects via a cube camera
+const CH = 3.0, RW = 2.8, RD = 5.0;
+const tileTex = canvasTex(512, 512, (g, w, h) => { for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) { g.fillStyle = (x + y) % 2 ? '#1d1d1f' : '#e9e6df'; g.fillRect(x * 64, y * 64, 64, 64); } }, [4, 4]);
+plane(RW * 2, RD, new THREE.MeshStandardMaterial({ map: tileTex, roughness: .35 }), [0, 0, RD / 2], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#3c4a46', roughness: .85 });
+const sideM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#d9d4cb', roughness: .9 });
+box(RW * 2, CH, .1, wallM, -RW, 0, -.1); box(.1, CH, RD + .1, sideM, -RW - .1, 0, -.1); box(.1, CH, RD + .1, sideM, RW, 0, -.1);
+box(RW * 2 + .2, .1, RD + .1, M.ceil, -RW - .1, CH, -.1, { cast: false });
+box(RW * 2, .9, .03, new THREE.MeshStandardMaterial({ map: oakTex, color: '#7a5a3c', roughness: .6 }), -RW, 0, 0); // wood wainscot
+// mirrors with a reflection (cube camera), counters, tools
+const cubeRT = new THREE.WebGLCubeRenderTarget(512); const cubeCam = new THREE.CubeCamera(.05, 20, cubeRT); cubeCam.position.set(-1.2, 1.35, 1.9); scene.add(cubeCam);
+const mirrorM = new THREE.MeshStandardMaterial({ color: '#e3e8ec', metalness: 1, roughness: .02, envMap: cubeRT.texture });
+const mirrors = [-1.2, 1.2].map((x) => { box(1.0, 1.3, .03, M.black, x - .5, .98, .02, { cast: false }); return box(.92, 1.22, .02, mirrorM, x - .46, 1.02, .05, { cast: false }); });
+const ctrM = new THREE.MeshStandardMaterial({ color: '#f1efe9', roughness: .3 });
+const bottleMs = ['#2b6cb0', '#c05621', '#2f855a', '#e2e8f0'].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: .3, metalness: .1 }));
+for (const x of [-1.2, 1.2]) {
+  box(1.2, .05, .4, ctrM, x - .6, .9, .02); box(1.2, .85, .02, new THREE.MeshStandardMaterial({ color: '#1f2523', roughness: .6 }), x - .6, .05, .4);
+  for (let i = 0; i < 5; i++) { const b = new THREE.Mesh(new THREE.CylinderGeometry(.035, .04, .16 + R() * .08, 16), bottleMs[i % 4]); b.position.set(x - .45 + i * .11, 1.03, .18); b.castShadow = true; scene.add(b); }
+  box(.18, .05, .08, M.black, x + .25, .95, .15); box(.12, .04, .05, chromeM(), x + .3, .99, .25);
+}
+function chromeM() { return new THREE.MeshStandardMaterial({ color: '#cfd3d6', metalness: 1, roughness: .2 }); }
+// barber chairs + the faceless client under a cape on the left chair
+const leather = new THREE.MeshStandardMaterial({ color: '#1a1a1c', roughness: .4 });
+for (const x of [-1.2, 1.2]) {
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(.28, .32, .06, 32), chromeM()); base.position.set(x, .03, 1.15); scene.add(base);
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .38, 16), chromeM()); post.position.set(x, .25, 1.15); scene.add(post);
+  box(.56, .14, .52, leather, x - .28, .44, .9, { r: .05 }); box(.56, .62, .1, leather, x - .28, .56, 1.38, { r: .04 }); box(.24, .14, .08, leather, x - .12, 1.2, 1.4, { r: .03 });
+  for (const s of [-1, 1]) box(.07, .06, .48, chromeM(), x + s * .3 - .035, .74, .92);
+  box(.4, .04, .2, chromeM(), x - .2, .2, .62);
+}
+const capeM = new THREE.MeshStandardMaterial({ color: '#2a2d33', roughness: .7 });
+const cape = new THREE.Mesh(new THREE.ConeGeometry(.42, .9, 32, 1, true), capeM); cape.position.set(-1.2, .95, 1.12); cape.castShadow = true; scene.add(cape);
+const skinM = new THREE.MeshStandardMaterial({ color: '#b98d6b', roughness: .55 });
+const head = new THREE.Mesh(new THREE.SphereGeometry(.11, 32, 24), skinM); head.scale.set(1, 1.18, 1.05); head.position.set(-1.2, 1.55, 1.12); head.castShadow = true; scene.add(head);
+const hair = new THREE.Mesh(new THREE.SphereGeometry(.116, 32, 16, 0, Math.PI * 2, 0, Math.PI * .45), new THREE.MeshStandardMaterial({ color: '#1a1410', roughness: .8 })); hair.scale.set(1, 1.18, 1.05); hair.position.set(-1.2, 1.555, 1.125); scene.add(hair);
+const neck = new THREE.Mesh(new THREE.CylinderGeometry(.05, .06, .1, 16), skinM); neck.position.set(-1.2, 1.4, 1.12); scene.add(neck);
+// waiting bench and a plant by the right wall
+box(.45, .45, 1.6, new THREE.MeshStandardMaterial({ map: fabricTex, color: '#6b4a32', roughness: .8 }), RW - .5, 0, 2.4, { r: .04 });
+plant(RW - .35, 4.4, 1.5, .45);
+// BEFORE: one warm spot right above the client's head
+const spot = new THREE.SpotLight('#ffd6a0', 0, 5, 22 * Math.PI / 180, .4, 1.3); spot.position.set(-1.2, CH - .05, 1.15); spot.target.position.set(-1.2, 0, 1.15); spot.castShadow = true; spot.shadow.mapSize.set(1024, 1024); scene.add(spot, spot.target);
+const spotLens = new THREE.Mesh(new THREE.CircleGeometry(.04, 20), emis('#000', 0)); spotLens.rotation.x = Math.PI / 2; spotLens.position.set(-1.2, CH - .002, 1.15); scene.add(spotLens);
+// AFTER: vertical 4000 K light bars each side of each mirror + a ceiling linear along the stations
+const bars = [];
+for (const mx of [-1.2, 1.2]) for (const s of [-1, 1]) {
+  const x = mx + s * .58;
+  const m = box(.05, 1.22, .04, emis('#000', 0), x - .025, 1.02, .04, { cast: false });
+  const l = new THREE.RectAreaLight('#fff6ec', 0, .05, 1.22); l.position.set(x, 1.63, .07); l.lookAt(x, 1.63, 3); scene.add(l);
+  bars.push({ m, l });
+}
+const linLens = box(4.2, .01, .05, emis('#000', 0), -2.1, CH - .02, 1.7, { cast: false }); box(4.3, .05, .1, M.black, -2.15, CH - .05, 1.67, { cast: false });
+const linL = new THREE.RectAreaLight('#fff6ec', 0, 4.2, .06); linL.position.set(0, CH - .03, 1.72); linL.lookAt(0, 0, 1.72); scene.add(linL);
+const hemi = new THREE.HemisphereLight('#e6e2da', '#2a2622', .04); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [2.1, 1.65, 4.7], tgt: [-.6, 1.25, .6], fov: 60 },     // the shop
+  c: { pos: [-.95, 1.6, 2.7], tgt: [-1.2, 1.4, 0], fov: 50 },       // behind the client: the mirror and the bars
+  s: { pos: [.0, 1.5, 1.75], tgt: [-1.2, 1.45, 1.1], fov: 40 },     // close on the head from the side: shadows or not
+};
+// state tokens joined by '+':  off · spot (one spot over the head) · mirror (side bars) · linear (ceiling linear) · all (= mirror+linear)
+window.setState = (state) => {
+  const T = Object.fromEntries(state.replace('all', 'mirror+linear').split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const sp = T.spot ?? 0, mr = T.mirror ?? 0, ln = T.linear ?? 0;
+  spot.intensity = 26 * sp; spotLens.material = sp ? emis('#ffe2b8', 6) : emis('#000', 0);
+  bars.forEach(({ m, l }) => { l.intensity = 30 * mr; m.material = mr ? emis('#fff4e8', 5) : emis('#000', 0); });
+  linL.intensity = 45 * ln; linLens.material = ln ? emis('#fff4e8', 4) : emis('#000', 0);
+  hemi.intensity = .04 + .06 * Math.max(mr, ln); scene.environmentIntensity = .03 + .05 * Math.max(mr, ln);
+  renderer.toneMappingExposure = 1.0;
+  mirrors.forEach((m) => m.visible = false); cubeCam.update(renderer, scene); mirrors.forEach((m) => m.visible = true);
+};
