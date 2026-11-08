@@ -1,0 +1,68 @@
+// ===== Winter desert camp (kashta) at night: one harsh white floodlight on a pole vs warm 2700 K string lights + lanterns over the seating, a small aimed floodlight for the path to the cars; dust for IP65 =====
+// sand y=0; tent at the back (x -2..2, z -3..-0.5); majlis seating on a carpet in front of it (z 0..2.5); cars to the right (x 4..6, z 2..5); night sky
+const sandTex = canvasTex(1024, 1024, (g, w, h) => { g.fillStyle = '#c9a777'; g.fillRect(0, 0, w, h); for (let i = 0; i < 20000; i++) { const c = 170 + R() * 50; g.fillStyle = `rgba(${c},${c * .82},${c * .58},.35)`; g.fillRect(R() * w, R() * h, 2, 2); } }, [30, 30]);
+plane(150, 150, new THREE.MeshStandardMaterial({ map: sandTex, roughness: 1 }), [0, 0, 0], [-Math.PI / 2, 0, 0]);
+// tent: a box body with a pitched roof, beige canvas, dark entrance
+const canvasM = new THREE.MeshStandardMaterial({ color: '#e2d3b4', roughness: .95, side: THREE.DoubleSide });
+box(4.0, 1.8, 2.5, canvasM, -2.0, 0, -3.0);
+const roof = new THREE.Mesh(new THREE.CylinderGeometry(.01, 2.4, 1.0, 4, 1), canvasM); roof.rotation.y = Math.PI / 4; roof.scale.set(1.18, 1, .74); roof.position.set(0, 2.3, -1.75); roof.castShadow = true; scene.add(roof);
+box(1.2, 1.5, .02, new THREE.MeshStandardMaterial({ color: '#2a1f15', roughness: 1 }), -.6, 0, -.49, { cast: false });
+// majlis: carpet, floor cushions on three sides, a low table with a dallah and cups, a fire pit
+const campRugTex = canvasTex(1024, 768, (g, w, h) => { g.fillStyle = '#8a2f2a'; g.fillRect(0, 0, w, h); g.strokeStyle = '#e0b56a'; g.lineWidth = 18; g.strokeRect(30, 30, w - 60, h - 60); g.strokeStyle = '#1f3a5c'; g.lineWidth = 10; g.strokeRect(70, 70, w - 140, h - 140); for (let i = 0; i < 6; i++) { g.fillStyle = i % 2 ? '#e0b56a' : '#1f3a5c'; g.beginPath(); const x = 180 + i * 130, y = h / 2; g.moveTo(x, y - 60); g.lineTo(x + 50, y); g.lineTo(x, y + 60); g.lineTo(x - 50, y); g.fill(); } }, [1, 1]);
+plane(4.4, 3.2, new THREE.MeshStandardMaterial({ map: campRugTex, roughness: 1 }), [0, .01, 1.2], [-Math.PI / 2, 0, 0]);
+const cushM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#6b2a26', roughness: .95 });
+const backM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#3b4f6b', roughness: .95 });
+box(3.8, .15, .6, cushM, -1.9, .01, -.3, { r: .05 }); box(3.8, .4, .2, backM, -1.9, .16, -.4, { r: .06 });
+for (const x of [-2.1, 1.5]) { box(.6, .15, 2.6, cushM, x, .01, .3, { r: .05 }); box(.2, .4, 2.6, backM, x + (x < 0 ? 0 : .4), .16, .3, { r: .06 }); }
+box(1.0, .25, .6, M.darkWood, -.5, 0, 1.0, { r: .02 });
+const brassM = new THREE.MeshStandardMaterial({ color: '#c9a063', metalness: 1, roughness: .25 });
+const dallah = new THREE.Mesh(new THREE.CylinderGeometry(.06, .1, .22, 20), brassM); dallah.position.set(-.2, .36, 1.25); dallah.castShadow = true; scene.add(dallah);
+for (const x of [.05, .15, .25]) { const c = new THREE.Mesh(new THREE.CylinderGeometry(.025, .02, .04, 12), new THREE.MeshStandardMaterial({ color: '#f2efe8', roughness: .4 })); c.position.set(x - .4, .27, 1.05); scene.add(c); }
+const pit = new THREE.Mesh(new THREE.CylinderGeometry(.35, .3, .2, 24), new THREE.MeshStandardMaterial({ color: '#2b2622', metalness: .4, roughness: .7 })); pit.position.set(0, .1, 2.4); scene.add(pit);
+const embers = new THREE.Mesh(new THREE.CircleGeometry(.28, 24), emis('#ff6a1f', 1.5)); embers.rotation.x = -Math.PI / 2; embers.position.set(0, .21, 2.4); scene.add(embers);
+const fireL = new THREE.PointLight('#ff7a2a', 1.2, 4, 2); fireL.position.set(0, .5, 2.4); scene.add(fireL);
+// cars on the right (simple shapes)
+const carM = new THREE.MeshStandardMaterial({ color: '#d8dadd', metalness: .6, roughness: .35 });
+for (const [x, z] of [[4.6, 2.2], [5.2, 4.6]]) { box(1.8, .7, 4.2, carM, x, .3, z, { r: .12 }); box(1.6, .5, 2.2, new THREE.MeshStandardMaterial({ color: '#1c2229', roughness: .2, metalness: .3 }), x + .1, .95, z + .9, { r: .1 }); for (const dz of [.6, 3.4]) for (const dx of [0, 1.7]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.33, .33, .2, 20), M.black); w.rotation.z = Math.PI / 2; w.position.set(x + dx + .05, .33, z + dz); scene.add(w); } }
+// night sky dome-ish backdrop
+const skyTex = canvasTex(2048, 1024, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#02040a'); gr.addColorStop(1, '#1a2036'); g.fillStyle = gr; g.fillRect(0, 0, w, h); for (let i = 0; i < 1600; i++) { g.fillStyle = `rgba(255,255,255,${.3 + R() * .7})`; g.fillRect(R() * w, R() * h * .8, 1.5, 1.5); } }, [1, 1]);
+const skyDome = new THREE.Mesh(new THREE.SphereGeometry(70, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ map: skyTex, toneMapped: false, side: THREE.BackSide })); skyTex.wrapS = THREE.RepeatWrapping; skyTex.repeat.set(3, 1); scene.add(skyDome);
+// BEFORE: one harsh white floodlight on a pole by the tent
+box(.08, 4.0, .08, M.black, 2.4, 0, -.2);
+const floodHead = box(.4, .25, .1, M.black, 2.25, 3.9, -.2);
+const floodLens = box(.36, .21, .01, emis('#000', 0), 2.27, 3.92, -.1, { cast: false });
+const flood = new THREE.SpotLight('#f4f7ff', 0, 30, 60 * Math.PI / 180, .3, 1.0); flood.position.set(2.45, 3.95, 0); flood.target.position.set(-.5, 0, 1.5); flood.castShadow = true; scene.add(flood, flood.target);
+// AFTER: warm string lights over the seating (between the tent and two poles), lanterns, a small aimed floodlight for the path
+for (const [x, z] of [[-2.3, 3.0], [2.3, 3.0]]) box(.06, 2.6, .06, M.darkWood, x, 0, z);
+const bulbs = [], bulbLights = [];
+const strand = (ax, ay, az, bx, by, bz, n) => { for (let i = 0; i <= n; i++) { const t = i / n, sag = Math.sin(t * Math.PI) * .35; const p = new THREE.Vector3(ax + (bx - ax) * t, ay + (by - ay) * t - sag, az + (bz - az) * t); const b = new THREE.Mesh(new THREE.SphereGeometry(.04, 10, 8), emis('#000', 0)); b.position.copy(p); scene.add(b); bulbs.push(b); if (i % 3 === 1) { const l = new THREE.PointLight('#ffc070', 0, 3.5, 2); l.position.copy(p); scene.add(l); bulbLights.push(l); } } };
+strand(-1.9, 1.8, -.5, -2.3, 2.5, 3.0, 12); strand(1.9, 1.8, -.5, 2.3, 2.5, 3.0, 12); strand(-2.3, 2.5, 3.0, 2.3, 2.5, 3.0, 12); strand(-1.9, 1.8, -.5, 1.9, 1.8, -.5, 10);
+const lanterns = [[-1.8, 1.9], [1.3, .1], [-.9, 2.0]].map(([x, z]) => { const g = new THREE.Mesh(new THREE.CylinderGeometry(.08, .1, .25, 6), new THREE.MeshStandardMaterial({ color: '#fff', emissive: '#ffb45a', emissiveIntensity: 0, transparent: true, opacity: .9 })); g.position.set(x, .3, z); scene.add(g); const l = new THREE.PointLight('#ffb45a', 0, 2.5, 2); l.position.set(x, .4, z); scene.add(l); return { g, l }; });
+box(.2, .15, .15, M.black, 2.9, .05, 3.2);
+const pathL = new THREE.SpotLight('#ffe6c4', 0, 12, 22 * Math.PI / 180, .5, 1.2); pathL.position.set(3.0, .5, 3.25); pathL.target.position.set(3.9, 0, 6.8); scene.add(pathL, pathL.target);
+const pathLens = box(.01, .1, .1, emis('#000', 0), 3.1, .07, 3.22, { cast: false });
+// dust in the air for the IP65 close-up
+const dustM = new THREE.MeshBasicMaterial({ color: '#f3e2c4', transparent: true, opacity: 0, depthWrite: false });
+const dust = new THREE.InstancedMesh(new THREE.SphereGeometry(.01, 6, 4), dustM, 900); const dd = new THREE.Object3D();
+for (let i = 0; i < 900; i++) { dd.position.set(2.6 + (R() - .5) * 3.4, .03 + R() * 3.8, 1.6 + (R() - .5) * 4.4); dd.updateMatrix(); dust.setMatrixAt(i, dd.matrix); } scene.add(dust);
+const moon = new THREE.DirectionalLight('#8fa3d0', .25); moon.position.set(-6, 10, 6); scene.add(moon);
+const hemi = new THREE.HemisphereLight('#6f84b8', '#2a2018', .06); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [1.6, 2.0, 8.0], tgt: [.2, 1.0, .5], fov: 58 },       // the camp
+  s: { pos: [1.5, 1.35, 4.6], tgt: [-.4, .5, .6], fov: 58 },         // the seating close
+  p: { pos: [-2.6, 2.6, 11.5], tgt: [4.4, .3, 4.4], fov: 50 },       // the path to the cars
+  d: { pos: [1.4, 3.1, 2.4], tgt: [2.35, 3.9, -.15], fov: 48 },    // the fixture up close, dust in the air
+};
+// state tokens joined by '+':  off · flood (harsh white floodlight) · warm:<0..1> (string lights + lanterns) · path (aimed floodlight to the cars) · dust · ip (the pole head re-lit as a warm IP65 floodlight) · all (= warm+path)
+window.setState = (state) => {
+  const T = Object.fromEntries(state.replace('all', 'warm+path').split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const ip = T.ip ?? 0, fl = T.flood ?? 0, wa = T.warm ?? 0, pa = T.path ?? 0, du = T.dust ?? 0;
+  flood.color.set(ip ? '#ffd2a0' : '#f4f7ff'); flood.intensity = ip ? 28 * ip : 75 * fl; floodLens.material = ip ? emis('#ffd2a0', 6) : fl ? emis('#f4f8ff', 8) : emis('#000', 0);
+  bulbs.forEach((b, i) => { const k = Math.max(0, Math.min(1, (wa * 1.1 - i / bulbs.length) / .2)); b.material = k ? emis('#ffc070', 6 * k) : emis('#000', 0); });
+  bulbLights.forEach((l, i) => { const k = Math.max(0, Math.min(1, (wa * 1.1 - i / bulbLights.length) / .2)); l.intensity = 3.0 * k; });
+  lanterns.forEach(({ g, l }) => { g.material.emissiveIntensity = 2.5 * Math.min(1, wa); l.intensity = 1.5 * Math.min(1, wa); });
+  pathL.intensity = 40 * pa; pathLens.material = pa ? emis('#ffe6c4', 6) : emis('#000', 0);
+  dustM.opacity = .45 * du;
+  hemi.intensity = .06 + .04 * fl; scene.environmentIntensity = .03;
+  renderer.toneMappingExposure = 1.0;
+};
