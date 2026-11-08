@@ -33,6 +33,9 @@ const glows = [[0, 2.25, 1.9, .3], [-1.15, 1.1, .3, 1.9], [1.15, 1.1, .3, 1.9]].
 const sensor = box(.05, .03, .03, M.black, .9, .12, 2.13, { cast: false });
 const path = [[1.6, 2.6], [2.3, 3.3]].map(([x, z]) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(.12, .05), emis('#000', 0)); m.position.set(RW - .002, .25, z); m.rotation.y = -Math.PI / 2; scene.add(m); const l = new THREE.SpotLight('#ffb15c', 0, 2.5, 1.1, .9, 1.3); l.position.set(RW - .05, .26, z); l.target.position.set(RW - .9, 0, z); scene.add(l, l.target); return { m, l }; });
 const hemi = new THREE.HemisphereLight('#d8dcf0', '#2a2018', .03); scene.add(hemi);
+// soft warm room fill for the 'after' states (the owner found the night scenes too dark)
+const fillL = new THREE.PointLight('#ffd2a0', 0, 9, 1.6); fillL.position.set(.3, 2.2, 2.4); scene.add(fillL);
+const lampL = [-1.38, 1.38].map((x) => { const l = new THREE.PointLight('#ffc98a', 0, 3, 2); l.position.set(x, .85, .3); scene.add(l); return l; });
 const VIEWS = {
   w: { pos: [1.7, 1.55, 4.6], tgt: [-.3, .6, .9], fov: 62 },      // the bedroom
   f: { pos: [1.6, .35, 3.2], tgt: [-.2, .2, 1.4], fov: 55 },       // low: the gap under the bed and the glow
@@ -43,8 +46,8 @@ window.setState = (state) => {
   const T = Object.fromEntries(state.split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
   const ce = T.ceil ?? 0, gl = T.glow ?? 0, pa = T.path ?? 0;
   ceilL.intensity = 12 * ce; ceilLamp.material = ce ? emis('#f2f7ff', 3) : emis('#000', 0);
-  glows.forEach((l) => l.intensity = 16 * gl); stripM.forEach((m) => m.material = gl ? emis('#ffd09a', 6 * gl) : emis('#000', 0));
+  glows.forEach((l) => l.intensity = 26 * gl); fillL.intensity = 2.2 * Math.min(1, gl); lampL.forEach((l) => l.intensity = 1.2 * Math.min(1, gl)); stripM.forEach((m) => m.material = gl ? emis('#ffd09a', 6 * gl) : emis('#000', 0));
   path.forEach(({ m, l }) => { l.intensity = 6 * pa; m.material = pa ? emis('#ffb15c', 6) : emis('#000', 0); });
-  hemi.intensity = .03 + .1 * ce + .03 * gl; scene.environmentIntensity = .02 + .08 * ce;
+  hemi.intensity = .03 + .1 * ce + .1 * gl; scene.environmentIntensity = .02 + .08 * ce + .06 * gl;
   renderer.toneMappingExposure = 1.0;
 };
