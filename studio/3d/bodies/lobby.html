@@ -1,0 +1,91 @@
+// ===== Apartment-building lobby: cold flat ceiling panels (feels like a car park) vs a designed scheme: hidden 3000 K strip in a ceiling cove, up/down wall sconces, glare-free downlights over the mailboxes and the concierge desk =====
+// back wall z=0 with the lift (x -0.9..0.9) on a wood-clad feature wall; mailboxes on the left wall; concierge desk on the right; glass entrance on the front wall (z=6.9); ceiling 3.0 with a gypsum drop band around it (the cove)
+const CH = 3.0, RW = 3.2, RD = 6.9;
+marbleTex.repeat.set(4, 4);
+plane(RW * 2, RD, new THREE.MeshStandardMaterial({ map: marbleTex, color: '#e6e1d8', roughness: .18 }), [0, 0, RD / 2], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#e8e3dc', roughness: .9 });
+box(RW * 2, CH, .1, wallM, -RW, 0, -.12); box(.1, CH, RD + .12, wallM, -RW - .1, 0, -.12); box(.1, CH, RD + .12, wallM, RW, 0, -.12);
+box(RW * 2 + .2, .1, RD + .12, M.ceil, -RW - .1, CH, -.12, { cast: false });
+// front wall with a glass double door in the middle; dark street outside
+box(RW - 1.0, CH, .1, wallM, -RW, 0, RD); box(RW - 1.0, CH, .1, wallM, 1.0, 0, RD); box(2.0, CH - 2.4, .1, wallM, -1.0, 2.4, RD);
+const steelM0 = new THREE.MeshStandardMaterial({ color: '#c9ccd0', metalness: .9, roughness: .3 });
+const glassM = new THREE.MeshPhysicalMaterial({ color: '#9fb3bf', roughness: .05, transmission: .6, transparent: true, opacity: .35 });
+box(.98, 2.4, .02, glassM, -1.0, 0, RD + .04, { cast: false }); box(.98, 2.4, .02, glassM, .02, 0, RD + .04, { cast: false });
+for (const x of [-1.0, -.02, .98]) box(.04, 2.4, .06, M.black, x, 0, RD + .02);
+plane(14, 8, new THREE.MeshBasicMaterial({ color: '#16202f' }), [0, 3, RD + 5], [0, Math.PI, 0]);
+plane(14, 8, new THREE.MeshStandardMaterial({ color: '#2a2b2d', roughness: .9 }), [0, -.01, RD + 4], [-Math.PI / 2, 0, 0]);   // the pavement outside
+for (const [x, y] of [[-2.2, 2.2], [1.6, 2.4], [3.4, 1.9], [-4.2, 2.0]]) box(.08, .08, .02, emis('#ffc77a', 4), x, y, RD + 4.9, { cast: false });   // street lights far away
+for (const x of [-.12, .1]) box(.03, .9, .04, steelM0, x, .8, RD + .07, { cast: false });   // door pull handles
+// feature wall behind the lift: vertical wood cladding, the lift doors in brushed steel, a small floor indicator
+const slatM = new THREE.MeshStandardMaterial({ map: oakTex, color: '#a87a50', roughness: .55 });
+box(3.6, CH - .02, .04, slatM, -1.8, .01, -.02);
+const steelM = new THREE.MeshStandardMaterial({ color: '#c9ccd0', metalness: .9, roughness: .3 });
+box(1.8, 2.3, .06, new THREE.MeshStandardMaterial({ color: '#2a2b2e', metalness: .5, roughness: .4 }), -.9, 0, .02);
+box(.78, 2.15, .04, steelM, -.8, 0, .08); box(.78, 2.15, .04, steelM, .02, 0, .08);
+box(.3, .1, .03, emis('#ff9a3a', 1.2), -.15, 2.4, .05, { cast: false });
+box(.08, .14, .03, M.black, 1.0, 1.1, .05);
+// mailboxes on the left wall: a 6 x 5 grid of small brushed doors
+const mbM = new THREE.MeshStandardMaterial({ color: '#c3c6cb', metalness: .55, roughness: .4 });
+box(.12, 1.3, 2.1, new THREE.MeshStandardMaterial({ color: '#3b3d41', roughness: .6 }), -RW, .55, 1.6);
+for (let r = 0; r < 5; r++) for (let c = 0; c < 6; c++) box(.03, .22, .31, mbM, -RW + .12, .6 + r * .25, 1.65 + c * .34);
+// concierge desk on the right
+const deskM = new THREE.MeshStandardMaterial({ color: '#efebe5', roughness: .45 });
+box(.7, 1.05, 1.8, deskM, RW - 1.3, 0, 2.2, { r: .02 });
+box(.85, .05, 1.95, new THREE.MeshStandardMaterial({ map: marbleTex.clone(), color: '#4b4541', roughness: .2 }), RW - 1.4, 1.05, 2.12);
+box(.6, .75, 1.2, M.darkWood, RW - .55, 0, 2.5);
+// bench and plants near the entrance
+box(1.6, .42, .5, new THREE.MeshStandardMaterial({ map: fabricTex, color: '#5a4b3e', roughness: .9 }), -RW + .2, 0, 5.0, { r: .05 });
+plant(-2.6, 6.3, 1.5, .45); plant(2.6, 6.3, 1.5, .45);
+// the ceiling: a gypsum drop band 0.55 m wide around the room, its inner edge hides an LED strip that washes the raised centre
+const gypM = new THREE.MeshStandardMaterial({ color: '#f2f0ec', roughness: .9 });
+const B = .55, DY = 2.72, DH = .12;
+box(RW * 2, DH, B, gypM, -RW, DY, -.12, { cast: false }); box(RW * 2, DH, B, gypM, -RW, DY, RD - B, { cast: false });
+box(B, DH, RD - 2 * B + .12, gypM, -RW, DY, -.12 + B, { cast: false }); box(B, DH, RD - 2 * B + .12, gypM, RW - B, DY, -.12 + B, { cast: false });
+// upstand lip on the inner edge so the strip stays hidden from below
+const ix0 = -RW + B, ix1 = RW - B, iz0 = -.12 + B, iz1 = RD - B;
+box(ix1 - ix0, .08, .03, gypM, ix0, DY + DH, iz0, { cast: false }); box(ix1 - ix0, .08, .03, gypM, ix0, DY + DH, iz1 - .03, { cast: false });
+box(.03, .08, iz1 - iz0, gypM, ix0, DY + DH, iz0, { cast: false }); box(.03, .08, iz1 - iz0, gypM, ix1 - .03, DY + DH, iz0, { cast: false });
+const coveStrips = [], coveLights = [];
+const cove = (x, z, w, d, lx, lz) => { const s = box(w, .006, d, emis('#000', 0), x, DY + DH + .002, z, { cast: false }); coveStrips.push(s); const l = new THREE.RectAreaLight('#ffd6a8', 0, Math.max(w, d), .08); l.position.set(x + w / 2, DY + DH + .02, z + d / 2); l.lookAt(lx, CH + 1, lz); scene.add(l); coveLights.push(l); };
+cove(ix0 - .1, iz0 - .06, ix1 - ix0 + .2, .03, 0, iz0 + .8);       // back edge, aims into the room
+cove(ix0 - .1, iz1 + .03, ix1 - ix0 + .2, .03, 0, iz1 - .8);       // front edge
+cove(ix0 - .06, iz0, .03, iz1 - iz0, ix0 + .8, (iz0 + iz1) / 2);   // left edge
+cove(ix1 + .03, iz0, .03, iz1 - iz0, ix1 - .8, (iz0 + iz1) / 2);   // right edge
+// BEFORE: flat cold 60 x 60 panels in the raised centre
+const panels = [], panelOff = new THREE.MeshStandardMaterial({ color: '#cfd0d2', roughness: .6 });
+for (const x of [-1.3, 0, 1.3]) for (const z of [1.5, 3.4, 5.3]) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(.6, .6), panelOff); m.rotation.x = Math.PI / 2; m.position.set(x, CH - .005, z); scene.add(m);
+  const l = new THREE.RectAreaLight('#eef4ff', 0, .6, .6); l.position.set(x, CH - .01, z); l.lookAt(x, 0, z); scene.add(l);
+  panels.push({ m, l });
+}
+// AFTER: up/down wall sconces flanking the lift and the entrance
+const scM = new THREE.MeshStandardMaterial({ color: '#1d1d20', metalness: .6, roughness: .4 });
+const sconces = [[-1.3, .06, 1], [1.3, .06, 1], [-1.4, RD - .06, -1], [1.4, RD - .06, -1]].map(([x, z, dir]) => {
+  box(.1, .3, .1, scM, x - .05, 1.75, z - .05);
+  const lens = [box(.08, .01, .08, emis('#000', 0), x - .04, 1.745, z - .04, { cast: false }), box(.08, .01, .08, emis('#000', 0), x - .04, 2.05, z - .04, { cast: false })];
+  const ls = [[1.7, 0], [2.1, CH]].map(([y, ty]) => { const s = new THREE.SpotLight('#ffcf95', 0, 4, 22 * Math.PI / 180, .6, 1.4); s.position.set(x, y, z + dir * .07); s.target.position.set(x, ty, z + dir * .2); scene.add(s, s.target); return s; });
+  return { lens, ls };
+});
+// AFTER: glare-free downlights (deep recessed, 3000 K) over the mailboxes, the desk and the lift
+const downs = [[-2.6, 2.3], [-2.6, 3.3], [2.4, 2.6], [2.4, 3.5], [0, 1.0]].map(([x, z]) => {
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .02, 24), emis('#000', 0)); ring.position.set(x, DY - .005, z); scene.add(ring);
+  const s = new THREE.SpotLight('#ffdcb0', 0, 6, 26 * Math.PI / 180, .55, 1.4); s.position.set(x, DY - .02, z); s.target.position.set(x + (x < -2 ? -.4 : x > 2 ? .2 : 0), 0, z); scene.add(s, s.target); return { ring, s };
+});
+const hemi = new THREE.HemisphereLight('#f4ecdf', '#3a3028', .05); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [1.0, 1.6, 6.4], tgt: [-.2, 1.4, .5], fov: 64 },       // the lobby from the entrance, toward the lift
+  m: { pos: [-.6, 1.5, 4.6], tgt: [-3.0, 1.15, 2.4], fov: 58 },    // the mailboxes, close
+  e: { pos: [.8, 1.55, 1.3], tgt: [-.1, 1.5, 6.9], fov: 64 },      // the entrance seen from inside (sconces either side of the door)
+  u: { pos: [.4, 1.35, 5.2], tgt: [0, 2.95, 1.8], fov: 64 },       // looking up at the ceiling cove
+};
+// state tokens joined by '+':  off · panels (flat cold panels) · cove:<0..1> (hidden strip, edge by edge) · sconce · downs · all (= cove+sconce+downs)
+window.setState = (state) => {
+  const T = Object.fromEntries(state.replace('all', 'cove+sconce+downs').split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const pn = T.panels ?? 0, cv = T.cove ?? 0, sc = T.sconce ?? 0, dn = T.downs ?? 0;
+  panels.forEach(({ m, l }) => { l.intensity = 9 * pn; m.material = pn ? emis('#f4f8ff', 2.5) : panelOff; });
+  coveLights.forEach((l, i) => { const k = Math.max(0, Math.min(1, (cv * 1.1 - i / 4) / .3)); l.intensity = 30 * k; coveStrips[i].material = k ? emis('#ffd6a8', 6 * k) : emis('#000', 0); });
+  sconces.forEach(({ lens, ls }) => { ls.forEach((s) => s.intensity = 9 * sc); lens.forEach((m) => m.material = sc ? emis('#ffcf95', 5) : emis('#000', 0)); });
+  downs.forEach(({ ring, s }) => { s.intensity = 16 * dn; ring.material = dn ? emis('#ffe2bf', 3) : emis('#000', 0); });
+  hemi.intensity = .05 + .08 * pn + .08 * Math.min(1, cv); scene.environmentIntensity = .03 + .06 * pn + .05 * Math.min(1, cv);
+  renderer.toneMappingExposure = 1.0;
+};
