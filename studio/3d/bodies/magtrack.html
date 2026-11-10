@@ -1,0 +1,76 @@
+// ===== Magnetic track (product hero): a slim black track recessed in a gypsum ceiling over a dining table and a framed picture; spot heads click on by magnet, one slides along, one is placed from below, a linear module and a small pendant join =====
+// wall z=0 with a picture; the track runs along x at z=1.2 in the ceiling (y=2.8); dining table under it; no people, no hands
+const CH = 2.8, RW = 3.0, RD = 5.0, TZ = 1.2;
+const floorTex = canvasTex(1024, 1024, (g, w, h) => { woodDraw('#9c7a58', '62,40,20')(g, w, h); }, [3, 3]);
+plane(RW * 2, RD, new THREE.MeshStandardMaterial({ map: floorTex, roughness: .5 }), [0, 0, RD / 2], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#e2ddd5', roughness: .9 });
+box(RW * 2, CH, .1, wallM, -RW, 0, -.12); box(.1, CH, RD, wallM, -RW - .1, 0, -.12); box(.1, CH, RD, wallM, RW, 0, -.12);
+box(RW * 2 + .2, .1, RD, M.ceil, -RW - .1, CH, -.12, { cast: false });
+// the picture on the wall (abstract warm colour fields, no text)
+const artTex = canvasTex(768, 512, (g, w, h) => { g.fillStyle = '#e9dcc6'; g.fillRect(0, 0, w, h); const cs = ['#c4693c', '#2f4d5c', '#d9a85b', '#8a3b2f']; for (let i = 0; i < 4; i++) { g.fillStyle = cs[i]; g.globalAlpha = .85; g.beginPath(); g.arc(160 + i * 150, 220 + (i % 2) * 90, 110 - i * 12, 0, 7); g.fill(); } g.globalAlpha = 1; }, [1, 1]);
+box(1.46, 1.0, .04, new THREE.MeshStandardMaterial({ color: '#1a1714', roughness: .5 }), -.73, 1.25, -.05);
+plane(1.36, .9, new THREE.MeshStandardMaterial({ map: artTex, roughness: .8 }), [0, 1.75, .0], [0, 0, 0]);
+// dining table + chairs + a vase
+const tabM = new THREE.MeshStandardMaterial({ map: oakTex, color: '#7a5636', roughness: .45 });
+box(1.8, .05, .9, tabM, -.9, .74, TZ - .45, { r: .01 });
+for (const [x, z] of [[-.8, TZ - .38], [.74, TZ - .38], [-.8, TZ + .32], [.74, TZ + .32]]) box(.06, .74, .06, tabM, x, 0, z);
+const chM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#b9ab98', roughness: .95 });
+for (const x of [-.6, .15]) { box(.45, .45, .45, chM, x, 0, TZ + .55, { r: .03 }); box(.45, .5, .06, chM, x, .45, TZ + .94, { r: .02 }); }
+const vase = new THREE.Mesh(new THREE.CylinderGeometry(.06, .09, .28, 24), new THREE.MeshStandardMaterial({ color: '#efe9e0', roughness: .3 })); vase.position.set(.2, .93, TZ); vase.castShadow = true; scene.add(vase);
+// the track: a black channel recessed flush in the ceiling, with a thin inner slot
+const blk = new THREE.MeshStandardMaterial({ color: '#141416', metalness: .4, roughness: .45 });
+box(4.2, .06, .06, blk, -2.1, CH - .055, TZ - .03, { cast: false });
+box(4.2, .005, .02, new THREE.MeshStandardMaterial({ color: '#2c2c30', metalness: .8, roughness: .3 }), -2.1, CH - .058, TZ - .01, { cast: false });
+// a spot head: magnetic adapter + tilted cylinder + lens; returns a handle we can move and switch
+const head = (aimX, aimY, aimZ) => {
+  const g = new THREE.Group(); scene.add(g);
+  const ad = new THREE.Mesh(new THREE.BoxGeometry(.07, .03, .05), blk); ad.position.y = -.015; g.add(ad);
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(.008, .008, .05, 12), blk); arm.position.y = -.05; g.add(arm);
+  const body = new THREE.Group(); body.position.y = -.08; g.add(body);
+  const c = new THREE.Mesh(new THREE.CylinderGeometry(.034, .034, .13, 28), blk); c.castShadow = true; body.add(c);
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(.026, 24), emis('#000', 0)); lens.rotation.x = Math.PI / 2; lens.position.y = -.066; body.add(lens);
+  const s = new THREE.SpotLight('#ffe2bc', 0, 7, 16 * Math.PI / 180, .45, 1.3); s.castShadow = true; scene.add(s, s.target);
+  return { g, body, lens, s, aim: new THREE.Vector3(aimX, aimY, aimZ) };
+};
+const spots = [head(-.25, 1.75, 0), head(.2, .78, TZ), head(-.55, .78, TZ)];
+const homeX = [-.33, -.02, .28];
+// linear module: a slim bar clipped into the track, opal diffuser
+const lin = new THREE.Group(); scene.add(lin);
+const linBody = new THREE.Mesh(new THREE.BoxGeometry(.6, .04, .03), blk); linBody.position.y = -.02; lin.add(linBody);
+const linLens = new THREE.Mesh(new THREE.PlaneGeometry(.58, .02), emis('#000', 0)); linLens.rotation.x = Math.PI / 2; linLens.position.y = -.041; lin.add(linLens);
+const linL = new THREE.RectAreaLight('#ffe6c8', 0, .58, .03); linL.position.y = -.045; linL.lookAt(0, -10, 0); lin.add(linL);
+lin.position.set(1.35, CH - .055, TZ);
+// small pendant hanging from the track over the table end
+const pend = new THREE.Group(); scene.add(pend);
+const cord = new THREE.Mesh(new THREE.CylinderGeometry(.003, .003, .9, 6), blk); cord.position.y = -.45; pend.add(cord);
+const shade = new THREE.Mesh(new THREE.ConeGeometry(.12, .14, 32, 1, true), new THREE.MeshStandardMaterial({ color: '#1a1a1c', metalness: .5, roughness: .4, side: THREE.DoubleSide })); shade.position.y = -.95; pend.add(shade);
+const bulb = new THREE.Mesh(new THREE.SphereGeometry(.03, 16, 12), emis('#000', 0)); bulb.position.y = -.99; pend.add(bulb);
+const pendL = new THREE.PointLight('#ffcf95', 0, 3, 2); pendL.position.y = -1.0; pend.add(pendL);
+pend.position.set(-1.35, CH - .055, TZ);
+const hemi = new THREE.HemisphereLight('#efe7dc', '#2a2018', .05); scene.add(hemi);
+const amb = new THREE.PointLight('#ffe8d0', 0, 9, 1.6); amb.position.set(.5, 2.3, 3.2); scene.add(amb);
+const VIEWS = {
+  c: { pos: [-.05, 1.9, 2.5], tgt: [-.05, 2.58, 1.2], fov: 56 },     // close, looking up at the track and the heads
+  w: { pos: [1.2, 1.95, 4.7], tgt: [-.05, 1.65, .7], fov: 66 },       // the room: track, table, picture
+  s: { pos: [.05, 2.4, 1.72], tgt: [-.1, 2.72, 1.2], fov: 40 },    // macro on one head and the track slot
+};
+// state tokens joined by '+':  n:<0..3> spot heads on the track · on (light them) · slide:<0..1> head 2 slides along the track to its place (default 1 = in place) · lift:<0..1> head 3 still below the track (1) / clicked on (0) · linear · pend · room (soft fill)
+window.setState = (state) => {
+  const T = Object.fromEntries(state.split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const n = T.n ?? 0, on = T.on ?? 0, sl = T.slide ?? 1, lf = T.lift ?? 0, li = T.linear ?? 0, pe = T.pend ?? 0, rm = T.room ?? 0;
+  spots.forEach((h, i) => {
+    const vis = i < n; h.g.visible = vis;
+    let x = homeX[i]; if (i === 1) x = .2 + (homeX[1] - .2) * sl;
+    const y = CH - .055 - (i === 2 ? .28 * lf : 0);
+    h.g.position.set(x, y, TZ);
+    const dir = new THREE.Vector3().subVectors(h.aim, new THREE.Vector3(x, y - .08, TZ)).normalize();
+    h.body.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir);
+    const lit = vis && on && !(i === 2 && lf > .05);
+    h.s.position.set(x, y - .1, TZ); h.s.target.position.copy(h.aim); h.s.intensity = lit ? 26 : 0;
+    h.lens.material = lit ? emis('#fff1dc', 6) : emis('#000', 0);
+  });
+  lin.visible = !!li; linL.intensity = li && on ? 18 : 0; linLens.material = li && on ? emis('#ffe6c8', 5) : emis('#000', 0);
+  pend.visible = !!pe; pendL.intensity = pe && on ? 1.6 : 0; bulb.material = pe && on ? emis('#ffcf95', 6) : emis('#000', 0);
+  amb.intensity = 1.8 + 1.2 * rm; hemi.intensity = .05 + .05 * rm; scene.environmentIntensity = .04 + .04 * rm;
+  renderer.toneMappingExposure = 1.0;
+};
