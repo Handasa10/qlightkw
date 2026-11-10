@@ -42,8 +42,21 @@ Deno.serve(async () => {
   try {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // The catalog is larger than one 1000-row page, so read products page by page
+    const allProducts = async () => {
+      const rows: { slug: string; updated_at: string | null }[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await supabase.from("products").select("slug, updated_at")
+          .eq("is_active", true).order("slug").range(from, from + 999);
+        if (error) throw error;
+        rows.push(...(data || []));
+        if (!data || data.length < 1000) break;
+      }
+      return { data: rows };
+    };
+
     const [products, categories, projects, posts] = await Promise.all([
-      supabase.from("products").select("slug, updated_at").eq("is_active", true),
+      allProducts(),
       supabase.from("categories").select("slug, updated_at").eq("is_active", true),
       supabase.from("projects").select("slug, updated_at").eq("is_active", true),
       supabase.from("blog_posts").select("slug, updated_at, published_at").eq("is_published", true),
