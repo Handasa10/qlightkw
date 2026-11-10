@@ -1,0 +1,68 @@
+// ===== New home, 5 lighting mistakes and their fixes in one flat: mixed colour temperatures, a "sieve" ceiling of spots, a downlight over the head at the vanity, a bare LED strip that yellowed, and no dimmer =====
+// living room: back wall z=0 (x -3..3) with a TV wall and a gypsum cove above; sofa in front; a vanity niche on the right wall (x=3) with a mirror and basin; window on the left wall; ceiling 2.8
+const CH = 2.8, RW = 3.0, RD = 5.2;
+const floorTex = canvasTex(1024, 1024, (g, w, h) => { woodDraw('#b49a7a', '80,55,30')(g, w, h); }, [3, 3]);
+plane(RW * 2, RD, new THREE.MeshStandardMaterial({ map: floorTex, roughness: .45 }), [0, 0, RD / 2], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#ebe6df', roughness: .9 });
+box(RW * 2, CH, .1, wallM, -RW, 0, -.12); box(.1, CH, RD, wallM, -RW - .1, 0, -.12); box(.1, CH, RD, wallM, RW, 0, -.12);
+box(RW * 2 + .2, .1, RD, M.ceil, -RW - .1, CH, -.12, { cast: false });
+// window on the left wall: night sky
+box(.02, 1.4, 1.6, new THREE.MeshBasicMaterial({ color: '#141b2b' }), -RW + .01, .9, 2.4, { cast: false });
+for (const z of [2.4, 3.2, 4.0]) box(.04, 1.44, .04, M.black, -RW, .88, z - .02);
+// TV wall: dark panel, TV, low console; a gypsum cove pocket above it holding the LED strip
+box(3.4, 2.1, .05, new THREE.MeshStandardMaterial({ map: plasterTex, color: '#d9d2c7', roughness: .85 }), -1.7, 0, -.06);
+box(1.5, .85, .04, new THREE.MeshStandardMaterial({ color: '#0d0d10', roughness: .2, metalness: .3 }), -.75, 1.0, .0);
+box(2.2, .4, .4, new THREE.MeshStandardMaterial({ color: '#efe9df', roughness: .5 }), -1.1, 0, .0, { r: .02 });
+const gyp = new THREE.MeshStandardMaterial({ color: '#f1efea', roughness: .9 });
+box(RW * 2, .1, .35, gyp, -RW, 2.55, -.07, { cast: false });                 // drop band
+box(RW * 2, .06, .02, gyp, -RW, 2.65, .26, { cast: false });                 // lip that hides the strip
+// the strip: segments so a "bare, aged" strip can show patches; a profile with an opal cover for the fixed version
+const SEG = 24, segs = [];
+for (let i = 0; i < SEG; i++) { const m = box(RW * 2 / SEG - .004, .006, .012, emis('#000', 0), -RW + i * RW * 2 / SEG, 2.655, .2, { cast: false }); segs.push(m); }
+const prof = box(RW * 2, .018, .03, new THREE.MeshStandardMaterial({ color: '#c9ccd0', metalness: .8, roughness: .35 }), -RW, 2.648, .185, { cast: false });
+const cover = box(RW * 2, .004, .022, emis('#000', 0), -RW, 2.667, .19, { cast: false });
+const stripL = [-2, 0, 2].map((x) => { const l = new THREE.RectAreaLight('#ffd9ad', 0, 2, .05); l.position.set(x, 2.67, .2); l.lookAt(x, CH + 1, -.3); scene.add(l); return l; });
+// sofa, rug, coffee table, floor plant
+const sofaM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#8c8a84', roughness: .95 });
+box(2.4, .42, .9, sofaM, -1.2, 0, 3.3, { r: .06 }); box(2.4, .5, .2, sofaM, -1.2, .42, 4.0, { r: .05 });
+plane(2.6, 1.7, M.rug, [0, .006, 2.3], [-Math.PI / 2, 0, 0]);
+box(1.0, .38, .55, M.darkWood, -.5, 0, 2.1, { r: .02 });
+plant(2.3, 3.9, 1.5, .45);
+// vanity niche on the right wall: mirror, basin counter, a downlight right above the head position, and side bars by the mirror
+box(.03, 1.0, .8, new THREE.MeshPhysicalMaterial({ color: '#dfe6ea', metalness: 1, roughness: .05 }), RW - .04, 1.15, 1.0, { cast: false });
+box(.5, .85, 1.1, new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: .35 }), RW - .5, 0, .85, { r: .02 });
+box(.36, .04, .5, new THREE.MeshStandardMaterial({ color: '#f5f5f3', roughness: .2 }), RW - .43, .85, 1.15);
+const bars = [.9, 1.9].map((z) => box(.04, .9, .05, emis('#000', 0), RW - .06, 1.2, z - .025, { cast: false }));
+const barL = [.9, 1.9].map((z) => { const l = new THREE.RectAreaLight('#fff1e0', 0, .05, .9); l.position.set(RW - .07, 1.65, z); l.lookAt(RW - 1.5, 1.6, z); scene.add(l); return l; });
+const vanTop = new THREE.SpotLight('#fff4e8', 0, 4, 28 * Math.PI / 180, .4, 1.4); vanTop.position.set(RW - .55, CH - .03, 1.4); vanTop.target.position.set(RW - .55, 0, 1.4); vanTop.castShadow = true; scene.add(vanTop, vanTop.target);
+const vanRing = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .02, 20), emis('#000', 0)); vanRing.position.set(RW - .55, CH - .01, 1.4); scene.add(vanRing);
+// a simple head shape (no face) standing at the mirror so the shadow under the "eyes" reads; it is a matte dome, not a person
+const headM = new THREE.MeshStandardMaterial({ color: '#c9a58a', roughness: .8 });
+const dome = new THREE.Mesh(new THREE.SphereGeometry(.11, 24, 18), headM); dome.position.set(RW - .75, 1.62, 1.4); dome.castShadow = true; scene.add(dome);
+const brow = new THREE.Mesh(new THREE.BoxGeometry(.04, .02, .16), headM); brow.position.set(RW - .65, 1.64, 1.4); brow.castShadow = true; scene.add(brow);
+// ceiling spots: a planned set of 6 and a "sieve" of 20; each can be warm or cold
+const mkSpot = (x, z) => { const ring = new THREE.Mesh(new THREE.CylinderGeometry(.045, .045, .02, 20), emis('#000', 0)); ring.position.set(x, CH - .01, z); scene.add(ring); const s = new THREE.SpotLight('#ffd9a8', 0, 6, 34 * Math.PI / 180, .5, 1.4); s.position.set(x, CH - .03, z); s.target.position.set(x, 0, z < 1 ? z - .35 : z); scene.add(s, s.target); return { ring, s }; };
+const plan = [[-2.2, .45], [-1.1, .45], [0, .45], [1.1, .45], [-1.4, 2.9], [.6, 2.9]].map(([x, z]) => mkSpot(x, z));
+const sieve = []; for (let ix = 0; ix < 5; ix++) for (let iz = 0; iz < 4; iz++) sieve.push(mkSpot(-2.3 + ix * 1.05, 1.0 + iz * .9));
+const hemi = new THREE.HemisphereLight('#e9e4dc', '#2a2018', .05); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [.9, 1.75, 5.1], tgt: [-.5, 1.35, 0], fov: 60 },      // the living room
+  c: { pos: [.2, 1.3, 4.6], tgt: [0, 2.8, 1.9], fov: 70 },         // looking up at the ceiling
+  b: { pos: [1.2, 1.55, 1.45], tgt: [2.95, 1.55, 1.4], fov: 52 },  // the vanity mirror
+  p: { pos: [-.4, 2.25, 1.15], tgt: [-.6, 2.62, .2], fov: 44 },    // the strip pocket over the TV wall
+};
+// state tokens joined by '+':  mix (plan spots alternate 2700/6500 K) · plan (6 spots, 3000 K) · sieve (20 spots) · vtop (downlight over the head at the vanity) · vside (side bars by the mirror) · bare (strip without profile, yellowed and patchy) · strip (strip in a profile, even) · dim:<0..1> (dimmer level for everything, default 1)
+window.setState = (state) => {
+  const T = Object.fromEntries(state.split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const mx = T.mix ?? 0, pl = T.plan ?? 0, sv = T.sieve ?? 0, vt = T.vtop ?? 0, vs = T.vside ?? 0, br = T.bare ?? 0, st = T.strip ?? 0, dm = T.dim ?? 1;
+  const warm = '#ffd9a8', cold = '#e6efff';
+  plan.forEach(({ ring, s }, i) => { const on = pl || mx; const c = mx ? (i % 2 ? cold : '#ffc27a') : warm; s.color.set(c); s.intensity = on ? 18 * dm : 0; ring.material = on ? emis(c, 3 * dm) : emis('#000', 0); });
+  sieve.forEach(({ ring, s }) => { s.color.set('#fff2e2'); s.intensity = sv ? 7 * dm : 0; ring.material = sv ? emis('#fff2e2', 3 * dm) : emis('#000', 0); });
+  vanTop.intensity = vt ? 22 * dm : 0; vanRing.material = vt ? emis('#fff4e8', 3) : emis('#000', 0);
+  barL.forEach((l) => l.intensity = vs ? 14 * dm : 0); bars.forEach((m) => m.material = vs ? emis('#fff1e0', 4 * dm) : emis('#000', 0));
+  prof.visible = !!st; cover.material = st ? emis('#ffd9ad', 5 * dm) : emis('#000', 0);
+  segs.forEach((m, i) => { m.visible = !st; if (!br) { m.material = emis('#000', 0); return; } const dead = (i % 7 === 3) || (i % 11 === 5); m.material = dead ? emis('#3a2a10', .2) : emis(i % 3 ? '#ffb347' : '#e8a23a', (2 + (i % 4)) * dm); });
+  stripL.forEach((l, i) => { l.color.set(br ? '#ffb04a' : '#ffd9ad'); l.intensity = st ? 16 * dm : br ? (i === 1 ? 4 : 9) * dm : 0; });
+  hemi.intensity = .05 + .05 * (pl || mx || sv ? 1 : 0) * dm; scene.environmentIntensity = .03 + .04 * (pl || mx || sv ? 1 : 0) * dm;
+  renderer.toneMappingExposure = .45 + .55 * dm;
+};
