@@ -1,0 +1,67 @@
+// ===== Restaurant dining room: flat white ceiling panels (food looks dull, nobody takes photos) vs a narrow 2700 K spot over every table, high-CRI colour on the plates, and a soft wall wash =====
+// back wall z=0 (x -3.2..3.2) with vertical wood slats; 4 tables in two rows; plates of food on each table (tomato red, salad green, golden fries, a steak); ceiling 3.0
+const CH = 3.0, RW = 3.2, RD = 6.0;
+const floorTex = canvasTex(1024, 1024, (g, w, h) => { g.fillStyle = '#3b3632'; g.fillRect(0, 0, w, h); for (let i = 0; i < 9000; i++) { const c = 50 + R() * 30; g.fillStyle = `rgba(${c},${c * .95},${c * .9},.4)`; g.fillRect(R() * w, R() * h, 2, 2); } }, [6, 6]);
+plane(RW * 2, RD, new THREE.MeshStandardMaterial({ map: floorTex, roughness: .6 }), [0, 0, RD / 2], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#cfc4b6', roughness: .9 });
+box(RW * 2, CH, .1, wallM, -RW, 0, -.12); box(.1, CH, RD, wallM, -RW - .1, 0, -.12); box(.1, CH, RD, wallM, RW, 0, -.12);
+box(RW * 2 + .2, .1, RD, new THREE.MeshStandardMaterial({ color: '#2a2622', roughness: .9 }), -RW - .1, CH, -.12, { cast: false });
+box(RW * 2 - .1, CH - .02, .04, new THREE.MeshStandardMaterial({ map: flutedTex, color: '#b08868', roughness: .6 }), -RW + .05, .01, -.07);
+// a long banquette along the back wall
+box(RW * 2 - .4, .45, .55, new THREE.MeshStandardMaterial({ map: fabricTex, color: '#5b2f2a', roughness: .9 }), -RW + .2, 0, .0, { r: .04 });
+box(RW * 2 - .4, .55, .14, new THREE.MeshStandardMaterial({ map: fabricTex, color: '#5b2f2a', roughness: .9 }), -RW + .2, .45, -.02, { r: .04 });
+// tables with plates; food materials keep two colour sets: dull (low CRI under cold panels) and vivid (high CRI)
+const tableM = new THREE.MeshStandardMaterial({ map: oakTex, color: '#5a3d28', roughness: .45 });
+const chairM = new THREE.MeshStandardMaterial({ color: '#1e1b18', roughness: .5 });
+const plateM = new THREE.MeshStandardMaterial({ color: '#fbfaf7', roughness: .25 });
+const foods = [];   // { m, vivid, dull }
+const food = (vivid, dull, rough = .55) => { const m = new THREE.MeshStandardMaterial({ color: dull, roughness: rough }); foods.push({ m, vivid, dull }); return m; };
+const tomatoM = food('#d6261c', '#8d5a52'), saladM = food('#3f9a2c', '#6d7a5e'), friesM = food('#f0b43a', '#b49c72'), steakM = food('#7a3b22', '#5e4a40', .7), sauceM = food('#e8d27a', '#b9ad8c', .3);
+const tables = [[-1.6, 1.4], [1.6, 1.4], [-1.6, 3.4], [1.6, 3.4]];
+tables.forEach(([x, z], ti) => {
+  box(1.1, .04, .8, tableM, x - .55, .74, z - .4, { r: .01 });
+  box(.08, .74, .08, chairM, x - .04, 0, z - .04);
+  for (const dz of [-.65, .65]) { box(.42, .45, .42, chairM, x - .21, 0, z + dz - .21, { r: .03 }); box(.42, .45, .05, chairM, x - .21, .45, z + dz + (dz < 0 ? -.23 : .18), { r: .02 }); }
+  for (const [px, pz, kind] of [[-.25, -.15, 0], [.25, .15, 1]]) {
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(.14, .1, .025, 36), plateM); p.position.set(x + px, .79, z + pz); p.receiveShadow = true; scene.add(p);
+    if ((kind + ti) % 2 === 0) { // salad with tomatoes
+      const s = new THREE.Mesh(new THREE.SphereGeometry(.08, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), saladM); s.position.set(x + px, .8, z + pz); s.scale.y = .6; s.castShadow = true; scene.add(s);
+      for (let k = 0; k < 5; k++) { const tm = new THREE.Mesh(new THREE.SphereGeometry(.022, 12, 8), tomatoM); tm.position.set(x + px + Math.cos(k * 1.3) * .06, .835, z + pz + Math.sin(k * 1.3) * .06); scene.add(tm); }
+    } else { // steak, fries and sauce
+      const st = new THREE.Mesh(new THREE.CylinderGeometry(.07, .075, .03, 20), steakM); st.position.set(x + px - .03, .81, z + pz); st.scale.z = .7; st.castShadow = true; scene.add(st);
+      for (let k = 0; k < 9; k++) { const f = new THREE.Mesh(new THREE.BoxGeometry(.012, .012, .08), friesM); f.position.set(x + px + .06 + (k % 3) * .015, .815 + Math.floor(k / 3) * .01, z + pz - .02 + (k % 2) * .02); f.rotation.y = k * .7; scene.add(f); }
+      const sc = new THREE.Mesh(new THREE.CylinderGeometry(.025, .02, .02, 16), sauceM); sc.position.set(x + px - .02, .81, z + pz + .085); scene.add(sc);
+    }
+    const gl = new THREE.Mesh(new THREE.CylinderGeometry(.03, .025, .12, 16), new THREE.MeshPhysicalMaterial({ color: '#e9f1f3', transmission: .8, roughness: .05, transparent: true, opacity: .5 })); gl.position.set(x + px + .18, .82, z + pz - .18); scene.add(gl);
+  }
+});
+plant(-2.8, 5.4, 1.6, .45); plant(2.8, 5.4, 1.6, .45);
+// BEFORE: flat cold panels in the ceiling
+const panels = [], panelOff = new THREE.MeshStandardMaterial({ color: '#4a4744', roughness: .6 });
+for (const x of [-1.6, 1.6]) for (const z of [1.4, 3.4, 5.0]) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(.6, .6), panelOff); m.rotation.x = Math.PI / 2; m.position.set(x, CH - .005, z); scene.add(m);
+  const l = new THREE.RectAreaLight('#eef4ff', 0, .6, .6); l.position.set(x, CH - .01, z); l.lookAt(x, 0, z); scene.add(l); panels.push({ m, l });
+}
+// AFTER: a narrow 2700 K spot over each table (black ceiling, the table glows), and a soft wash on the slat wall
+const spots = tables.map(([x, z]) => {
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, .02, 20), emis('#000', 0)); ring.position.set(x, CH - .01, z); scene.add(ring);
+  const s = new THREE.SpotLight('#ffcf98', 0, 6, 15 * Math.PI / 180, .45, 1.2); s.position.set(x, CH - .03, z); s.target.position.set(x, .76, z); s.castShadow = true; scene.add(s, s.target); return { ring, s };
+});
+const wash = [-2.4, -.8, .8, 2.4].map((x) => { const s = new THREE.SpotLight('#ffbf80', 0, 5, 30 * Math.PI / 180, .8, 1.4); s.position.set(x, CH - .05, .45); s.target.position.set(x, .4, -.05); scene.add(s, s.target); return s; });
+const hemi = new THREE.HemisphereLight('#e7e1d8', '#1a1612', .04); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [-.4, 2.0, 5.6], tgt: [-1.35, .8, 2.3], fov: 60 },        // the dining room
+  t: { pos: [-.6, 1.35, 2.35], tgt: [-1.55, .78, 1.4], fov: 50 }, // one table, close
+  d: { pos: [-1.45, 1.05, 1.75], tgt: [-1.75, .8, 1.35], fov: 42 },// the plates, macro
+};
+// state tokens joined by '+':  panels (flat cold panels, dull food) · spots:<0..1> (table spots, one by one) · cri (vivid high-CRI food colours) · wash (wall wash) · all (= spots+cri+wash)
+window.setState = (state) => {
+  const T = Object.fromEntries(state.replace('all', 'spots+cri+wash').split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const pn = T.panels ?? 0, sp = T.spots ?? 0, cr = T.cri ?? 0, wa = T.wash ?? 0;
+  panels.forEach(({ m, l }) => { l.intensity = 11 * pn; m.material = pn ? emis('#f4f8ff', 2.5) : panelOff; });
+  spots.forEach(({ ring, s }, i) => { const k = Math.max(0, Math.min(1, (sp * 1.1 - i / 4) / .25)); s.intensity = 13 * k; ring.material = k ? emis('#ffd8a8', 3 * k) : emis('#000', 0); });
+  wash.forEach((s) => s.intensity = 6 * wa);
+  foods.forEach(({ m, vivid, dull }) => m.color.set(cr ? vivid : dull));
+  hemi.intensity = .04 + .08 * pn + .03 * Math.min(1, sp); scene.environmentIntensity = .03 + .06 * pn + .02 * Math.min(1, sp);
+  renderer.toneMappingExposure = 1.0;
+};
