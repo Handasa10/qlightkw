@@ -202,7 +202,7 @@ const Header = () => {
               </li>
             ))}
             <li onMouseEnter={() => setOpenDept(null)}><Link to="/shop?offers=true" className="flex h-12 items-center text-red-600 hover:text-red-700">{isRTL ? 'العروض' : 'Offers'}</Link></li>
-            <li className="ms-auto" onMouseEnter={() => setOpenDept(null)}><Link to="/quote" className="flex h-12 items-center text-neutral-500 hover:text-primary">{isRTL ? 'عرض سعر فوري' : 'Instant quotation'}</Link></li>
+            <li className="ms-auto hidden xl:block" onMouseEnter={() => setOpenDept(null)}><Link to="/quote" className="flex h-12 items-center text-neutral-500 hover:text-primary">{isRTL ? 'عرض سعر فوري' : 'Instant quotation'}</Link></li>
           </ul>
           {DEPARTMENTS.filter((d) => d.id === openDept && d.categories.length > 1).map((d) => (
             <div key={d.id} className="absolute inset-x-0 top-full z-40 rounded-b-2xl border border-t-0 border-neutral-200 bg-white p-6 shadow-xl">
