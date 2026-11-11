@@ -1,668 +1,254 @@
-import { useEffect, useState, useMemo } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import StorefrontLayout from '@/layouts/StorefrontLayout';
 import ProductCard from '@/components/storefront/ProductCard';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Slider } from '@/components/ui/slider';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Skeleton } from '@/components/ui/skeleton';
-import { parseProductSpecs } from '@/lib/spec-helper';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination';
-import { SlidersHorizontal, Grid3X3, List, Search, X, Tag } from 'lucide-react';
-import { resolveImageUrl, resolveSecondaryImageUrl } from '@/lib/image-resolver';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useSEO } from '@/hooks/useSEO';
+import { priceOf, searchCatalog, useCatalog } from '@/hooks/useCatalog';
+import { DEPARTMENTS, departmentById, departmentOfCategory } from '@/lib/store-nav';
 
-interface Product {
-  id: string;
-  name_en: string;
-  name_ar: string;
-  slug: string;
-  base_price: number;
-  sale_price: number | null;
-  is_new: boolean | null;
-  is_bestseller: boolean | null;
-  is_featured: boolean | null;
-  image_url?: string | null;
-  secondary_image_url?: string | null;
-  category_id: string | null;
-  brand_id: string | null;
-  specifications?: Record<string, any> | null;
-}
+const PAGE_SIZE = 24;
 
-interface Category {
-  id: string;
-  name_en: string;
-  name_ar: string;
-  slug: string;
-}
+type Sort = 'featured' | 'best' | 'newest' | 'price-low' | 'price-high' | 'name';
 
-interface Brand {
-  id: string;
-  name: string;
-  name_ar: string | null;
-}
-
-const PRODUCTS_PER_PAGE = 12;
-
+// Collection page: a department, a category, search results or offers.
+// Everything the visitor chooses lives in the URL, so pages can be shared and the back button works.
 const Shop = () => {
-  const { t } = useTranslation();
-  const { language, isRTL } = useLanguage();
-  const [searchParams, setSearchParams] = useSearchParams();
-  
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const { isRTL } = useLanguage();
+  const { products, categories, loading } = useCatalog();
+  const [params, setParams] = useSearchParams();
+  const [shown, setShown] = useState(PAGE_SIZE);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
-  // Filter states
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-  const [priceRange, setPriceRange] = useState([0, 500]);
-  const [sortBy, setSortBy] = useState('newest');
-  
-  // Smart specifications filter states
-  const [selectedWatts, setSelectedWatts] = useState<string[]>([]);
-  const [selectedIPs, setSelectedIPs] = useState<string[]>([]);
-  const [selectedCCTs, setSelectedCCTs] = useState<string[]>([]);
-  const [offersOnly, setOffersOnly] = useState(searchParams.get('offers') === 'true');
-  const seoCategory = categories.find((c) => c.slug === selectedCategory);
-  const seoCategoryName = seoCategory ? (isRTL ? seoCategory.name_ar || seoCategory.name_en : seoCategory.name_en) : '';
+  const q = params.get('q') || '';
+  const categorySlug = params.get('category') || '';
+  const dept = departmentById(params.get('dept')) || (categorySlug ? departmentOfCategory(categorySlug) : undefined);
+  const offers = params.get('offers') === 'true';
+  const pricedOnly = params.get('priced') === 'true';
+  const sort = (params.get('sort') as Sort) || 'featured';
+  const min = Number(params.get('min')) || 0;
+  const max = Number(params.get('max')) || 0;
+
+  const set = (changes: Record<string, string | null>) => {
+    const next = new URLSearchParams(params);
+    Object.entries(changes).forEach(([k, v]) => (v ? next.set(k, v) : next.delete(k)));
+    setParams(next, { replace: true });
+  };
+
+  const nameOf = (slug: string) => {
+    const c = categories.find((x) => x.slug === slug);
+    return c ? (isRTL ? c.name_ar || c.name_en : c.name_en) : '';
+  };
+  const category = categories.find((c) => c.slug === categorySlug);
+  const title = q
+    ? (isRTL ? `نتائج البحث عن "${q}"` : `Search results for "${q}"`)
+    : category ? nameOf(category.slug)
+      : dept ? (isRTL ? dept.ar : dept.en)
+        : offers ? (isRTL ? 'العروض' : 'Offers')
+          : (isRTL ? 'جميع المنتجات' : 'All products');
+
   useSEO({
-    title: seoCategoryName
-      ? (isRTL ? `${seoCategoryName} في الكويت | تسوق أونلاين بأفضل الأسعار` : `${seoCategoryName} in Kuwait | Shop Online at the Best Prices`)
-      : (isRTL ? 'تسوق جميع منتجات الإضاءة في الكويت' : 'Shop All Lighting Products in Kuwait'),
-    description: seoCategoryName
-      ? (isRTL
-        ? `تسوق ${seoCategoryName} من كواليتي لايت: أسعار ممتازة، ضمان، وتوصيل سريع لجميع مناطق الكويت. معرضنا في حولي – شارع تونس.`
-        : `Buy ${seoCategoryName} from Quality Light: great prices, warranty and fast delivery across Kuwait. Showroom in Hawalli, Tunis Street.`)
-      : (isRTL
-        ? 'أكثر من 120 منتج إضاءة: LED، ثريات، سبوت لايت، شرائط LED، إضاءة خارجية وذكية بتوصيل سريع في الكويت.'
-        : 'Over 120 lighting products: LED, chandeliers, spotlights, LED strips, outdoor and smart lighting with fast delivery in Kuwait.'),
-    params: { category: selectedCategory || null },
-    // Search results and filtered views are thin duplicates of category pages
-    noindex: !!searchParams.get('q') || offersOnly,
+    title: category || dept
+      ? (isRTL ? `${title} في الكويت | تسوق أونلاين` : `${title} in Kuwait | Shop Online`)
+      : (isRTL ? 'تسوق الإضاءة والكهربائيات في الكويت' : 'Shop Lighting & Electrical Products in Kuwait'),
+    description: isRTL
+      ? `تسوق ${title} من كواليتي لايت: أسعار المعرض، توصيل لجميع مناطق الكويت والدفع عند الاستلام.`
+      : `Shop ${title} at Quality Light: showroom prices, delivery across Kuwait and cash on delivery.`,
+    params: { category: categorySlug || null, dept: !categorySlug && dept ? dept.id : null },
+    // Search results and filtered views are thin duplicates of the collection pages
+    noindex: !!q || offers || pricedOnly || !!min || !!max,
   });
 
-  // Handle URL change
-  useEffect(() => {
-    const q = searchParams.get('q');
-    if (q !== null) setSearchQuery(q);
+  // Products of the chosen collection, before the sidebar filters
+  const scoped = useMemo(() => {
+    let list = q ? searchCatalog(products, q) : products;
+    if (categorySlug) list = list.filter((p) => p.category_slug === categorySlug);
+    else if (dept) list = list.filter((p) => p.category_slug && dept.categories.includes(p.category_slug));
+    return list;
+  }, [products, q, categorySlug, dept]);
 
-    const cat = searchParams.get('category');
-    if (cat !== null) setSelectedCategory(cat);
-
-    const offers = searchParams.get('offers');
-    if (offers === 'true') setOffersOnly(true);
-  }, [searchParams]);
-
-  // Load Filters & All Products once
-  useEffect(() => {
-    const loadStoreData = async () => {
-      setLoading(true);
-      try {
-        // Supabase returns at most 1000 rows per request, so load the catalog page by page.
-        // Photos come embedded with each product (a long "id in (...)" list breaks past ~1000 ids).
-        const PAGE = 1000;
-        const loadProducts = async () => {
-          const rows: any[] = [];
-          for (let from = 0; ; from += PAGE) {
-            const { data, error } = await supabase
-              .from('products')
-              .select('id, name_en, name_ar, slug, base_price, sale_price, is_new, is_bestseller, is_featured, category_id, brand_id, specifications, product_images(url, is_primary, sort_order)')
-              .eq('is_active', true)
-              .order('id')
-              .range(from, from + PAGE - 1);
-            if (error) throw error;
-            rows.push(...(data || []));
-            if (!data || data.length < PAGE) break;
-          }
-          return rows;
-        };
-
-        const [categoriesRes, brandsRes, productRows] = await Promise.all([
-          supabase.from('categories').select('id, name_en, name_ar, slug').eq('is_active', true),
-          supabase.from('brands').select('id, name, name_ar').eq('is_active', true),
-          loadProducts(),
-        ]);
-
-        if (categoriesRes.data) setCategories(categoriesRes.data);
-        if (brandsRes.data) setBrands(brandsRes.data);
-
-        const productsWithImages = productRows.map(({ product_images, ...product }) => {
-          const productImages = [...(product_images || [])].sort(
-            (a: any, b: any) => Number(!!b.is_primary) - Number(!!a.is_primary) || (a.sort_order ?? 0) - (b.sort_order ?? 0)
-          );
-          const primaryImage = productImages[0];
-          const secondaryImage = productImages.find((img: any) => img.url !== primaryImage?.url);
-          return {
-            ...product,
-            image_url: resolveImageUrl(primaryImage?.url, 'product', product.slug),
-            secondary_image_url: resolveSecondaryImageUrl(secondaryImage?.url, product.slug),
-          };
-        });
-        setAllProducts(productsWithImages);
-      } catch (err) {
-        console.error("Error loading store catalog:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadStoreData();
-  }, []);
-
-  // Filter and sort items dynamically in memory
-  const filteredProducts = useMemo(() => {
-    let result = [...allProducts];
-
-    // 1. Search Query
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(p => 
-        p.name_en.toLowerCase().includes(q) || 
-        p.name_ar.includes(q) || 
-        p.slug.toLowerCase().includes(q)
-      );
-    }
-
-    // 2. Category
-    if (selectedCategory) {
-      const cat = categories.find(c => c.slug === selectedCategory);
-      if (cat) {
-        result = result.filter(p => p.category_id === cat.id);
-      }
-    }
-
-    // 3. Brand
-    if (selectedBrands.length > 0) {
-      result = result.filter(p => p.brand_id && selectedBrands.includes(p.brand_id));
-    }
-
-    // 4. Price Range
-    result = result.filter(p => {
-      const price = p.sale_price || p.base_price;
-      return price >= priceRange[0] && price <= priceRange[1];
-    });
-
-    // 5. Offers Only
-    if (offersOnly) {
-      result = result.filter(p => p.sale_price !== null);
-    }
-
-    // 6. Wattage filtering
-    if (selectedWatts.length > 0) {
-      result = result.filter(p => {
-        const specs = parseProductSpecs(p.specifications, p.slug, p.name_en);
-        const w = specs.wattage.toLowerCase();
-        return selectedWatts.some(target => w.includes(target.toLowerCase()));
-      });
-    }
-
-    // 7. IP Rating filtering
-    if (selectedIPs.length > 0) {
-      result = result.filter(p => {
-        const specs = parseProductSpecs(p.specifications, p.slug, p.name_en);
-        const ip = specs.ip_rating.toLowerCase();
-        return selectedIPs.some(target => ip.includes(target.toLowerCase()));
-      });
-    }
-
-    // 8. Color Temperature (CCT) filtering
-    if (selectedCCTs.length > 0) {
-      result = result.filter(p => {
-        const specs = parseProductSpecs(p.specifications, p.slug, p.name_en);
-        const cct = specs.cct.toLowerCase();
-        return selectedCCTs.some(target => cct.includes(target.toLowerCase()));
-      });
-    }
-
-    // 9. Sorting
-    switch (sortBy) {
-      case 'price-low':
-        result.sort((a, b) => (a.sale_price || a.base_price) - (b.sale_price || b.base_price));
-        break;
-      case 'price-high':
-        result.sort((a, b) => (b.sale_price || b.base_price) - (a.sale_price || a.base_price));
-        break;
-      case 'name':
-        result.sort((a, b) => {
-          const nameA = language === 'ar' ? a.name_ar : a.name_en;
-          const nameB = language === 'ar' ? b.name_ar : b.name_en;
-          return nameA.localeCompare(nameB);
-        });
-        break;
+  const filtered = useMemo(() => {
+    let list = scoped;
+    if (offers) list = list.filter((p) => p.sale_price && p.sale_price > 0 && p.sale_price < p.base_price);
+    if (pricedOnly || min || max) list = list.filter((p) => priceOf(p) > 0);
+    if (min) list = list.filter((p) => priceOf(p) >= min);
+    if (max) list = list.filter((p) => priceOf(p) <= max);
+    const name = (p: (typeof list)[number]) => (isRTL ? p.name_ar : p.name_en) || '';
+    const sorted = [...list];
+    switch (sort) {
+      case 'price-low': sorted.sort((a, b) => (priceOf(a) || Infinity) - (priceOf(b) || Infinity)); break;
+      case 'price-high': sorted.sort((a, b) => priceOf(b) - priceOf(a)); break;
+      case 'name': sorted.sort((a, b) => name(a).localeCompare(name(b), isRTL ? 'ar' : 'en')); break;
+      case 'newest': sorted.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')); break;
+      case 'best': sorted.sort((a, b) => Number(!!b.is_bestseller) - Number(!!a.is_bestseller)); break;
       default:
-        // Newest / Featured
-        result.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
+        // Featured: proper photos and priced items first, then best sellers
+        sorted.sort((a, b) => Number(a.stock_photo) - Number(b.stock_photo) || Number(priceOf(b) > 0) - Number(priceOf(a) > 0) || Number(!!b.is_bestseller) - Number(!!a.is_bestseller));
     }
+    return sorted;
+  }, [scoped, offers, pricedOnly, min, max, sort, isRTL]);
 
-    return result;
-  }, [allProducts, searchQuery, selectedCategory, selectedBrands, priceRange, offersOnly, selectedWatts, selectedIPs, selectedCCTs, sortBy, categories, language]);
+  useEffect(() => { setShown(PAGE_SIZE); }, [q, categorySlug, dept?.id, offers, pricedOnly, min, max, sort]);
 
-  // Reset page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, selectedCategory, selectedBrands, priceRange, offersOnly, selectedWatts, selectedIPs, selectedCCTs, sortBy]);
-
-  const handleBrandToggle = (brandId: string) => {
-    setSelectedBrands(prev =>
-      prev.includes(brandId) ? prev.filter(id => id !== brandId) : [...prev, brandId]
-    );
-  };
-
-  const handleWattToggle = (watt: string) => {
-    setSelectedWatts(prev =>
-      prev.includes(watt) ? prev.filter(w => w !== watt) : [...prev, watt]
-    );
-  };
-
-  const handleIPToggle = (ip: string) => {
-    setSelectedIPs(prev =>
-      prev.includes(ip) ? prev.filter(i => i !== ip) : [...prev, ip]
-    );
-  };
-
-  const handleCCTToggle = (cct: string) => {
-    setSelectedCCTs(prev =>
-      prev.includes(cct) ? prev.filter(c => c !== cct) : [...prev, cct]
-    );
-  };
-
-  const clearFilters = () => {
-    setSearchQuery('');
-    setSelectedCategory('');
-    setSelectedBrands([]);
-    setPriceRange([0, 500]);
-    setSortBy('newest');
-    setSelectedWatts([]);
-    setSelectedIPs([]);
-    setSelectedCCTs([]);
-    setOffersOnly(false);
-    setCurrentPage(1);
-    setSearchParams({});
-  };
-
-  const totalProducts = filteredProducts.length;
-  const totalPages = Math.ceil(totalProducts / PRODUCTS_PER_PAGE);
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const getPageNumbers = () => {
-    const pages: (number | 'ellipsis')[] = [];
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else {
-      pages.push(1);
-      if (currentPage > 3) pages.push('ellipsis');
-      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
-        pages.push(i);
-      }
-      if (currentPage < totalPages - 2) pages.push('ellipsis');
-      pages.push(totalPages);
+  // Sub-collections shown as picture tiles: a department's categories, or all departments
+  const tiles = useMemo(() => {
+    if (q || offers) return [];
+    const pictureFor = (slugs: string[]) => {
+      const own = products.filter((p) => p.category_slug && slugs.includes(p.category_slug));
+      return { image: (own.find((p) => !p.stock_photo) || own[0])?.image_url || null, count: own.length };
+    };
+    if (dept) {
+      return dept.categories.map((slug) => ({ key: slug, label: nameOf(slug), href: `/shop?category=${slug}`, active: slug === categorySlug, ...pictureFor([slug]) }))
+        .filter((t) => t.count > 0 && t.label);
     }
-    return pages;
-  };
+    return DEPARTMENTS.map((d) => ({ key: d.id, label: isRTL ? d.ar : d.en, href: `/shop?dept=${d.id}`, active: false, ...pictureFor(d.categories) })).filter((t) => t.count > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, categories, dept, categorySlug, q, offers, isRTL]);
 
-  const paginatedProducts = useMemo(() => {
-    const from = (currentPage - 1) * PRODUCTS_PER_PAGE;
-    const to = from + PRODUCTS_PER_PAGE;
-    return filteredProducts.slice(from, to);
-  }, [filteredProducts, currentPage]);
+  const activeFilters = Number(offers) + Number(pricedOnly) + Number(!!min) + Number(!!max);
 
-  const FiltersContent = () => (
-    <div className="space-y-6.5 p-1">
-      {/* 1. Search Query */}
-      <div>
-        <h3 className="text-sm font-bold text-foreground mb-3">{isRTL ? "البحث بالاسم" : "Search Keyword"}</h3>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder={isRTL ? "اسم المنتج..." : "Search..."}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-muted/30 rounded-xl text-xs h-10 border-border"
-          />
-        </div>
-      </div>
-
-      {/* 2. Offers Toggle */}
-      <div className="bg-amber-500/5 border border-amber-500/10 rounded-2xl p-4 flex items-center justify-between">
+  const Filters = () => (
+    <div className="space-y-1">
+      <FilterGroup title={isRTL ? 'التوفر' : 'Availability'}>
+        <label className="flex cursor-pointer items-center gap-3 py-1.5 text-sm">
+          <input type="checkbox" checked={pricedOnly} onChange={(e) => set({ priced: e.target.checked ? 'true' : null })} className="h-4 w-4 accent-neutral-900" />
+          {isRTL ? 'متاح للشراء المباشر (بسعر)' : 'Buy online now (priced)'}
+        </label>
+        <label className="flex cursor-pointer items-center gap-3 py-1.5 text-sm">
+          <input type="checkbox" checked={offers} onChange={(e) => set({ offers: e.target.checked ? 'true' : null })} className="h-4 w-4 accent-neutral-900" />
+          {isRTL ? 'العروض فقط' : 'On offer only'}
+        </label>
+      </FilterGroup>
+      <FilterGroup title={isRTL ? 'السعر (د.ك)' : 'Price (KD)'}>
         <div className="flex items-center gap-2">
-          <Tag className="h-4 w-4 text-primary" />
-          <span className="text-xs font-bold text-foreground">{isRTL ? "عروض وحسومات خاصة" : "Special Offers Only"}</span>
+          <input type="number" min={0} inputMode="decimal" placeholder={isRTL ? 'من' : 'From'} defaultValue={min || ''} key={`min-${min}`}
+            onBlur={(e) => set({ min: Number(e.target.value) > 0 ? e.target.value : null })}
+            onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+            className="h-10 w-full rounded-lg border border-neutral-200 px-3 text-sm outline-none focus:border-neutral-900" />
+          <span className="text-neutral-400">–</span>
+          <input type="number" min={0} inputMode="decimal" placeholder={isRTL ? 'إلى' : 'To'} defaultValue={max || ''} key={`max-${max}`}
+            onBlur={(e) => set({ max: Number(e.target.value) > 0 ? e.target.value : null })}
+            onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+            className="h-10 w-full rounded-lg border border-neutral-200 px-3 text-sm outline-none focus:border-neutral-900" />
         </div>
-        <Checkbox
-          checked={offersOnly}
-          onCheckedChange={(checked) => setOffersOnly(!!checked)}
-        />
-      </div>
-
-      {/* 3. Categories list */}
-      <div>
-        <h3 className="text-sm font-bold text-foreground mb-3">{isRTL ? "أقسام الإضاءة" : "Lighting Categories"}</h3>
-        <div className="space-y-1">
-          <Button
-            variant={selectedCategory === '' ? 'secondary' : 'ghost'}
-            size="sm"
-            className="w-full justify-start rounded-xl text-xs h-9"
-            onClick={() => setSelectedCategory('')}
-          >
-            {isRTL ? "جميع الأقسام" : "All Categories"}
-          </Button>
-          {categories.map(category => (
-            <Button
-              key={category.id}
-              variant={selectedCategory === category.slug ? 'secondary' : 'ghost'}
-              size="sm"
-              className="w-full justify-start rounded-xl text-xs h-9"
-              onClick={() => setSelectedCategory(category.slug)}
-            >
-              {language === 'ar' ? category.name_ar : category.name_en}
-            </Button>
+      </FilterGroup>
+      {dept && (
+        <FilterGroup title={isRTL ? 'الفئة' : 'Category'}>
+          <Link to={`/shop?dept=${dept.id}`} className={`block py-1.5 text-sm ${!categorySlug ? 'font-bold text-neutral-900' : 'text-neutral-600 hover:text-primary'}`}>{isRTL ? 'الكل' : 'All'}</Link>
+          {dept.categories.filter(nameOf).map((slug) => (
+            <Link key={slug} to={`/shop?category=${slug}`} className={`block py-1.5 text-sm ${slug === categorySlug ? 'font-bold text-neutral-900' : 'text-neutral-600 hover:text-primary'}`}>{nameOf(slug)}</Link>
           ))}
-        </div>
-      </div>
-
-      {/* 4. Price Range */}
-      <div>
-        <h3 className="text-sm font-bold text-foreground mb-3">{isRTL ? "نطاق السعر (د.ك)" : "Price Range (KWD)"}</h3>
-        <div className="px-2">
-          <Slider
-            value={priceRange}
-            onValueChange={setPriceRange}
-            min={0}
-            max={500}
-            step={5}
-            className="mb-3.5 cursor-pointer"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground font-mono">
-            <span>{priceRange[0].toFixed(3)} د.ك</span>
-            <span>{priceRange[1].toFixed(3)} د.ك</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 5. Watts (Smart Specs Filter) */}
-      <div>
-        <h3 className="text-sm font-bold text-foreground mb-3">{isRTL ? "القدرة (واط)" : "Power (Wattage)"}</h3>
-        <div className="grid grid-cols-2 gap-2">
-          {['9W', '12W', '15W', '18W', '24W', '50W', '100W'].map(watt => (
-            <label key={watt} className="flex items-center gap-2 cursor-pointer bg-muted/20 hover:bg-muted/40 p-2 rounded-xl border border-border/40 transition-colors">
-              <Checkbox
-                checked={selectedWatts.includes(watt)}
-                onCheckedChange={() => handleWattToggle(watt)}
-              />
-              <span className="text-xs font-medium">{watt}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* 6. CCT Color Temperature */}
-      <div>
-        <h3 className="text-sm font-bold text-foreground mb-3">{isRTL ? "حرارة اللون (CCT)" : "Color Temp (CCT)"}</h3>
-        <div className="space-y-2">
-          {[
-            { key: '3000K', label: isRTL ? '3000K (أصفر دافئ)' : '3000K (Warm White)' },
-            { key: '4000K', label: isRTL ? '4000K (أبيض طبيعي)' : '4000K (Natural White)' },
-            { key: '6000K', label: isRTL ? '6000K (نهاري بارد)' : '6000K (Cool White)' }
-          ].map(c => (
-            <label key={c.key} className="flex items-center gap-2.5 cursor-pointer">
-              <Checkbox
-                checked={selectedCCTs.includes(c.key)}
-                onCheckedChange={() => handleCCTToggle(c.key)}
-              />
-              <span className="text-xs font-semibold">{c.label}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* 7. IP Protection */}
-      <div>
-        <h3 className="text-sm font-bold text-foreground mb-3">{isRTL ? "مقاومة الماء (IP)" : "IP Protection"}</h3>
-        <div className="space-y-2">
-          {[
-            { key: 'IP20', label: isRTL ? 'IP20 (إضاءة داخلية)' : 'IP20 (Indoor/Dustproof)' },
-            { key: 'IP44', label: isRTL ? 'IP44 (مقاوم للرطوبة)' : 'IP44 (Damp Location)' },
-            { key: 'IP65', label: isRTL ? 'IP65 (خارجي مضاد للمطر)' : 'IP65 (Rainproof Outdoor)' },
-            { key: 'IP66', label: isRTL ? 'IP66 (كشافات خارجية)' : 'IP66 (Weatherproof)' }
-          ].map(ip => (
-            <label key={ip.key} className="flex items-center gap-2.5 cursor-pointer">
-              <Checkbox
-                checked={selectedIPs.includes(ip.key)}
-                onCheckedChange={() => handleIPToggle(ip.key)}
-              />
-              <span className="text-xs font-semibold">{ip.label}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* 8. Brands */}
-      <div>
-        <h3 className="text-sm font-bold text-foreground mb-3">{isRTL ? "العلامات التجارية" : "Brands"}</h3>
-        <div className="space-y-2">
-          {brands.map(brand => (
-            <label key={brand.id} className="flex items-center gap-2.5 cursor-pointer">
-              <Checkbox
-                checked={selectedBrands.includes(brand.id)}
-                onCheckedChange={() => handleBrandToggle(brand.id)}
-              />
-              <span className="text-xs font-semibold text-muted-foreground hover:text-foreground">
-                {language === 'ar' && brand.name_ar ? brand.name_ar : brand.name}
-              </span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Reset Button */}
-      <Button variant="outline" className="w-full rounded-xl text-xs font-bold h-10 border-slate-300 dark:border-slate-800" onClick={clearFilters}>
-        <X className="h-3.5 w-3.5 mr-2 shrink-0" />
-        <span>{isRTL ? "إعادة تعيين الفلاتر" : "Clear Filters"}</span>
-      </Button>
+        </FilterGroup>
+      )}
+      {activeFilters > 0 && (
+        <button type="button" onClick={() => set({ offers: null, priced: null, min: null, max: null })} className="mt-3 flex items-center gap-1.5 text-sm font-semibold text-primary">
+          <X className="h-4 w-4" />{isRTL ? 'مسح الفلاتر' : 'Clear filters'}
+        </button>
+      )}
     </div>
   );
 
   return (
     <StorefrontLayout>
-      {/* Page Header */}
-      <div className="bg-muted/20 py-10 border-b border-border/50">
-        <div className="container">
-          <nav className="text-xs text-muted-foreground mb-3">
-            <Link to="/" className="hover:text-primary transition-colors">{t('nav.home', 'Home')}</Link>
-            <span className="mx-2">/</span>
-            <span>{t('nav.products', 'Products')}</span>
-          </nav>
-          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-foreground">
-            {isRTL ? "معرض المنتجات الفاخرة" : "Shop All Products"}
-          </h1>
-          <p className="text-xs md:text-sm text-muted-foreground mt-2 max-w-xl">
-            {isRTL 
-              ? "استعرض مجموعاتنا المتكاملة من حلول الإضاءة المعمارية والديكورية بأعلى مقاييس الجودة."
-              : "Discover our comprehensive catalog of architectural, decorative, and commercial lighting fixtures."}
-          </p>
-        </div>
-      </div>
+      <div className="container py-6 md:py-8">
+        <nav className="mb-4 flex flex-wrap items-center gap-1.5 text-xs text-neutral-500">
+          <Link to="/" className="hover:text-primary">{isRTL ? 'الرئيسية' : 'Home'}</Link>
+          <span>/</span>
+          {dept || category || q || offers ? <Link to="/shop" className="hover:text-primary">{isRTL ? 'المتجر' : 'Shop'}</Link> : <span className="text-neutral-900">{isRTL ? 'المتجر' : 'Shop'}</span>}
+          {dept && (<><span>/</span>{category ? <Link to={`/shop?dept=${dept.id}`} className="hover:text-primary">{isRTL ? dept.ar : dept.en}</Link> : <span className="text-neutral-900">{isRTL ? dept.ar : dept.en}</span>}</>)}
+          {category && (<><span>/</span><span className="text-neutral-900">{nameOf(category.slug)}</span></>)}
+        </nav>
 
-      <div className="container py-10 md:py-16">
-        <div className="flex gap-8">
-          
-          {/* Desktop Filters Sidebar */}
-          <aside className="hidden lg:block w-72 shrink-0 border border-border/80 rounded-2xl bg-card p-6 h-fit sticky top-24">
-            <FiltersContent />
-          </aside>
+        <h1 className="text-2xl font-extrabold tracking-tight text-neutral-900 md:text-4xl">{title}</h1>
 
-          {/* Products Column */}
-          <div className="flex-1">
-            {/* Toolbar */}
-            <div className="flex items-center justify-between gap-4 mb-8 bg-card border border-border/80 p-3.5 rounded-2xl">
-              <div className="flex items-center gap-2">
-                {/* Mobile Filter Sheet Trigger */}
-                <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
-                  <SheetTrigger asChild>
-                    <Button variant="outline" size="sm" className="lg:hidden rounded-xl text-xs font-bold gap-1.5 h-9">
-                      <SlidersHorizontal className="h-4 w-4" />
-                      <span>{t('shop.filters', 'Filters')}</span>
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="left" className="w-80 overflow-y-auto bg-slate-900 border-slate-800 text-slate-100">
-                    <div className="py-4">
-                      <FiltersContent />
-                    </div>
-                  </SheetContent>
-                </Sheet>
-
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-bold text-foreground mr-1">{totalProducts}</span>
-                  {isRTL ? "منتجات مطابقة" : "products found"}
-                </p>
-              </div>
-
-              {/* Layout controls */}
-              <div className="flex items-center gap-3">
-                {/* Sort dropdown */}
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-40 rounded-xl h-9 text-xs">
-                    <SelectValue placeholder={t('shop.sortBy', 'Sort by')} />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="newest" className="text-xs">{isRTL ? "أحدث الموديلات" : "Newest Arrivals"}</SelectItem>
-                    <SelectItem value="price-low" className="text-xs">{isRTL ? "السعر: من الأقل للأعلى" : "Price: Low to High"}</SelectItem>
-                    <SelectItem value="price-high" className="text-xs">{isRTL ? "السعر: من الأعلى للأقل" : "Price: High to Low"}</SelectItem>
-                    <SelectItem value="name" className="text-xs">{isRTL ? "الترتيب بالاسم" : "Alphabetical"}</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {/* Grid Mode switch */}
-                <div className="hidden sm:flex border rounded-xl overflow-hidden p-0.5 bg-muted/40 border-border">
-                  <Button
-                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                    size="icon"
-                    className="h-8 w-8 rounded-lg"
-                    onClick={() => setViewMode('grid')}
-                    aria-label="Grid view"
-                  >
-                    <Grid3X3 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                    size="icon"
-                    className="h-8 w-8 rounded-lg"
-                    onClick={() => setViewMode('list')}
-                    aria-label="List view"
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
+        {tiles.length > 1 && (
+          <div className="-mx-4 mt-6 flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] md:mx-0 md:gap-4 md:px-0 [&::-webkit-scrollbar]:hidden">
+            {tiles.map((t) => (
+              <Link key={t.key} to={t.href} className="group w-28 shrink-0 md:w-36">
+                <div className={`aspect-square overflow-hidden rounded-2xl bg-[#f5f5f6] ring-2 ring-offset-2 transition ${t.active ? 'ring-neutral-900' : 'ring-transparent'}`}>
+                  {t.image && <img src={t.image} alt="" loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />}
                 </div>
+                <p className={`mt-2 text-center text-xs font-semibold md:text-sm ${t.active ? 'text-primary' : 'text-neutral-800 group-hover:text-primary'}`}>{t.label}</p>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-8 flex gap-10">
+          <aside className="hidden w-60 shrink-0 lg:block"><div className="sticky top-48"><Filters /></div></aside>
+
+          <div className="min-w-0 flex-1">
+            <div className="mb-5 flex items-center justify-between gap-3 border-b border-neutral-200 pb-4">
+              <div className="flex items-center gap-3">
+                <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+                  <SheetTrigger asChild>
+                    <button type="button" className="flex items-center gap-2 rounded-full border border-neutral-300 px-4 py-2 text-sm font-semibold lg:hidden">
+                      <SlidersHorizontal className="h-4 w-4" />{isRTL ? 'الفلاتر' : 'Filters'}{activeFilters > 0 && ` (${activeFilters})`}
+                    </button>
+                  </SheetTrigger>
+                  <SheetContent side={isRTL ? 'right' : 'left'} className="w-[85vw] max-w-sm overflow-y-auto bg-white text-neutral-900"><div className="pt-8"><Filters /></div></SheetContent>
+                </Sheet>
+                <p className="text-sm text-neutral-500">{loading ? '…' : isRTL ? `${filtered.length} منتج` : `${filtered.length} products`}</p>
               </div>
+              <label className="relative flex items-center text-sm">
+                <span className="me-2 hidden text-neutral-500 sm:inline">{isRTL ? 'ترتيب حسب' : 'Sort by'}</span>
+                <select value={sort} onChange={(e) => set({ sort: e.target.value === 'featured' ? null : e.target.value })}
+                  className="h-10 appearance-none rounded-full border border-neutral-300 bg-white pe-9 ps-4 text-sm font-semibold outline-none focus:border-neutral-900">
+                  <option value="featured">{isRTL ? 'المميزة' : 'Featured'}</option>
+                  <option value="best">{isRTL ? 'الأكثر مبيعاً' : 'Best selling'}</option>
+                  <option value="newest">{isRTL ? 'الأحدث' : 'Newest'}</option>
+                  <option value="price-low">{isRTL ? 'السعر: من الأقل' : 'Price: low to high'}</option>
+                  <option value="price-high">{isRTL ? 'السعر: من الأعلى' : 'Price: high to low'}</option>
+                  <option value="name">{isRTL ? 'الاسم' : 'Name'}</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute end-3 h-4 w-4 text-neutral-500" />
+              </label>
             </div>
 
-            {/* Catalog Grid */}
             {loading ? (
-              <div className={`grid gap-4 md:gap-6 ${viewMode === 'grid' ? 'grid-cols-2 md:grid-cols-3' : 'grid-cols-1'}`}>
-                {[...Array(PRODUCTS_PER_PAGE)].map((_, i) => (
-                  <div key={i} className="space-y-3.5 border border-border/80 rounded-2xl p-4">
-                    <Skeleton className="aspect-square rounded-xl" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                  </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 xl:grid-cols-4">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div key={i}><div className="aspect-square animate-pulse rounded-2xl bg-neutral-100" /><div className="mt-3 h-4 w-3/4 animate-pulse rounded bg-neutral-100" /></div>
                 ))}
               </div>
-            ) : paginatedProducts.length > 0 ? (
-              <>
-                <div className={`grid gap-4 md:gap-6 ${viewMode === 'grid' ? 'grid-cols-2 md:grid-cols-3' : 'grid-cols-1'}`}>
-                  {paginatedProducts.map((product, index) => (
-                    <ProductCard key={product.id} product={product} index={index} />
-                  ))}
+            ) : filtered.length === 0 ? (
+              <div className="rounded-3xl bg-[#f5f5f6] px-6 py-16 text-center">
+                <p className="text-lg font-bold text-neutral-900">{isRTL ? 'لا توجد منتجات مطابقة' : 'No products match'}</p>
+                <p className="mt-2 text-sm text-neutral-600">{isRTL ? 'جرّب كلمات أقل أو امسح الفلاتر، أو اسألنا عبر واتساب.' : 'Try fewer words or clear the filters, or ask us on WhatsApp.'}</p>
+                <div className="mt-6 flex flex-wrap justify-center gap-3">
+                  <Link to="/shop" className="rounded-full bg-neutral-900 px-6 py-3 text-sm font-bold text-white hover:bg-primary">{isRTL ? 'كل المنتجات' : 'All products'}</Link>
+                  <a href="https://wa.me/96551111725" target="_blank" rel="noopener noreferrer" className="rounded-full border border-neutral-300 px-6 py-3 text-sm font-bold hover:border-neutral-900">WhatsApp</a>
                 </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="mt-12 flex justify-center border-t border-border/50 pt-8">
-                    <Pagination>
-                      <PaginationContent>
-                        <PaginationItem>
-                          <PaginationPrevious 
-                            onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
-                            className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                          />
-                        </PaginationItem>
-                        
-                        {getPageNumbers().map((page, index) => (
-                          <PaginationItem key={index}>
-                            {page === 'ellipsis' ? (
-                              <PaginationEllipsis />
-                            ) : (
-                              <PaginationLink
-                                onClick={() => handlePageChange(page)}
-                                isActive={currentPage === page}
-                                className="cursor-pointer"
-                              >
-                                {page}
-                              </PaginationLink>
-                            )}
-                          </PaginationItem>
-                        ))}
-                        
-                        <PaginationItem>
-                          <PaginationNext 
-                            onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
-                            className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                          />
-                        </PaginationItem>
-                      </PaginationContent>
-                    </Pagination>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 md:gap-x-5 xl:grid-cols-4">
+                  {filtered.slice(0, shown).map((p) => <ProductCard key={p.id} product={p} />)}
+                </div>
+                {shown < filtered.length && (
+                  <div className="mt-10 text-center">
+                    <p className="mb-3 text-xs text-neutral-500">{isRTL ? `عرض ${Math.min(shown, filtered.length)} من ${filtered.length}` : `Showing ${Math.min(shown, filtered.length)} of ${filtered.length}`}</p>
+                    <button type="button" onClick={() => setShown((n) => n + PAGE_SIZE)} className="rounded-full border-2 border-neutral-900 px-8 py-3 text-sm font-bold text-neutral-900 transition hover:bg-neutral-900 hover:text-white">
+                      {isRTL ? 'عرض المزيد' : 'Load more'}
+                    </button>
                   </div>
                 )}
               </>
-            ) : (
-              <div className="text-center py-20 bg-card border border-border/80 rounded-3xl p-8">
-                <p className="text-muted-foreground text-sm mb-4">
-                  {isRTL 
-                    ? "لا توجد منتجات مطابقة لخيارات البحث المحددة." 
-                    : "No products found matching the selected search criteria."}
-                </p>
-                <Button onClick={clearFilters} className="rounded-xl font-bold text-xs h-10 px-6">
-                  {isRTL ? "إعادة تعيين الفلاتر" : "Reset All Filters"}
-                </Button>
-              </div>
             )}
           </div>
-
         </div>
       </div>
     </StorefrontLayout>
   );
 };
+
+const FilterGroup = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <div className="border-b border-neutral-200 py-4 first:pt-0">
+    <h3 className="mb-2 text-sm font-bold text-neutral-900">{title}</h3>
+    {children}
+  </div>
+);
 
 export default Shop;

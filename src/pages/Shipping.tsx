@@ -17,13 +17,13 @@ const Shipping = () => {
   const isRTL = i18n.language === 'ar';
 
   const deliveryOptions = isRTL ? [
-    { icon: Truck, title: 'التوصيل القياسي', time: '3-5 أيام عمل', price: '2.000 د.ك', description: 'توصيل لجميع مناطق الكويت' },
+    { icon: Truck, title: 'التوصيل القياسي', time: '3-5 أيام عمل', price: '3.000 د.ك', description: 'توصيل لجميع مناطق الكويت' },
     { icon: Clock, title: 'التوصيل السريع', time: '1-2 يوم عمل', price: '5.000 د.ك', description: 'توصيل سريع لمنطقة العاصمة' },
-    { icon: Package, title: 'توصيل مجاني', time: '3-5 أيام عمل', price: 'مجاني', description: 'للطلبات فوق 50 د.ك' },
+    { icon: Package, title: 'توصيل في نفس اليوم', time: 'نفس اليوم', price: '8.000 د.ك', description: 'حسب التوفر ووقت الطلب' },
   ] : [
-    { icon: Truck, title: 'Standard Delivery', time: '3-5 business days', price: '2.000 KWD', description: 'Delivery to all areas in Kuwait' },
+    { icon: Truck, title: 'Standard Delivery', time: '3-5 business days', price: '3.000 KWD', description: 'Delivery to all areas in Kuwait' },
     { icon: Clock, title: 'Express Delivery', time: '1-2 business days', price: '5.000 KWD', description: 'Fast delivery to Capital area' },
-    { icon: Package, title: 'Free Shipping', time: '3-5 business days', price: 'Free', description: 'For orders above 50 KWD' },
+    { icon: Package, title: 'Same-day Delivery', time: 'Same day', price: '8.000 KWD', description: 'Subject to availability and order time' },
   ];
 
   const policies = isRTL ? [

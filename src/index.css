@@ -139,6 +139,73 @@
     --chart-4: 45 93% 47%;
     --chart-5: 0 62.8% 50%;
   }
+
+  /* The storefront always uses the light palette, even when the visitor or admin theme is dark */
+  .store-light {
+    /* Primary - Orange from logo */
+    --primary: 24.6 95% 53.1%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 24.6 95% 45%;
+    
+    /* Background & Surface */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    
+    /* Secondary - Dark Gray */
+    --secondary: 220 13% 91%;
+    --secondary-foreground: 220.9 39.3% 11%;
+    
+    /* Muted */
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    
+    /* Accent */
+    --accent: 220 14.3% 95.9%;
+    --accent-foreground: 220.9 39.3% 11%;
+    
+    /* Destructive */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Success */
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 0 0% 100%;
+    
+    /* Warning */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    
+    /* Borders & Inputs */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 24.6 95% 53.1%;
+    
+    --radius: 0.5rem;
+    
+    /* Sidebar */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 24.6 95% 53.1%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 24.6 95% 53.1%;
+    
+    /* Chart Colors */
+    --chart-1: 24.6 95% 53.1%;
+    --chart-2: 220.9 39.3% 11%;
+    --chart-3: 142.1 76.2% 36.3%;
+    --chart-4: 38 92% 50%;
+    --chart-5: 0 84.2% 60.2%;
+    color-scheme: light;
+  }
 }
 
 @layer base {

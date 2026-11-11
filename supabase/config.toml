@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.photo-bot]
 verify_jwt = false
+
+[functions.product-studio]
+verify_jwt = false
