@@ -109,8 +109,8 @@ serve(async (req) => {
     );
 
     let geminiResponse = await callGemini(model);
-    // Google retires models over time; if the configured one is gone, fall back to the current default
-    if (geminiResponse.status === 404 && model !== DEFAULT_MODEL) {
+    // The configured model may be retired (404) or outside the plan's quota (429): fall back to the default
+    if ((geminiResponse.status === 404 || geminiResponse.status === 429) && model !== DEFAULT_MODEL) {
       console.warn(`Model ${model} unavailable, retrying with ${DEFAULT_MODEL}`);
       await geminiResponse.body?.cancel();
       geminiResponse = await callGemini(DEFAULT_MODEL);
