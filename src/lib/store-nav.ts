@@ -11,15 +11,15 @@ export interface Department {
 
 export const DEPARTMENTS: Department[] = [
   {
-    id: 'indoor-lighting', en: 'Indoor Lighting', ar: 'الإضاءة الداخلية',
+    id: 'indoor-lighting', en: 'Indoor Lights', ar: 'الإضاءة الداخلية',
     categories: ['led-spot-light', 'led-downlight', 'led-panel-light', 'ceiling-general-lighting', 'magnetic-light', 'linear-light', 'indoor-wall-light', 'led-stair-lights', 'professional-lighting'],
   },
   {
-    id: 'decorative-lighting', en: 'Chandeliers & Decorative', ar: 'الثريات والإضاءة الديكورية',
+    id: 'decorative-lighting', en: 'Chandeliers & Pendants', ar: 'الثريات والإضاءة الديكورية',
     categories: ['chandelier', 'pendant-lighting', 'accent-decorative-lighting'],
   },
   {
-    id: 'led-strips', en: 'LED Strips & Profiles', ar: 'شرائط LED والبروفايل',
+    id: 'led-strips', en: 'LED Strips', ar: 'شرائط LED والبروفايل',
     categories: ['led-strip-light', 'aluminum-profile', 'lighting-accessories'],
   },
   {
@@ -27,7 +27,7 @@ export const DEPARTMENTS: Department[] = [
     categories: ['led-bulbs-tubes'],
   },
   {
-    id: 'outdoor-lighting', en: 'Outdoor Lighting', ar: 'الإضاءة الخارجية',
+    id: 'outdoor-lighting', en: 'Outdoor Lights', ar: 'الإضاءة الخارجية',
     categories: ['led-flood-light', 'led-outdoor-wall-light', 'led-garden-light', 'solar-lights', 'high-bay-light', 'led-street-light'],
   },
   {
@@ -35,7 +35,7 @@ export const DEPARTMENTS: Department[] = [
     categories: ['switches-sockets', 'extension-socket', 'smart-control', 'sensor-switch'],
   },
   {
-    id: 'wiring', en: 'Wiring & Protection', ar: 'التمديدات والحماية',
+    id: 'wiring', en: 'Wiring & Breakers', ar: 'التمديدات والحماية',
     categories: ['wiring-accessories', 'breakers-distribution', 'cables-wires'],
   },
   {
