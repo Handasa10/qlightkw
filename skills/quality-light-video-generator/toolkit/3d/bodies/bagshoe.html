@@ -1,0 +1,119 @@
+// ===== Bags & shoes boutique: flat white ceiling panels (leather looks like plastic, every colour the same) vs a narrow CRI 95 spot on every piece + a hidden strip under every shelf =====
+// back wall z=0 (x -3.2..3.2): left = shoe wall with 5 floating oak shelves; right = bag wall, 3 x 3 dark cubbies; a display table in the middle with bags on plinths; mirror + pouf on the right wall; ceiling 3.0
+const CH = 3.0, RW = 3.2, RD = 6.0;
+const floorTex = canvasTex(1024, 1024, (g, w, h) => { g.fillStyle = '#d8d2c8'; g.fillRect(0, 0, w, h); for (let i = 0; i < 7000; i++) { const c = 190 + R() * 40; g.fillStyle = `rgba(${c},${c * .97},${c * .92},.35)`; g.fillRect(R() * w, R() * h, 3, 3); } g.strokeStyle = 'rgba(120,110,100,.25)'; g.lineWidth = 2; for (let x = 0; x <= w; x += 256) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); g.beginPath(); g.moveTo(0, x); g.lineTo(w, x); g.stroke(); } }, [4, 4]);
+plane(RW * 2, RD, new THREE.MeshStandardMaterial({ map: floorTex, roughness: .3 }), [0, 0, RD / 2], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#e4ddd3', roughness: .9 });
+box(RW * 2, CH, .1, wallM, -RW, 0, -.12); box(.1, CH, RD, wallM, -RW - .1, 0, -.12); box(.1, CH, RD, wallM, RW, 0, -.12);
+box(RW * 2 + .2, .1, RD, M.ceil, -RW - .1, CH, -.12, { cast: false });
+// leather materials keep two looks: dull (flat cold panels, low CRI: greyish, matte) and vivid (CRI 95 spot: true colour, a soft sheen)
+const leathers = [];
+const lea = (vivid, dull) => { const m = new THREE.MeshStandardMaterial({ color: dull, roughness: .85 }); leathers.push({ m, vivid, dull }); return m; };
+const L = {
+  cognac: lea('#8e4a1f', '#7a6658'), red: lea('#b11e2a', '#7e5f5f'), emerald: lea('#17694a', '#55665e'), navy: lea('#1c2d5e', '#4c5363'),
+  mustard: lea('#cf9525', '#9c8f74'), black: lea('#17130f', '#3a3734'), cream: lea('#eadcc2', '#bdb6aa'), blush: lea('#d9879a', '#a39294'), tan: lea('#a9733f', '#8a7b6c'),
+};
+const soleW = new THREE.MeshStandardMaterial({ color: '#f2efe8', roughness: .6 }), soleB = new THREE.MeshStandardMaterial({ color: '#1c1a18', roughness: .6 });
+const goldM = new THREE.MeshStandardMaterial({ color: '#c9a063', roughness: .25, metalness: 1 });
+// a bag: rounded body, a flap, a half-ring handle, a gold clasp
+const bag = (x, y, z, w, h, d, mat, ry = 0) => {
+  const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; scene.add(g);
+  box(w, h, d, mat, -w / 2, 0, -d / 2, { r: .025, parent: g });
+  box(w + .004, h * .38, d * .55, mat, -w / 2 - .002, h * .62, d * .02, { r: .015, parent: g });
+  box(.03, .02, .01, goldM, -.015, h * .6, d / 2 + .004, { parent: g, cast: false });
+  const hd = new THREE.Mesh(new THREE.TorusGeometry(w * .28, .011, 8, 28, Math.PI), mat); hd.position.y = h; hd.castShadow = true; g.add(hd);
+  return g;
+};
+// a shoe: sole + upper + rounded toe (a heel for the pumps)
+const shoe = (x, y, z, mat, kind = 0, ry = 0) => {
+  const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; scene.add(g);
+  if (kind === 2) { // pump: thin sole, heel, low upper
+    box(.075, .012, .22, soleB, -.0375, .05, -.11, { parent: g }); box(.02, .06, .02, soleB, -.01, 0, -.11, { parent: g });
+    box(.072, .045, .17, mat, -.036, .06, -.08, { r: .02, parent: g });
+  } else {
+    box(.095, .025, .27, kind ? soleB : soleW, -.0475, 0, -.135, { r: .01, parent: g });
+    box(.088, kind ? .1 : .07, .2, mat, -.044, .022, -.125, { r: .03, parent: g });
+    const toe = new THREE.Mesh(new THREE.SphereGeometry(.045, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat); toe.position.set(0, .022, .085); toe.scale.set(1, .9, 1.1); toe.castShadow = true; g.add(toe);
+  }
+  return g;
+};
+// LEFT: shoe wall, oak backing panel + 5 floating shelves, 5 pairs each; a hidden strip under each shelf's front edge lights the row below
+box(2.9, 2.5, .03, new THREE.MeshStandardMaterial({ map: oakTex, color: '#b08a62', roughness: .6 }), -3.05, .2, -.08);
+const shelfM = new THREE.MeshStandardMaterial({ map: oakTex, color: '#d7b48a', roughness: .5 });
+const shelfY = [.45, .88, 1.31, 1.74, 2.17], shoeMats = [L.cream, L.black, L.tan, L.red, L.navy, L.blush, L.cognac, L.emerald, L.mustard];
+const shelfStrips = [], shelfL = [];
+shelfY.forEach((y, r) => {
+  box(2.7, .035, .3, shelfM, -2.95, y, -.05);
+  for (let k = 0; k < 5; k++) { const x = -2.7 + k * .55, m = shoeMats[(r * 2 + k) % shoeMats.length], kind = (r + k) % 3; shoe(x - .055, y + .035, .1, m, kind, .5); shoe(x + .055, y + .035, .1, m, kind, .5); }
+  // the strip for the row ON this shelf hangs under the shelf above (top row: under a capping shelf)
+  const sy = (shelfY[r + 1] ?? 2.6) - .003;
+  if (r === 4) box(2.7, .035, .3, shelfM, -2.95, 2.6, -.05);
+  shelfStrips.push(box(2.6, .006, .012, emis('#000', 0), -2.9, sy - .004, .2, { cast: false }));
+  const l = new THREE.RectAreaLight('#ffe2c0', 0, 2.6, .03); l.position.set(-1.6, sy - .01, .2); l.lookAt(-1.6, 0, .05); scene.add(l); shelfL.push(l);
+});
+// RIGHT: bag wall, 3 x 3 dark-wood cubbies, one bag in each; a strip at the top of each cubby row
+const cubM = new THREE.MeshStandardMaterial({ color: '#2b211b', roughness: .55 });
+const cubIn = new THREE.MeshStandardMaterial({ color: '#3a2e26', roughness: .8 });
+const CX0 = .3, CW = .85, CHh = .72, CY0 = .35;
+box(CW * 3 + .06, CHh * 3 + .06, .03, cubIn, CX0 - .03, CY0 - .03, -.08);   // back of the cubbies
+const bagMats = [L.cognac, L.red, L.black, L.navy, L.emerald, L.cream, L.blush, L.mustard, L.tan];
+const cubStrips = [], cubL = [];
+for (let r = 0; r < 3; r++) {
+  for (let c = 0; c < 3; c++) {
+    const x = CX0 + c * CW, y = CY0 + r * CHh;
+    bag(x + CW / 2, y + .02, .18, .36 - (r === 2 ? .06 : 0), .27, .13, bagMats[r * 3 + c]);
+  }
+  cubStrips.push(box(CW * 3 - .1, .006, .012, emis('#000', 0), CX0 + .05, CY0 + (r + 1) * CHh - .05, .3, { cast: false }));
+  const l = new THREE.RectAreaLight('#ffe2c0', 0, CW * 3 - .1, .03); l.position.set(CX0 + CW * 1.5, CY0 + (r + 1) * CHh - .06, .3); l.lookAt(CX0 + CW * 1.5, 0, .3); scene.add(l); cubL.push(l);
+}
+// the cubby frame: full-depth dark-wood boards
+for (let c = 0; c <= 3; c++) box(.04, CHh * 3 + .04, .42, cubM, CX0 + c * CW - .02, CY0 - .02, -.06);
+for (let r = 0; r <= 3; r++) box(CW * 3 + .04, .04, .42, cubM, CX0 - .02, CY0 + r * CHh - .02, -.06);
+// CENTRE: a low display table with two plinths: bags and a pair of shoes on top
+const tabM = new THREE.MeshStandardMaterial({ color: '#efe9df', roughness: .4 });
+box(1.6, .7, .7, tabM, -.8, 0, 2.3, { r: .02 });
+box(.4, .18, .4, new THREE.MeshStandardMaterial({ map: marbleTex.clone(), color: '#e6e0d6', roughness: .15 }), -.6, .7, 2.45);
+box(.34, .12, .34, new THREE.MeshStandardMaterial({ map: marbleTex.clone(), color: '#e6e0d6', roughness: .15 }), .25, .7, 2.48);
+bag(-.4, .88, 2.65, .4, .3, .15, L.red, .35);
+bag(.42, .82, 2.65, .3, .22, .12, L.emerald, -.4);
+shoe(-.05, .7, 2.6, L.cognac, 1, .9); shoe(.06, .7, 2.66, L.cognac, 1, .7);
+// right wall: tall mirror and a velvet pouf
+box(.03, 1.8, .7, new THREE.MeshPhysicalMaterial({ color: '#dfe6ea', metalness: 1, roughness: .05 }), RW - .04, .25, 3.6, { cast: false });
+box(.05, 1.86, .76, M.brass, RW - .05, .22, 3.57);
+const pouf = new THREE.Mesh(new THREE.CylinderGeometry(.28, .28, .42, 36), new THREE.MeshStandardMaterial({ map: fabricTex, color: '#7b5a4a', roughness: .95 })); pouf.position.set(2.3, .21, 3.95); pouf.castShadow = true; scene.add(pouf);
+plant(-2.75, 5.3, 1.6, .45);
+// BEFORE: flat cold panels in the ceiling
+const panels = [], panelOff = new THREE.MeshStandardMaterial({ color: '#d2d3d5', roughness: .6 });
+for (const x of [-1.8, 0, 1.8]) for (const z of [1.3, 3.6]) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(.6, .6), panelOff); m.rotation.x = Math.PI / 2; m.position.set(x, CH - .005, z); scene.add(m);
+  const l = new THREE.RectAreaLight('#eef4ff', 0, .6, .6); l.position.set(x, CH - .01, z); l.lookAt(x, 0, z); scene.add(l); panels.push({ m, l });
+}
+// AFTER: narrow CRI 95 spots, 3000 K: one per bag column, two on the table pieces, three across the shoe wall
+const mkSpot = (x, z, tx, ty, tz, ang, shadow = false) => {
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, .02, 20), emis('#000', 0)); ring.position.set(x, CH - .01, z); scene.add(ring);
+  const s = new THREE.SpotLight('#ffdcb0', 0, 7, ang * Math.PI / 180, .4, 1.2); s.position.set(x, CH - .03, z); s.target.position.set(tx, ty, tz); s.castShadow = shadow; scene.add(s, s.target); return { ring, s };
+};
+const spots = [
+  mkSpot(-.4, 2.65, -.4, .95, 2.65, 12, true), mkSpot(.42, 2.65, .42, .9, 2.65, 12, true),
+  mkSpot(CX0 + CW * .5, 1.1, CX0 + CW * .5, 1.3, .15, 16), mkSpot(CX0 + CW * 1.5, 1.1, CX0 + CW * 1.5, 1.3, .15, 16), mkSpot(CX0 + CW * 2.5, 1.1, CX0 + CW * 2.5, 1.3, .15, 16),
+  mkSpot(-2.4, 1.1, -2.4, 1.3, .1, 20), mkSpot(-1.6, 1.1, -1.6, 1.3, .1, 20), mkSpot(-.8, 1.1, -.8, 1.3, .1, 20),
+];
+const hemi = new THREE.HemisphereLight('#ece6dc', '#2a2420', .05); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [1.3, 1.7, 5.7], tgt: [-.3, 1.25, .6], fov: 64 },       // the boutique from the door
+  b: { pos: [1.6, 1.4, 2.3], tgt: [1.58, 1.28, 0], fov: 58 },       // the bag wall, close
+  s: { pos: [-1.6, 1.3, 1.75], tgt: [-1.65, 1.25, 0], fov: 58 },     // the shoe wall
+  t: { pos: [.1, 1.42, 4.25], tgt: [-.3, 1.0, 2.65], fov: 46 },    // the red bag on its plinth, macro
+};
+// state tokens joined by '+':  panels (flat cold panels: dull, matte leather) · spots:<0..1> (narrow spots, one by one) · cri (true leather colour + sheen) · shelf:<0..1> (hidden strips under the shoe shelves, row by row, then the bag cubbies) · all (= spots+cri+shelf)
+window.setState = (state) => {
+  const T = Object.fromEntries(state.replace('all', 'spots+cri+shelf').split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const pn = T.panels ?? 0, sp = T.spots ?? 0, cr = T.cri ?? 0, sh = T.shelf ?? 0;
+  panels.forEach(({ m, l }) => { l.intensity = 10 * pn; m.material = pn ? emis('#f4f8ff', 2.5) : panelOff; });
+  spots.forEach(({ ring, s }, i) => { const k = Math.max(0, Math.min(1, (sp * 1.1 - i / spots.length) / .2)); s.intensity = 16 * k; ring.material = k ? emis('#ffd8a8', 3 * k) : emis('#000', 0); });
+  const rows = [...shelfL.map((l, i) => [l, shelfStrips[i]]), ...cubL.map((l, i) => [l, cubStrips[i]])];
+  rows.forEach(([l, m], i) => { const k = Math.max(0, Math.min(1, (sh * 1.1 - i / rows.length) / .15)); l.intensity = 12 * k; m.material = k ? emis('#ffe2c0', 5 * k) : emis('#000', 0); });
+  leathers.forEach(({ m, vivid, dull }) => { m.color.set(cr ? vivid : dull); m.roughness = cr ? .38 : .85; });
+  hemi.intensity = .05 + .08 * pn + .07 * Math.min(1, sp + sh); scene.environmentIntensity = .03 + .05 * pn + .07 * Math.min(1, sp + sh);
+  renderer.toneMappingExposure = 1.0;
+};

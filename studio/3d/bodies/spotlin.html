@@ -1,0 +1,95 @@
+// ===== Spot or linear? one open-plan flat: narrow spots pick out the painting, the sofa and the plant corner; linear lights draw soft lines over the dining table, down the corridor and above the kitchen counter; then both together =====
+// back wall z=0 (x -3.4..3.4): living on the left (painting over the sofa, a plant corner), a corridor opening in the middle (x -.45..+.45, running back to z=-3), kitchen counter on the right; dining table in front of the kitchen; ceiling 2.9
+const CH = 2.9, RW = 3.4, RD = 6.5;
+const floorTex = canvasTex(1024, 1024, (g, w, h) => { woodDraw('#c4a27c', '90,60,32')(g, w, h); }, [3, 3]);
+plane(RW * 2, RD, new THREE.MeshStandardMaterial({ map: floorTex, roughness: .45 }), [0, 0, RD / 2], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#ece6dd', roughness: .9 });
+// back wall in two parts around the corridor opening; header above it
+box(RW - .45, CH, .1, wallM, -RW, 0, -.12); box(RW - .45, CH, .1, wallM, .45, 0, -.12); box(.9, CH - 2.3, .1, wallM, -.45, 2.3, -.12);
+box(.1, CH, RD, wallM, -RW - .1, 0, -.12); box(.1, CH, RD, wallM, RW, 0, -.12);
+box(RW * 2 + .2, .1, RD, M.ceil, -RW - .1, CH, -.12, { cast: false });
+// the corridor: 0.9 wide, 3 deep, a door at the end, a small console with a vase
+plane(.9, 3.0, new THREE.MeshStandardMaterial({ map: floorTex, roughness: .45 }), [0, .001, -1.6], [-Math.PI / 2, 0, 0]);
+box(.1, CH, 3.0, wallM, -.55, 0, -3.1); box(.1, CH, 3.0, wallM, .45, 0, -3.1); box(1.1, CH, .1, wallM, -.55, 0, -3.2);
+box(1.1, .1, 3.0, M.ceil, -.55, CH, -3.1, { cast: false });
+box(.8, 2.1, .04, new THREE.MeshStandardMaterial({ map: oakTex, color: '#9c7552', roughness: .55 }), -.4, 0, -3.1);
+box(.25, .8, .5, M.darkWood, -.44, 0, -2.2); const cvase = new THREE.Mesh(new THREE.CylinderGeometry(.05, .07, .3, 20), new THREE.MeshStandardMaterial({ color: '#c96f45', roughness: .4 })); cvase.position.set(-.32, .95, -1.95); scene.add(cvase);
+// LIVING: the painting, a long sofa under it, a coffee table, a rug, the plant corner
+const artTex = canvasTex(1024, 640, (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#1f3b4d'); gr.addColorStop(.55, '#c46a3a'); gr.addColorStop(1, '#efc77a'); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(255,240,220,.85)'; g.beginPath(); g.arc(w * .68, h * .38, 90, 0, 7); g.fill(); g.strokeStyle = 'rgba(20,25,35,.6)'; g.lineWidth = 14; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(0, h * (.7 + i * .09)); g.bezierCurveTo(w * .3, h * (.6 + i * .09), w * .6, h * (.85 + i * .05), w, h * (.68 + i * .09)); g.stroke(); } }, [1, 1]);
+box(1.66, 1.06, .04, new THREE.MeshStandardMaterial({ color: '#1b1714', roughness: .5 }), -2.83, 1.35, -.02);
+plane(1.56, .96, new THREE.MeshStandardMaterial({ map: artTex, roughness: .8 }), [-2.0, 1.88, .025], [0, 0, 0]);
+const sofaM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#b8a58c', roughness: .95 });
+box(2.3, .42, .9, sofaM, -3.15, 0, .2, { r: .06 }); box(2.3, .45, .22, sofaM, -3.15, .42, .2, { r: .05 });
+for (const [x, c] of [[-2.85, '#c46a3a'], [-1.55, '#1f3b4d']]) box(.42, .36, .14, new THREE.MeshStandardMaterial({ map: fabricTex, color: c, roughness: .9 }), x, .45, .45, { r: .06 });
+plane(2.6, 1.8, M.rug, [-2.0, .006, 1.7], [-Math.PI / 2, 0, 0]);
+box(1.0, .36, .55, M.darkWood, -2.5, 0, 1.5, { r: .02 });
+plant(-3.0, 2.85, 1.7, .5);
+// KITCHEN: a counter along the back wall (right of the corridor), upper cabinets, a backsplash
+const cabM = new THREE.MeshStandardMaterial({ color: '#f1ede6', roughness: .45 });
+box(2.6, .88, .62, cabM, .7, 0, -.07, { r: .01 });
+box(2.64, .04, .65, new THREE.MeshStandardMaterial({ map: marbleTex.clone(), color: '#e8e4dd', roughness: .15 }), .68, .88, -.08);
+box(2.6, .6, .04, new THREE.MeshStandardMaterial({ map: marbleTex.clone(), color: '#dcd6cc', roughness: .2 }), .7, .92, -.07, { cast: false });
+box(2.6, .7, .35, new THREE.MeshStandardMaterial({ map: oakTex, color: '#d2ae86', roughness: .5 }), .7, 1.6, -.07);
+for (const [x, c] of [[1.1, '#e9e2d4'], [1.4, '#3c5f4a'], [2.6, '#c96f45']]) { const j = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .2, 20), new THREE.MeshStandardMaterial({ color: c, roughness: .4 })); j.position.set(x, 1.02, .2); j.castShadow = true; scene.add(j); }
+// DINING: a long table and four chairs in front of the kitchen
+const tabM = new THREE.MeshStandardMaterial({ map: oakTex, color: '#b48a60', roughness: .45 });
+box(1.9, .05, .95, tabM, .95, .74, 2.15, { r: .01 });
+for (const [x, z] of [[1.05, 2.25], [2.75, 2.25], [1.05, 2.95], [2.75, 2.95]]) box(.06, .74, .06, tabM, x, 0, z);
+const chM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#8a7663', roughness: .9 });
+for (const x of [1.2, 2.2]) for (const dz of [-1, 1]) { const z = 2.62 + dz * .72; box(.44, .45, .44, chM, x, 0, z - .22, { r: .03 }); box(.44, .48, .05, chM, x, .45, z + (dz < 0 ? -.22 : .17), { r: .02 }); }
+const bowl = new THREE.Mesh(new THREE.SphereGeometry(.16, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#efe9df', roughness: .3, side: THREE.DoubleSide })); bowl.rotation.x = Math.PI; bowl.position.set(1.9, .95, 2.62); scene.add(bowl);
+for (let k = 0; k < 5; k++) { const f = new THREE.Mesh(new THREE.SphereGeometry(.045, 14, 10), new THREE.MeshStandardMaterial({ color: ['#e0a128', '#c43a24', '#7aa03a'][k % 3], roughness: .5 })); f.position.set(1.9 + Math.cos(k * 1.3) * .07, .86, 2.62 + Math.sin(k * 1.3) * .07); scene.add(f); }
+// a soft base light so the room never goes black (evening, a lamp somewhere)
+const hemi = new THREE.HemisphereLight('#efe6da', '#2a2018', .08); scene.add(hemi);
+const amb = new THREE.PointLight('#ffe2c0', 0, 9, 1.6); amb.position.set(0, 1.9, 4.2); scene.add(amb);
+// SPOTS: narrow, 3000 K: the painting (2, crossing), the sofa (1), the plant corner (1), the corridor console (1)
+const mkSpot = (x, z, tx, ty, tz, ang, int, shadow = false) => {
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(.045, .045, .02, 20), emis('#000', 0)); ring.position.set(x, CH - .01, z); scene.add(ring);
+  const s = new THREE.SpotLight('#ffd9a8', 0, 7, ang * Math.PI / 180, .55, 1.2); s.position.set(x, CH - .03, z); s.target.position.set(tx, ty, tz); s.castShadow = shadow; scene.add(s, s.target); return { ring, s, int };
+};
+const spots = [
+  mkSpot(-2.0, .95, -2.0, 1.8, 0, 26, 11),
+  mkSpot(-2.0, 1.5, -2.0, .45, .65, 26, 16, true),
+  mkSpot(-2.85, 2.6, -3.0, 1.0, 2.85, 18, 20, true),
+  mkSpot(0, -1.7, -.32, .9, -1.95, 18, 14),
+];
+// LINEAR: a suspended linear over the dining table, a recessed line down the corridor ceiling, a line under the upper cabinets over the counter
+const blk = new THREE.MeshStandardMaterial({ color: '#151517', metalness: .4, roughness: .45 });
+const lins = [];
+const mkLin = (len, mesh, lensMesh, lights, int) => { lins.push({ mesh, lensMesh, lights, int }); };
+{ // dining suspended linear
+  const g = new THREE.Group(); g.position.set(1.9, 1.55, 2.62); scene.add(g);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, .05, .06), blk); body.castShadow = true; g.add(body);
+  for (const x of [-.6, .6]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.003, .003, CH - 1.55, 6), blk); w.position.set(x, (CH - 1.55) / 2, 0); g.add(w); }
+  const lens = new THREE.Mesh(new THREE.BoxGeometry(1.36, .008, .045), emis('#000', 0)); lens.position.y = -.027; g.add(lens);
+  const l = new THREE.RectAreaLight('#ffe0bc', 0, 1.36, .2); l.position.set(1.9, 1.51, 2.62); l.lookAt(1.9, 0, 2.62); scene.add(l);
+  const up = new THREE.RectAreaLight('#ffe0bc', 0, 1.36, .1); up.position.set(1.9, 1.58, 2.62); up.lookAt(1.9, CH + 1, 2.62); scene.add(up);
+  mkLin(1.4, g, lens, [[l, 45], [up, 10]]);
+}
+{ // corridor ceiling recessed line
+  const lens = box(.05, .006, 2.9, emis('#000', 0), -.025, CH - .008, -3.0, { cast: false });
+  const l1 = new THREE.RectAreaLight('#ffe0bc', 0, .12, 1.4); l1.position.set(0, CH - .02, -2.3); l1.lookAt(0, 0, -2.3);
+  const l2 = new THREE.RectAreaLight('#ffe0bc', 0, .12, 1.4); l2.position.set(0, CH - .02, -.8); l2.lookAt(0, 0, -.8); scene.add(l1, l2);
+  mkLin(2.9, null, lens, [[l1, 30], [l2, 30]]);
+}
+{ // under the upper cabinets, over the counter
+  const lens = box(2.5, .008, .03, emis('#000', 0), .75, 1.592, .22, { cast: false });
+  const l = new THREE.RectAreaLight('#ffe0bc', 0, 2.5, .08); l.position.set(2.0, 1.585, .2); l.lookAt(2.0, 0, .12); scene.add(l);
+  mkLin(2.5, null, lens, [[l, 20]]);
+}
+const VIEWS = {
+  w: { pos: [.9, 1.45, 6.2], tgt: [-.3, 1.05, .8], fov: 66 },       // the whole flat: living left, corridor, kitchen and dining right
+  p: { pos: [-1.6, 1.5, 3.9], tgt: [-2.1, 1.3, .2], fov: 56 },    // living: the painting, the sofa, the plant corner
+  d: { pos: [2.6, 1.55, 5.0], tgt: [1.6, 1.15, 1.6], fov: 58 },     // dining table + kitchen counter
+  c: { pos: [.05, 1.5, 1.6], tgt: [0, 1.3, -3.0], fov: 58 },        // down the corridor
+};
+// state tokens joined by '+':  off (base light only) · spots:<0..1> (spots one by one) · linear:<0..1> (linear lights one by one) · all (= spots+linear)
+window.setState = (state) => {
+  const T = Object.fromEntries(state.replace('all', 'spots+linear').split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const sp = T.spots ?? 0, li = T.linear ?? 0;
+  spots.forEach(({ ring, s, int }, i) => { const k = Math.max(0, Math.min(1, (sp * 1.1 - i / spots.length) / .2)); s.intensity = int * k; ring.material = k ? emis('#ffd8a8', 3 * k) : emis('#000', 0); });
+  lins.forEach(({ lensMesh, lights }, i) => { const k = Math.max(0, Math.min(1, (li * 1.1 - i / lins.length) / .3)); lights.forEach(([l, v]) => l.intensity = v * k); lensMesh.material = k ? emis('#ffe0bc', 6 * k) : emis('#000', 0); });
+  const on = Math.min(1, sp + li);
+  amb.intensity = 3.0 + 1.5 * on; hemi.intensity = .14 + .08 * on; scene.environmentIntensity = .08 + .06 * on;
+  renderer.toneMappingExposure = 1.0;
+};
