@@ -1,0 +1,135 @@
+// ===== Villa family hall on site, before the gypsum is closed: the 3 lighting decisions (spot positions aimed at what matters, the cove channel, the dimmer box + conduit) → closed, finished and lit =====
+// room x -3.5..3.5, z 0..6.2 (back wall face z=-.02): TV stone wall on the back, painting on the left wall, dimmer by the door on the right wall
+// ceiling: concrete slab 3.4 · gypsum drop band (B wide) at DY around the room · raised centre at GC with a cove lip on the band's inner edge
+const RW = 3.5, RD = 6.2, SLAB = 3.4, GC = 3.0, DY = 2.72, B = .65;
+const concreteTex = canvasTex(512, 512, (g, w, h) => { g.fillStyle = '#9a968f'; g.fillRect(0, 0, w, h); for (let i = 0; i < 9000; i++) { const c = 120 + R() * 60; g.fillStyle = `rgba(${c},${c - 3},${c - 8},.25)`; g.fillRect(R() * w, R() * h, 2, 2); } }, [4, 4]);
+const concrete = new THREE.MeshStandardMaterial({ map: concreteTex, roughness: .95 });
+const floorRaw = plane(RW * 2, RD, concrete, [0, 0, RD / 2], [-Math.PI / 2, 0, 0]);
+marbleTex.repeat.set(3, 3);
+const floorDone = plane(RW * 2, RD, M.floor, [0, .002, RD / 2], [-Math.PI / 2, 0, 0]);
+const wallRaw = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#aaa297', roughness: .95 });
+const wallDone = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#ece4d8', roughness: .9 });
+const walls = [box(RW * 2, SLAB, .1, wallRaw, -RW, 0, -.12), box(.1, SLAB, RD, wallRaw, -RW - .1, 0, -.12), box(.1, SLAB, RD, wallRaw, RW, 0, -.12)];
+box(RW * 2 + .2, .15, RD, concrete, -RW - .1, SLAB, -.12, { cast: false });
+// ---- gypsum: drop band boards (always there) + centre tiles (some still open on site) + the cove lip (built with the channel) ----
+const boardTex = canvasTex(512, 256, (g, w, h) => { g.fillStyle = '#e9e6e0'; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(160,150,140,.35)'; g.fillRect(0, 0, w, 6); g.fillRect(0, 0, 6, h); for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(200,190,175,.25)'; g.beginPath(); g.arc(R() * w, R() * h, 4 + R() * 6, 0, 7); g.fill(); } });
+const boardRaw = new THREE.MeshStandardMaterial({ map: boardTex, color: '#dcd8d0', roughness: .95, side: THREE.DoubleSide });
+const boardDone = new THREE.MeshStandardMaterial({ color: '#f6f2ec', roughness: .95, side: THREE.DoubleSide });
+const z0 = -.02, z1 = RD - .12, ix0 = -RW + B, ix1 = RW - B, iz0 = z0 + B, iz1 = z1 - B;
+const band = [box(RW * 2, .08, B, boardRaw, -RW, DY, z0, { cast: false }), box(RW * 2, .08, B, boardRaw, -RW, DY, iz1, { cast: false }),
+  box(B, .08, iz1 - iz0, boardRaw, -RW, DY, iz0, { cast: false }), box(B, .08, iz1 - iz0, boardRaw, ix1, DY, iz0, { cast: false })];
+const lip = [box(ix1 - ix0, .14, .03, boardRaw, ix0, DY + .08, iz0 - .03, { cast: false }), box(ix1 - ix0, .14, .03, boardRaw, ix0, DY + .08, iz1, { cast: false }),
+  box(.03, .14, iz1 - iz0, boardRaw, ix0 - .03, DY + .08, iz0, { cast: false }), box(.03, .14, iz1 - iz0, boardRaw, ix1, DY + .08, iz0, { cast: false })];
+const lipGlowM = emis('#ff8a2a', 0);
+const lipGlow = [box(ix1 - ix0, .012, .035, lipGlowM, ix0, DY + .075, iz0 - .035, { cast: false }), box(ix1 - ix0, .012, .035, lipGlowM, ix0, DY + .075, iz1, { cast: false }),
+  box(.035, .012, iz1 - iz0, lipGlowM, ix0 - .035, DY + .075, iz0, { cast: false }), box(.035, .012, iz1 - iz0, lipGlowM, ix1, DY + .075, iz0, { cast: false })];
+const steel = new THREE.MeshStandardMaterial({ color: '#b8bcc0', roughness: .35, metalness: .9 });
+const grid = new THREE.Group(); scene.add(grid);
+for (let z = iz0; z <= iz1 + .01; z += .6) box(ix1 - ix0, .03, .04, steel, ix0, GC + .01, z - .02, { parent: grid });
+for (let x = ix0; x <= ix1 + .01; x += 1.14) box(.04, .04, iz1 - iz0, steel, x - .02, GC + .04, iz0, { parent: grid });
+for (let x = ix0 + .3; x < ix1; x += 1.4) for (let z = iz0 + .4; z < iz1; z += 1.4) box(.008, SLAB - GC - .06, .008, steel, x, GC + .06, z, { parent: grid });
+const tiles = [], OPEN = new Set(['1,1', '2,1', '2,2', '3,4', '0,5', '1,5', '4,3', '3,6']);
+const NX = 5, NZ = Math.round((iz1 - iz0) / .6), TW = (ix1 - ix0) / NX, TD = (iz1 - iz0) / NZ;
+for (let i = 0; i < NX; i++) for (let j = 0; j < NZ; j++) tiles.push({ t: plane(TW, TD, boardRaw, [ix0 + (i + .5) * TW, GC, iz0 + (j + .5) * TD], [Math.PI / 2, 0, 0]), open: OPEN.has(`${i},${j}`) });
+// ---- cables on top of the grid (orange flex) ----
+const cableM = new THREE.MeshStandardMaterial({ color: '#e8742a', roughness: .6 });
+const cables = new THREE.Group(); scene.add(cables);
+function cable(pts, parent = cables, m = cableM, r = .013) { const c = new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...p))); const t = new THREE.Mesh(new THREE.TubeGeometry(c, 60, r, 8), m); t.castShadow = true; parent.add(t); return t; }
+cable([[-1.5, 3.1, 1.2], [-.5, 3.18, 2.0], [.6, 3.12, 2.6], [1.8, 3.1, 1.6]]);
+cable([[1.2, 3.12, 4.2], [0, 3.2, 3.6], [-1.6, 3.1, 4.4]]);
+// ---- decision 1: spot positions (red X marks while open, aim beams to the stone wall, the painting, the coffee table) ----
+const markTex = canvasTex(128, 128, (g, w, h) => { g.strokeStyle = '#d0281e'; g.lineWidth = 12; g.beginPath(); g.moveTo(24, 24); g.lineTo(104, 104); g.moveTo(104, 24); g.lineTo(24, 104); g.stroke(); g.beginPath(); g.arc(64, 64, 46, 0, 7); g.lineWidth = 6; g.stroke(); }, [1, 1]);
+const markM = new THREE.MeshBasicMaterial({ map: markTex, transparent: true, depthWrite: false });
+const beamM = new THREE.MeshBasicMaterial({ color: '#ffb347', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+// [x, y, z, target x,y,z, beam deg]
+const SP = [[-1.5, DY, .32, -1.5, .9, -.02, 20], [-.5, DY, .32, -.5, .9, -.02, 20], [.5, DY, .32, .5, .9, -.02, 20], [1.5, DY, .32, 1.5, .9, -.02, 20],
+  [-RW + .33, DY, 2.2, -RW, 1.6, 2.2, 22], [-RW + .33, DY, 3.2, -RW, 1.6, 3.2, 22], [0, GC, 2.3, 0, .45, 2.3, 30]];
+const spots = SP.map(([x, y, z, tx, ty, tz, a]) => {
+  const mark = plane(.42, .42, markM, [x, y - .004, z], [Math.PI / 2, 0, 0]);
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .012, 28), new THREE.MeshStandardMaterial({ color: '#f4f1ec', roughness: .4 })); ring.position.set(x, y - .006, z); scene.add(ring);
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(.03, 24), emis('#000', 0)); lens.rotation.x = Math.PI / 2; lens.position.set(x, y - .013, z); scene.add(lens);
+  const s = new THREE.SpotLight('#ffd9a8', 0, 8, a * Math.PI / 180, .5, 1.4); s.position.set(x, y - .03, z); s.target.position.set(tx, ty, tz); s.castShadow = true; s.shadow.mapSize.set(1024, 1024); scene.add(s, s.target);
+  const from = new THREE.Vector3(x, y - .02, z), to = new THREE.Vector3(tx, ty, tz), len = from.distanceTo(to);
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(Math.tan(a * Math.PI / 360) * len, len, 32, 1, true), beamM); cone.position.copy(from).lerp(to, .5); cone.lookAt(to); cone.rotateX(-Math.PI / 2); scene.add(cone);
+  return { mark, ring, lens, s, cone };
+});
+// ---- decision 2: the cove channel (aluminium profile on the lip + strip), highlighted in orange while on site ----
+const chanM = new THREE.MeshStandardMaterial({ color: '#d0d4d8', roughness: .3, metalness: .9, emissive: '#000' });
+const chan = new THREE.Group(); scene.add(chan);
+const strips = [], coveL = [];
+const run = (x, z, w, d, lx, lz) => {
+  box(w, .02, d, chanM, x, DY + .08, z, { parent: chan, cast: false });
+  const m = box(w > d ? w : .012, .006, w > d ? .012 : d, emis('#000', 0), x + (w > d ? 0 : d > w ? .01 : 0), DY + .1, z + (w > d ? .01 : 0), { cast: false, parent: chan }); strips.push(m);
+  const l = new THREE.RectAreaLight('#ffd3a0', 0, Math.max(w, d), .08); l.position.set(x + w / 2, DY + .12, z + d / 2); l.lookAt(lx, SLAB, lz); scene.add(l); coveL.push(l);
+};
+run(ix0, iz0 - .1, ix1 - ix0, .04, 0, iz0 + .9); run(ix0, iz1 + .06, ix1 - ix0, .04, 0, iz1 - .9);
+run(ix0 - .1, iz0, .04, iz1 - iz0, ix0 + .9, (iz0 + iz1) / 2); run(ix1 + .06, iz0, .04, iz1 - iz0, ix1 - .9, (iz0 + iz1) / 2);
+// ---- decision 3: the dimmer back box by the door (right wall) + its conduit up into the ceiling ----
+const dimG = new THREE.Group(); scene.add(dimG);
+const boxM = new THREE.MeshStandardMaterial({ color: '#2c5fa8', roughness: .6, emissive: '#000' });
+const DZ = 5.2;
+box(.04, .14, .14, boxM, RW - .04, 1.18, DZ - .07, { parent: dimG });
+const conduitM = new THREE.MeshStandardMaterial({ color: '#f1f1ee', roughness: .5, emissive: '#000' });
+const conduit = cable([[RW - .03, 1.32, DZ], [RW - .03, 2.2, DZ], [RW - .03, DY - .05, DZ], [RW - .3, DY + .3, DZ - .4], [ix1 - .1, GC + .1, iz1 - .5]], dimG, conduitM, .016);
+const plate = box(.012, .12, .12, new THREE.MeshStandardMaterial({ color: '#f4f1ea', roughness: .4 }), RW - .012, 1.19, DZ - .06);
+const knob = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, .02, 24), M.brass); knob.rotation.z = Math.PI / 2; knob.position.set(RW - .02, 1.25, DZ); scene.add(knob);
+// door frame next to the dimmer
+box(.06, 2.3, 1.0, new THREE.MeshStandardMaterial({ map: oakTex, color: '#6b4a32', roughness: .5 }), RW - .06, 0, DZ + .25);
+// ---- planned furniture: blue ghosts on site, real pieces when finished ----
+const ghostM = new THREE.MeshBasicMaterial({ color: '#4fc3ff', transparent: true, opacity: 0, depthWrite: false });
+const edgeM = new THREE.LineBasicMaterial({ color: '#8fdcff', transparent: true, opacity: 0 });
+const ghost = new THREE.Group(); scene.add(ghost);
+const real = new THREE.Group(); scene.add(real);
+function piece(w, h, d, x, y, z, mat, o = {}) {
+  const g = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), ghostM); g.position.set(x + w / 2, y + h / 2, z + d / 2); ghost.add(g);
+  const e = new THREE.LineSegments(new THREE.EdgesGeometry(g.geometry), edgeM); e.position.copy(g.position); ghost.add(e);
+  if (mat) box(w, h, d, mat, x, y, z, { ...o, parent: real });
+}
+const stoneM = new THREE.MeshStandardMaterial({ map: stoneTex, color: '#cfc4b4', roughness: .35 });
+piece(3.6, 2.6, .05, -1.8, 0, -.02, stoneM);                                                        // stone TV wall
+piece(1.6, .92, .05, -.8, 1.15, .03, M.screen);                                                     // TV
+piece(2.4, .38, .45, -1.2, .15, .03, new THREE.MeshStandardMaterial({ map: oakTex, color: '#5b3e2a', roughness: .45 }));   // floating unit
+const sofaM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#d9cdbb', roughness: .95 });
+piece(3.2, .42, .95, -1.6, 0, 3.7, sofaM, { r: .05 }); piece(3.2, .5, .22, -1.6, .4, 4.43, sofaM, { r: .06 });
+piece(1.3, .4, .7, -.65, 0, 2.0, new THREE.MeshStandardMaterial({ map: marbleTex, color: '#d8d0c4', roughness: .15 }), { r: .02 });   // coffee table
+piece(.05, .9, 1.4, -RW + .02, 1.25, 2.0, null);                                                    // painting (ghost only, the real one below)
+const artTex = canvasTex(768, 512, (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#2f4a5a'); gr.addColorStop(.6, '#8a6a4c'); gr.addColorStop(1, '#e2c9a0'); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.globalAlpha = .55; for (let i = 0; i < 7; i++) { g.fillStyle = ['#e9d7bd', '#b5562f', '#1f2b33', '#e2c48a', '#5d7a6a', '#c9a27a', '#f2eadc'][i]; g.fillRect(60 + i * 95, 80 + (i % 3) * 60, 70, 300 - (i % 2) * 90); } }, [1, 1]);
+box(.04, .96, 1.46, new THREE.MeshStandardMaterial({ color: '#1b1714', roughness: .5 }), -RW, 1.22, 1.97, { parent: real });
+plane(1.38, .88, new THREE.MeshStandardMaterial({ map: artTex, roughness: .8 }), [-RW + .045, 1.7, 2.7], [0, Math.PI / 2, 0], real);
+plane(3.6, 2.6, M.rug, [0, .006, 3.0], [-Math.PI / 2, 0, 0], real);
+// ---- site props: ladder, work lamp, cement bags ----
+const props = new THREE.Group(); scene.add(props);
+const ladM = new THREE.MeshStandardMaterial({ color: '#c9ccd0', roughness: .4, metalness: .8 });
+for (const sx of [-1, 1]) { const r = box(.04, 2.2, .04, ladM, 1.9 + sx * .22, 0, 1.6, { parent: props }); r.rotation.x = .18; const r2 = box(.04, 2.2, .04, ladM, 1.9 + sx * .22, 0, 2.2, { parent: props }); r2.rotation.x = -.18; }
+for (let k = 1; k < 6; k++) box(.48, .03, .05, ladM, 1.66, k * .34, 1.66 + k * .05, { parent: props });
+for (let k = 0; k < 3; k++) box(.5, .14, .35, new THREE.MeshStandardMaterial({ color: '#cfc3a8', roughness: 1 }), -2.6 + k * .05, k * .14, 4.8, { parent: props, r: .04 });
+box(.25, .2, .12, new THREE.MeshStandardMaterial({ color: '#f2c230', roughness: .5 }), -2.72, 1.55, 4.6, { parent: props }); box(.03, 1.55, .03, M.black, -2.615, 0, 4.65, { parent: props });
+const work = new THREE.SpotLight('#f4f6ff', 0, 14, 70 * Math.PI / 180, .9, 1); work.position.set(-2.6, 1.7, 4.6); work.target.position.set(1, 2.6, 1.5);
+const fill = new THREE.PointLight('#f2f4ff', 0, 9, 1.4); fill.position.set(1.4, 2.2, 3.6); scene.add(fill); scene.add(work, work.target);
+const hemi = new THREE.HemisphereLight('#eef2ff', '#4a4038', .4); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [0, 1.6, 6.0], tgt: [0, 1.85, .5], fov: 70 },          // the whole hall from the entrance, ceiling in view
+  u: { pos: [.6, 1.45, 4.6], tgt: [-.2, 2.9, 1.2], fov: 68 },       // looking up at the marked spots and their aim beams
+  c: { pos: [-4.7, 3.15, 4.0], tgt: [-2.9, 2.8, 2.4], fov: 50 },   // section: left wall hidden (token cut), the band, channel and lip from outside     // the cove channel along the left band
+  d: { pos: [1.1, 1.55, 3.4], tgt: [3.5, 1.8, 5.0], fov: 60 },      // the dimmer box by the door and its conduit
+};
+// state tokens joined by '+':  site (raw, ceiling open) · ghost:<0..1> planned furniture · marks:<0..1> spot X marks + aim beams · channel:<0..1> cove profile built + highlighted
+//   · dimmer:<0..1> back box + conduit highlighted · done (finished room, ceiling closed) · lights:<0..1> (cove + spots) · dim:<0..1> dimmer level (default 1)
+window.setState = (state) => {
+  const T = Object.fromEntries(state.split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const done = !!T.done, gh = T.ghost ?? 0, mk = T.marks ?? 0, ch = T.channel ?? (done ? 1 : 0), dm = T.dimmer ?? (done ? 1 : 0), li = (T.lights ?? 0) * (T.dim ?? 1);
+  for (const { t, open } of tiles) { t.visible = done || !open; t.material = done ? boardDone : boardRaw; }
+  band.forEach((b) => b.material = done ? boardDone : boardRaw); lip.forEach((b) => { b.visible = ch > 0; b.material = done ? boardDone : boardRaw; });
+  walls.forEach((w) => w.material = done ? wallDone : wallRaw); walls[1].visible = !T.cut; floorDone.visible = done; floorRaw.visible = !done;
+  grid.visible = cables.visible = !done; props.visible = !done; real.visible = done;
+  ghostM.opacity = .16 * gh; edgeM.opacity = .9 * gh; ghost.visible = gh > 0 && !done;
+  spots.forEach(({ mark, ring, lens, s, cone }, i) => { const k = Math.max(0, Math.min(1, mk * 1.3 - i * .05)); mark.visible = !done && k > 0; mark.scale.setScalar(.3 + .7 * k); ring.visible = done; cone.visible = !done && k > 0; beamM.opacity = .07 * mk; s.intensity = 40 * li; lens.material = li ? emis('#ffd9a8', 5 * li) : emis('#000', 0); });
+  chan.visible = ch > 0; chan.children.forEach((c, i) => c.scale.set(1, 1, 1)); chanM.emissive.set(!done && ch ? '#ff8a2a' : '#000'); chanM.emissiveIntensity = !done ? 1.6 * ch : 0;
+  strips.forEach((m) => m.material = li ? emis('#ffd3a0', 6 * li) : (!done && ch ? emis('#ff9a3a', 1.2 * ch) : emis('#000', 0)));
+  coveL.forEach((l) => l.intensity = 40 * li); lipGlowM.emissiveIntensity = !done ? 2 * ch : 0; lipGlow.forEach((g) => g.visible = !done && ch > 0);
+  dimG.visible = dm > 0 && !done; boxM.emissive.set(!done && dm ? '#2f7dff' : '#000'); boxM.emissiveIntensity = 1.2 * dm; conduitM.emissive.set(!done && dm ? '#ff8a2a' : '#000'); conduitM.emissiveIntensity = 1.4 * dm;
+  plate.visible = knob.visible = done;
+  work.intensity = done ? 0 : 22; fill.intensity = done ? 0 : 3;
+  hemi.intensity = done ? .05 + .55 * li : .4; scene.environmentIntensity = done ? .03 + .25 * li : .16;
+  renderer.toneMappingExposure = done ? 1.0 : .9;
+};
