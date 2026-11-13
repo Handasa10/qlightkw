@@ -1,0 +1,108 @@
+// ===== Villa living room, layer by layer (satisfying switch-on): dark room → hidden cove strip → spots on the painting, table and console → wall sconces → crystal chandelier =====
+// back wall z=0 (x -3.4..3.4): fluted feature panel, painting, two sconces, a long sofa; curtains on the left wall; console + plant on the right wall; ceiling 3.2 with a gypsum drop band (the cove) and a raised centre for the chandelier
+const CH = 3.2, RW = 3.4, RD = 6.2;
+marbleTex.repeat.set(3, 3);
+plane(RW * 2, RD, M.floor, [0, 0, RD / 2], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#e6ddd0', roughness: .9 });
+box(RW * 2, CH, .1, wallM, -RW, 0, -.12); box(.1, CH, RD, wallM, -RW - .1, 0, -.12); box(.1, CH, RD, wallM, RW, 0, -.12);
+box(RW * 2 + .2, .1, RD, M.ceil, -RW - .1, CH, -.12, { cast: false });
+// skirting
+const skM = new THREE.MeshStandardMaterial({ color: '#f4efe7', roughness: .6 });
+box(RW * 2, .1, .02, skM, -RW, 0, -.02, { cast: false });
+// fluted feature panel behind the sofa (in front of the wall face)
+const flM = new THREE.MeshStandardMaterial({ map: flutedTex, bumpMap: M.fluted.bumpMap, bumpScale: 3, color: '#cdb79a', roughness: .6 });
+box(3.6, 2.7, .04, flM, -1.8, 0, -.02, { uv: [3, 1] });
+// painting above the sofa (frame in front of the panel)
+const artTex = canvasTex(1024, 640, (g, w, h) => {
+  const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#e9d7bd'); gr.addColorStop(.5, '#c99a6b'); gr.addColorStop(1, '#5c3f2c'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.globalAlpha = .7; for (let i = 0; i < 6; i++) { g.fillStyle = ['#1f3b4d', '#b5562f', '#e8c88f', '#2c2420', '#7c8f6a', '#d9b48a'][i]; g.beginPath(); g.ellipse(160 + i * 140, 320 + Math.sin(i) * 120, 120 - i * 8, 220 - i * 18, i * .4, 0, 7); g.fill(); }
+  g.globalAlpha = 1; g.strokeStyle = 'rgba(20,14,10,.6)'; g.lineWidth = 8; g.beginPath(); g.moveTo(60, 520); g.bezierCurveTo(300, 380, 600, 600, 980, 420); g.stroke();
+}, [1, 1]);
+box(1.7, 1.06, .04, new THREE.MeshStandardMaterial({ color: '#b08a55', roughness: .35, metalness: .7 }), -.85, 1.45, .02);
+plane(1.6, .96, new THREE.MeshStandardMaterial({ map: artTex, roughness: .8 }), [0, 1.98, .065], [0, 0, 0]);
+// the sofa: long, low, cream boucle with cushions
+const sofaM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#efe6d8', roughness: .95 });
+box(3.0, .42, .95, sofaM, -1.5, 0, .12, { r: .06 });
+box(3.0, .5, .25, sofaM, -1.5, .4, .12, { r: .08 });
+for (const x of [-1.5, 1.25]) box(.25, .62, .95, sofaM, x, 0, .12, { r: .08 });
+const cuM = [new THREE.MeshStandardMaterial({ map: fabricTex, color: '#b07a4f', roughness: .9 }), new THREE.MeshStandardMaterial({ map: fabricTex, color: '#3f5563', roughness: .9 }), new THREE.MeshStandardMaterial({ map: fabricTex, color: '#d8c3a0', roughness: .9 })];
+[-1.1, -.55, .3, .85].forEach((x, i) => box(.42, .4, .14, cuM[i % 3], x, .45, .4, { r: .06 }));
+// rug + coffee table (marble top on brass legs) + a vase and books
+plane(4.0, 2.8, M.rug, [0, .006, 2.2], [-Math.PI / 2, 0, 0]);
+box(1.6, .06, .8, new THREE.MeshStandardMaterial({ map: marbleTex, color: '#cfc7ba', roughness: .15 }), -.8, .36, 1.75, { r: .02 });
+for (const [x, z] of [[-.7, 1.82], [.66, 1.82], [-.7, 2.48], [.66, 2.48]]) box(.04, .36, .04, M.brass, x, 0, z);
+const vase = new THREE.Mesh(new THREE.CylinderGeometry(.07, .1, .28, 24), new THREE.MeshStandardMaterial({ color: '#2f4a5a', roughness: .2, metalness: .2 })); vase.position.set(.3, .56, 2.1); scene.add(vase);
+box(.32, .06, .22, new THREE.MeshStandardMaterial({ color: '#8c3b2a', roughness: .7 }), -.45, .42, 2.0); box(.28, .05, .2, new THREE.MeshStandardMaterial({ color: '#e9dfcc', roughness: .7 }), -.43, .48, 2.01);
+// two armchairs facing the sofa (seen from behind in the wide view, a soft silhouette)
+const chM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#8a6e57', roughness: .95 });
+for (const x of [-1.6, .7]) { box(.9, .42, .8, chM, x, 0, 3.4, { r: .06 }); box(.9, .45, .2, chM, x, .4, 4.0, { r: .06 }); }
+// curtains on the left wall (a sheer + heavy drape)
+const crM = new THREE.MeshStandardMaterial({ color: '#d9cbb6', roughness: 1, side: THREE.DoubleSide });
+for (let i = 0; i < 14; i++) box(.06, 2.95, .2, crM, -RW + .02 + (i % 2) * .04, 0, 1.0 + i * .2, { r: .02 });
+// right wall: a long console, a plant, a mirror
+box(.45, .8, 1.8, new THREE.MeshStandardMaterial({ map: oakTex, color: '#6b4a32', roughness: .45 }), RW - .45, 0, 1.6, { r: .02 });
+plant(RW - .55, 4.1, 1.5, .55);
+const lampV = new THREE.Mesh(new THREE.SphereGeometry(.13, 24, 16), new THREE.MeshStandardMaterial({ color: '#c9a063', roughness: .2, metalness: .9 })); lampV.position.set(RW - .22, .93, 2.0); scene.add(lampV);
+box(.04, 1.0, 1.1, new THREE.MeshStandardMaterial({ color: '#b08a55', roughness: .3, metalness: .8 }), RW - .04, 1.25, 1.95);
+plane(1.0, .9, new THREE.MeshStandardMaterial({ color: '#9fa9ad', roughness: .05, metalness: 1 }), [RW - .045, 1.75, 2.5], [0, -Math.PI / 2, 0]);
+// ceiling cove: gypsum drop band with a hidden strip on its inner lip washing the raised centre
+const gypM = new THREE.MeshStandardMaterial({ color: '#f4f1eb', roughness: .9 });
+const B = .65, DY = 2.92, DH = .1;
+box(RW * 2, DH, B, gypM, -RW, DY, -.12, { cast: false }); box(RW * 2, DH, B, gypM, -RW, DY, RD - B - .12, { cast: false });
+box(B, DH, RD - 2 * B, gypM, -RW, DY, -.12 + B, { cast: false }); box(B, DH, RD - 2 * B, gypM, RW - B, DY, -.12 + B, { cast: false });
+const ix0 = -RW + B, ix1 = RW - B, iz0 = -.12 + B, iz1 = RD - B - .12;
+const coveS = [], coveL = [];
+const cv = (x, z, w, d, lx, lz) => { coveS.push(box(w, .006, d, emis('#000', 0), x, DY + DH + .002, z, { cast: false })); const l = new THREE.RectAreaLight('#ffd3a0', 0, Math.max(w, d), .08); l.position.set(x + w / 2, DY + DH + .02, z + d / 2); l.lookAt(lx, CH + 1, lz); scene.add(l); coveL.push(l); };
+cv(ix0, iz0 - .04, ix1 - ix0, .03, 0, iz0 + .8); cv(ix1 + .01, iz0, .03, iz1 - iz0, ix1 - .8, (iz0 + iz1) / 2);
+cv(ix0, iz1 + .01, ix1 - ix0, .03, 0, iz1 - .8); cv(ix0 - .04, iz0, .03, iz1 - iz0, ix0 + .8, (iz0 + iz1) / 2);
+// recessed spots in the drop band: painting (x2), coffee table, console
+const spots = [[-.55, .3, -.45, 2.0, .05, 22], [.55, .3, .45, 2.0, .05, 22], [0, 2.1, 0, .4, 2.1, 18], [RW - .35, 2.0, RW - .25, .8, 2.0, 18]].map(([x, z, tx, ty, tz, ang]) => {
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(.045, .045, .02, 20), emis('#000', 0)); ring.position.set(x, z < 1 || x > 2 ? DY - .005 : CH - .005, z); scene.add(ring);
+  const s = new THREE.SpotLight('#ffdcb0', 0, 7, ang * Math.PI / 180, .5, 1.3); s.position.set(x, ring.position.y - .02, z); s.target.position.set(tx, ty, tz); s.castShadow = true; s.shadow.mapSize.set(1024, 1024); scene.add(s, s.target); return { ring, s };
+});
+// wall sconces flanking the painting (brass, up + down light on the fluted panel)
+const scM = new THREE.MeshStandardMaterial({ color: '#c9a063', metalness: .9, roughness: .25 });
+const sconces = [-1.25, 1.25].map((x) => {
+  box(.1, .3, .06, scM, x - .05, 1.75, .02);
+  const shade = new THREE.Mesh(new THREE.CylinderGeometry(.08, .1, .2, 24, 1, true), new THREE.MeshStandardMaterial({ color: '#f3e6cf', roughness: .9, side: THREE.DoubleSide, emissive: '#000' })); shade.position.set(x, 2.02, .16); scene.add(shade);
+  const up = new THREE.SpotLight('#ffc98a', 0, 3, 38 * Math.PI / 180, .8, 1.4); up.position.set(x, 2.08, .12); up.target.position.set(x, 3.2, .05); scene.add(up, up.target);
+  const dn = new THREE.SpotLight('#ffc98a', 0, 3, 40 * Math.PI / 180, .8, 1.4); dn.position.set(x, 1.96, .12); dn.target.position.set(x, .4, .05); scene.add(dn, dn.target);
+  const pt = new THREE.PointLight('#ffbf7a', 0, 2.6, 2); pt.position.set(x, 2.0, .35); scene.add(pt);
+  return { shade, up, dn, pt };
+});
+// crystal chandelier from the raised centre: brass rings, candle bulbs, hanging crystal drops
+const chand = new THREE.Group(); scene.add(chand); const CY = 2.35, CZ = 2.4;
+const rod = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, CH - CY - .3, 8), M.brass); rod.position.set(0, (CH + CY + .3) / 2, CZ); chand.add(rod);
+const crystalOff = new THREE.MeshPhysicalMaterial({ color: '#e8eef2', roughness: .05, metalness: 0, transmission: .6, transparent: true, opacity: .7 });
+const crystals = [], bulbs = [];
+const bulbOff = new THREE.MeshStandardMaterial({ color: '#efe6d6', roughness: .3 });
+for (const [r, y, n] of [[.55, CY, 12], [.36, CY + .28, 8], [.18, CY + .5, 6]]) {
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(r, .014, 8, 48), M.brass); ring.rotation.x = Math.PI / 2; ring.position.set(0, y, CZ); chand.add(ring);
+  for (let i = 0; i < n; i++) {
+    const a = i / n * Math.PI * 2, x = Math.cos(a) * r, z = CZ + Math.sin(a) * r;
+    const b = new THREE.Mesh(new THREE.SphereGeometry(.028, 12, 10), bulbOff); b.position.set(x, y + .07, z); chand.add(b); bulbs.push(b);
+    for (let k = 0; k < 3; k++) { const c = new THREE.Mesh(new THREE.OctahedronGeometry(.022 + k * .004, 0), crystalOff); c.scale.y = 1.8; const aa = a + (k - 1) * .14; c.position.set(Math.cos(aa) * r, y - .06 - k * .05, CZ + Math.sin(aa) * r); chand.add(c); crystals.push(c); }
+  }
+}
+const chPt = new THREE.PointLight('#ffd7a3', 0, 7, 1.6); chPt.position.set(0, CY + .1, CZ); scene.add(chPt);
+const chDn = new THREE.SpotLight('#ffd7a3', 0, 6, 55 * Math.PI / 180, .9, 1.2); chDn.position.set(0, CY, CZ); chDn.target.position.set(0, 0, CZ); scene.add(chDn, chDn.target);
+const hemi = new THREE.HemisphereLight('#d9dde8', '#2a2018', .03); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [0, 1.75, 6.0], tgt: [0, 1.45, .8], fov: 66 },          // the whole room from the entrance
+  c: { pos: [.2, 1.5, 4.4], tgt: [0, 2.35, 2.4], fov: 55 },          // looking up at the chandelier with the room behind
+  s: { pos: [.3, 1.3, 2.8], tgt: [0, 1.45, 0], fov: 56 },           // the sofa, painting and sconces
+};
+// state tokens joined by '+':  off · cove:<0..1> (hidden strip edge by edge) · spots · sconce · chand:<0..1> (crystals sparkle in) · all (= cove+spots+sconce+chand)
+window.setState = (state) => {
+  const T = Object.fromEntries(state.replace('all', 'cove+spots+sconce+chand').split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const co = T.cove ?? 0, sp = T.spots ?? 0, sc = T.sconce ?? 0, ch = T.chand ?? 0;
+  coveL.forEach((l, i) => { const k = Math.max(0, Math.min(1, (co * 1.1 - i / 4) / .3)); l.intensity = 34 * k; coveS[i].material = k ? emis('#ffd3a0', 6 * k) : emis('#000', 0); });
+  spots.forEach(({ ring, s }) => { s.intensity = 30 * sp; ring.material = sp ? emis('#ffe2bf', 3) : emis('#000', 0); });
+  sconces.forEach(({ shade, up, dn, pt }) => { up.intensity = 9 * sc; dn.intensity = 9 * sc; pt.intensity = 1.2 * sc; shade.material.emissive.set(sc ? '#ffcf96' : '#000'); shade.material.emissiveIntensity = 1.6 * sc; });
+  bulbs.forEach((b, i) => { const k = Math.max(0, Math.min(1, (ch * 1.2 - i / bulbs.length * .5) / .5)); b.material = k ? emis('#ffe0b0', 7 * k) : bulbOff; });
+  crystals.forEach((c, i) => { c.material = ch ? emis(i % 3 ? '#ffe9cc' : '#ffd9a6', (.35 + (i * 7 % 5) * .22) * ch) : crystalOff; });
+  chPt.intensity = 6 * ch; chDn.intensity = 12 * ch;
+  const lit = Math.min(1, co) * .35 + sp * .2 + sc * .15 + ch * .3;
+  hemi.intensity = .03 + .3 * lit; scene.environmentIntensity = .02 + .13 * lit;
+  renderer.toneMappingExposure = 1.0;
+};
