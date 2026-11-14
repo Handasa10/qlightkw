@@ -50,6 +50,7 @@ const spots = tables.map(([x, z]) => {
 const wash = [-2.4, -.8, .8, 2.4].map((x) => { const s = new THREE.SpotLight('#ffbf80', 0, 5, 30 * Math.PI / 180, .8, 1.4); s.position.set(x, CH - .05, .45); s.target.position.set(x, .4, -.05); scene.add(s, s.target); return s; });
 const hemi = new THREE.HemisphereLight('#e7e1d8', '#1a1612', .04); scene.add(hemi);
 const VIEWS = {
+  q: { pos: [-1.2, 1.75, 2.75], tgt: [-1.6, .78, 1.35], fov: 50 },   // the table from the other side, plates in front (3-questions reel)
   w: { pos: [-.4, 2.0, 5.6], tgt: [-1.35, .8, 2.3], fov: 60 },        // the dining room
   t: { pos: [-.6, 1.35, 2.35], tgt: [-1.55, .78, 1.4], fov: 50 }, // one table, close
   d: { pos: [-1.45, 1.05, 1.75], tgt: [-1.75, .8, 1.35], fov: 42 },// the plates, macro

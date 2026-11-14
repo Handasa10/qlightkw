@@ -53,6 +53,7 @@ const key = new THREE.SpotLight('#ffffff', 0, 8, .6, .6, 1.2); key.position.set(
 const rim = new THREE.PointLight('#ffb36b', 0, 5, 2); rim.position.set(PX - 1.2, 1.6, -.5); scene.add(rim);
 
 const VIEWS = {
+  q: { pos: [-.9, 1.6, 3.7], tgt: [.1, .9, .6], fov: 58 },        // the corner from the left, a bit higher (3-questions reel)
   r: { pos: [0, 1.35, 4.3], tgt: [0, 1.05, .4], fov: 62 },      // the room
   t: { pos: [.35, 1.05, 2.6], tgt: [-.05, .55, 1.4], fov: 48 }, // the table + cushions close
   p: { pos: [PX, 1.3, 1.1], tgt: [PX, 1.05, 0], fov: 40 },      // the two fixtures

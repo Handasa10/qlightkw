@@ -59,6 +59,7 @@ const mixL = new THREE.SpotLight('#a9c2ff', 0, 8, .55, .6, 1.4); mixL.position.s
 const mixR = new THREE.SpotLight('#ff9f3d', 0, 8, .55, .6, 1.4); mixR.position.set(.6, 2.97, .7); mixR.target.position.set(.6, .4, -.1); scene.add(mixR, mixR.target);
 
 const VIEWS = {
+  q: { pos: [-1.6, 1.7, 4.2], tgt: [.2, .75, .3], fov: 58 },       // the corner from the left (3-questions reel)
   m: { pos: [2.0, 1.55, 4.4], tgt: [-.15, .72, .3], fov: 56 },
   c: { pos: [1.05, 1.1, 2.55], tgt: [-.3, .62, .2], fov: 48 },
 };
