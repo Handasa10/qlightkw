@@ -1,0 +1,123 @@
+// ===== Six product pairs, cheap vs quality, each on its own dark studio station (x = i*8): 0 spots (shallow glaring vs deep anti-glare), 1 LED strip (dotted, yellowed vs COB line), 2 drivers (cheap plastic vs finned metal, each feeding a bulb), 3 strip over a long run (12 V fading to orange vs 24 V even), 4 colour rendering (fruit under CRI 80 vs 90+), 5 outdoor floodlight on a stone wall at night (unprotected, dusty, weak vs IP65 die-cast, clean beam) =====
+// views a<i> = the cheap product, b<i> = the quality one. states: on (default) · flick (the cheap driver's bulb dipped) · off
+const SX = (i) => i * 8;
+const studioFloor = new THREE.MeshStandardMaterial({ color: '#1d1b1a', roughness: .55 });
+const studioWall = new THREE.MeshStandardMaterial({ color: '#3a3836', roughness: .9 });
+for (let i = 0; i < 6; i++) { plane(7.6, 6, studioFloor, [SX(i), 0, 1], [-Math.PI / 2, 0, 0]); box(7.6, 4, .1, studioWall, SX(i) - 3.8, 0, -1.3); }
+const cheap = [], good = [];
+// --- 0: spots in a ceiling slab
+{
+  const X = SX(0); box(3.2, .1, 2.4, new THREE.MeshStandardMaterial({ color: '#e9e6e1', roughness: .9 }), X - 1.6, 2.4, -1.2, { cast: false });
+  // cheap: flat white trim, big flush cold lens, wide beam
+  const trim = new THREE.Mesh(new THREE.CylinderGeometry(.085, .085, .012, 32), new THREE.MeshStandardMaterial({ color: '#f4f4f2', roughness: .4 })); trim.position.set(X - .6, 2.394, 0); scene.add(trim);
+  const lensA = new THREE.Mesh(new THREE.CylinderGeometry(.068, .068, .004, 32), emis('#eef4ff', 12)); lensA.position.set(X - .6, 2.386, 0); scene.add(lensA);
+  const sA = new THREE.SpotLight('#eef4ff', 30, 6, 60 * Math.PI / 180, .2, 1.3); sA.position.set(X - .6, 2.37, 0); sA.target.position.set(X - .6, 0, 0); scene.add(sA, sA.target);
+  cheap.push({ on: () => { sA.intensity = 30; lensA.material = emis('#eef4ff', 12); }, off: () => { sA.intensity = 0; lensA.material = emis('#000', 0); } });
+  // quality: black deep cup, the emitter far up inside, narrow warm beam
+  const cup = new THREE.Mesh(new THREE.CylinderGeometry(.07, .06, .16, 32, 1, true), new THREE.MeshStandardMaterial({ color: '#0b0b0b', roughness: .35, metalness: .4, side: THREE.DoubleSide })); cup.position.set(X + .6, 2.33, 0); scene.add(cup);
+  const rimB = new THREE.Mesh(new THREE.TorusGeometry(.075, .008, 8, 32), new THREE.MeshStandardMaterial({ color: '#111', roughness: .3, metalness: .6 })); rimB.rotation.x = Math.PI / 2; rimB.position.set(X + .6, 2.395, 0); scene.add(rimB);
+  const lensB = new THREE.Mesh(new THREE.CylinderGeometry(.022, .022, .004, 24), emis('#ffd9a8', 8)); lensB.position.set(X + .6, 2.41, 0); scene.add(lensB);
+  const sB = new THREE.SpotLight('#ffd9a8', 34, 6, 24 * Math.PI / 180, .45, 1.3); sB.position.set(X + .6, 2.25, 0); sB.target.position.set(X + .6, 0, 0); scene.add(sB, sB.target);
+  good.push({ on: () => { sB.intensity = 34; lensB.material = emis('#ffd9a8', 8); }, off: () => { sB.intensity = 0; lensB.material = emis('#000', 0); } });
+}
+// --- 1: LED strip in a shelf profile, washing the wall above
+{
+  const X = SX(1);
+  const mk = (x0, cob) => {
+    box(1.3, .04, .25, new THREE.MeshStandardMaterial({ map: oakTex, color: '#7a5a40', roughness: .5 }), x0, 1.1, -1.25);
+    const parts = [];
+    if (cob) { const m = box(1.2, .006, .012, emis('#fff1dc', 7), x0 + .05, 1.141, -1.12, { cast: false }); parts.push(m); }
+    else for (let k = 0; k < 24; k++) { const d = new THREE.Mesh(new THREE.BoxGeometry(.018, .006, .012), emis('#ffc56a', 9)); d.position.set(x0 + .07 + k * .05, 1.144, -1.115); scene.add(d); parts.push(d); }
+    const l = new THREE.RectAreaLight(cob ? '#fff1dc' : '#ffbf66', cob ? 30 : 16, 1.2, .05); l.position.set(x0 + .65, 1.15, -1.13); l.lookAt(x0 + .65, 3, -1.25); scene.add(l);
+    return { parts, l, cob };
+  };
+  const A = mk(X - 1.5, false), B = mk(X + .2, true);
+  cheap.push({ on: () => { A.l.intensity = 16; A.parts.forEach((p) => p.material = emis('#ffc56a', 9)); }, off: () => { A.l.intensity = 0; A.parts.forEach((p) => p.material = emis('#000', 0)); } });
+  good.push({ on: () => { B.l.intensity = 30; B.parts.forEach((p) => p.material = emis('#fff1dc', 7)); }, off: () => { B.l.intensity = 0; B.parts.forEach((p) => p.material = emis('#000', 0)); } });
+}
+// --- 2: drivers on a bench, each feeding a globe bulb above it
+{
+  const X = SX(2);
+  box(3.0, .06, .9, new THREE.MeshStandardMaterial({ color: '#2a2725', roughness: .6 }), X - 1.5, .9, -1.1);
+  // cheap: thin white plastic box with a paper label
+  box(.26, .05, .12, new THREE.MeshStandardMaterial({ color: '#efeeea', roughness: .5 }), X - .73, .96, -.7, { r: .01 });
+  box(.12, .002, .07, new THREE.MeshStandardMaterial({ color: '#d6d2c4', roughness: .9 }), X - .66, 1.011, -.67, { cast: false });
+  // quality: finned aluminium body with a black label plate
+  const al = new THREE.MeshStandardMaterial({ color: '#a7abb0', roughness: .35, metalness: .9 });
+  box(.34, .06, .16, al, X + .43, .96, -.72); for (let k = 0; k < 7; k++) box(.34, .025, .008, al, X + .43, 1.02, -.715 + k * .024);
+  box(.14, .002, .1, new THREE.MeshStandardMaterial({ color: '#141414', roughness: .4 }), X + .53, 1.046, -.69, { cast: false });
+  const cable = (x) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(.006, .006, .9, 8), M.black); c.position.set(x, 1.45, -.95); scene.add(c); };
+  cable(X - .6); cable(X + .6);
+  const bulb = (x) => { const b = new THREE.Mesh(new THREE.SphereGeometry(.09, 24, 16), emis('#ffd9a8', 7)); b.position.set(x, 1.95, -.95); scene.add(b); const p = new THREE.PointLight('#ffcf94', 4, 4, 1.6); p.position.set(x, 1.9, -.85); scene.add(p); return { b, p }; };
+  const A = bulb(X - .6), B = bulb(X + .6);
+  cheap.push({ on: (k = 1) => { A.p.intensity = 4 * k; A.b.material = emis('#ffd9a8', 7 * k + .2); }, off: () => { A.p.intensity = 0; A.b.material = emis('#000', 0); } });
+  good.push({ on: () => { B.p.intensity = 4; B.b.material = emis('#ffd9a8', 7); }, off: () => { B.p.intensity = 0; B.b.material = emis('#000', 0); } });
+}
+// --- 3: a long strip run along the wall (5 m): 12 V fades and turns orange toward the end; 24 V stays even
+{
+  const X = SX(3);
+  const run = (y, v24) => {
+    box(5.2, .04, .14, new THREE.MeshStandardMaterial({ color: '#d8d4cc', roughness: .8 }), X - 2.6, y, -1.25);
+    const segs = [];
+    for (let k = 0; k < 10; k++) {
+      const f = k / 9, kk = v24 ? 1 : 1 - .82 * f; const col = v24 ? '#fff1dc' : new THREE.Color('#fff1dc').lerp(new THREE.Color('#ff8a2a'), f).getStyle();
+      const m = box(.5, .006, .012, emis(col, 9 * kk), X - 2.55 + k * .51, y - .007, -1.15, { cast: false });
+      const l = new THREE.RectAreaLight(col, 34 * kk, .5, .05); l.position.set(X - 2.3 + k * .51, y - .01, -1.16); l.lookAt(X - 2.3 + k * .51, y - 3, -1.25); scene.add(l);
+      segs.push({ m, l, col, kk });
+    }
+    return segs;
+  };
+  const A = run(2.6, false), B = run(1.25, true);
+  const sw = (S, on) => S.forEach(({ m, l, col, kk }) => { l.intensity = on ? 34 * kk : 0; m.material = on ? emis(col, 9 * kk) : emis('#000', 0); });
+  cheap.push({ on: () => sw(A, 1), off: () => sw(A, 0) }); good.push({ on: () => sw(B, 1), off: () => sw(B, 0) });
+}
+// --- 4: colour rendering: the same fruit plate under a CRI 80 lamp (colours simulated dull) and a CRI 90+ lamp
+{
+  const X = SX(4);
+  box(3.0, .06, 1.0, new THREE.MeshStandardMaterial({ color: '#2d2a28', roughness: .6 }), X - 1.5, .8, -1.2);
+  box(.04, 1.4, 1.0, studioWall, X - .02, .86, -1.2); // divider
+  const plate = (x, vivid) => {
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(.24, .2, .03, 40), new THREE.MeshStandardMaterial({ color: '#f2efe9', roughness: .3 })); p.position.set(x, .875, -.7); scene.add(p);
+    const fr = vivid ? ['#d4202a', '#f2b51b', '#3f9b2f', '#e8641c', '#7a2a6b'] : ['#8f5a55', '#a99a6c', '#6d7d5f', '#a07a5e', '#6c5764'];
+    [[-.09, -.05], [.08, -.06], [0, .08], [-.1, .09], [.11, .07]].forEach(([dx, dz], i) => { const s = new THREE.Mesh(new THREE.SphereGeometry(.06 + (i % 2) * .012, 20, 14), new THREE.MeshStandardMaterial({ color: fr[i], roughness: .45 })); s.position.set(x + dx, .95, -.7 + dz); scene.add(s); });
+    const lamp = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .02, 24), emis(vivid ? '#ffe3c0' : '#f3f6ff', 6)); lamp.position.set(x, 2.0, -.7); scene.add(lamp);
+    const s = new THREE.SpotLight(vivid ? '#ffe3c0' : '#f3f6ff', 22, 4, 34 * Math.PI / 180, .5, 1.3); s.position.set(x, 1.98, -.7); s.target.position.set(x, .8, -.7); scene.add(s, s.target);
+    return { lamp, s, c: vivid ? '#ffe3c0' : '#f3f6ff' };
+  };
+  const A = plate(X - .75, false), B = plate(X + .75, true);
+  const sw = (P, on) => { P.s.intensity = on ? 22 : 0; P.lamp.material = on ? emis(P.c, 6) : emis('#000', 0); };
+  cheap.push({ on: () => sw(A, 1), off: () => sw(A, 0) }); good.push({ on: () => sw(B, 1), off: () => sw(B, 0) });
+}
+// --- 5: outdoor floodlights on a stone wall at night
+{
+  const X = SX(5);
+  box(4.0, 3.0, .12, new THREE.MeshStandardMaterial({ map: stoneTex, color: '#b9a78c', roughness: .9 }), X - 2.0, 0, -1.2);
+  // cheap: thin grey housing, rust patches, fogged glass, weak yellow beam, dust on top
+  const hA = new THREE.MeshStandardMaterial({ color: '#7d7a74', roughness: .7, metalness: .3 });
+  box(.34, .26, .07, hA, X - .9, 2.1, -1.06); for (const [dx, dy] of [[.03, .02], [.25, .18], [.1, .2]]) box(.06, .04, .004, new THREE.MeshStandardMaterial({ color: '#7a3d1a', roughness: 1 }), X - .9 + dx, 2.1 + dy, -.988, { cast: false });
+  const glassA = box(.28, .2, .004, emis('#c9a560', 1.6), X - .87, 2.13, -.99, { cast: false });
+  box(.34, .02, .07, new THREE.MeshStandardMaterial({ color: '#b39a72', roughness: 1 }), X - .9, 2.36, -1.06); // dust
+  const fA = new THREE.SpotLight('#ffcf80', 8, 5, 40 * Math.PI / 180, .3, 1.5); fA.position.set(X - .73, 2.2, -.95); fA.target.position.set(X - .73, 0, -1.2); scene.add(fA, fA.target);
+  // quality: black die-cast with fins, clear tempered glass, strong neutral beam grazing the stone
+  const hB = new THREE.MeshStandardMaterial({ color: '#141414', roughness: .35, metalness: .7 });
+  box(.36, .28, .08, hB, X + .55, 2.1, -1.07); for (let k = 0; k < 6; k++) box(.36, .01, .03, hB, X + .55, 2.12 + k * .045, -1.1);
+  const glassB = box(.3, .22, .004, emis('#fff4e2', 6), X + .58, 2.13, -.988, { cast: false });
+  const fB = new THREE.SpotLight('#fff4e2', 40, 6, 36 * Math.PI / 180, .45, 1.3); fB.position.set(X + .73, 2.2, -.95); fB.target.position.set(X + .73, 0, -1.2); scene.add(fB, fB.target);
+  cheap.push({ on: () => { fA.intensity = 8; glassA.material = emis('#c9a560', 1.6); }, off: () => { fA.intensity = 0; glassA.material = emis('#000', 0); } });
+  good.push({ on: () => { fB.intensity = 40; glassB.material = emis('#fff4e2', 6); }, off: () => { fB.intensity = 0; glassB.material = emis('#000', 0); } });
+}
+const hemi = new THREE.HemisphereLight('#d9dde8', '#2a2018', .12); scene.add(hemi);
+const VIEWS = {
+  a0: { pos: [SX(0) - .6, 1.25, 1.3], tgt: [SX(0) - .6, 2.1, -.2], fov: 52 }, b0: { pos: [SX(0) + .6, 1.25, 1.3], tgt: [SX(0) + .6, 2.1, -.2], fov: 52 },
+  a1: { pos: [SX(1) - .85, 1.3, -.05], tgt: [SX(1) - .85, 1.4, -1.25], fov: 50 }, b1: { pos: [SX(1) + .85, 1.3, -.05], tgt: [SX(1) + .85, 1.4, -1.25], fov: 50 },
+  a2: { pos: [SX(2) - .6, 1.4, .7], tgt: [SX(2) - .6, 1.4, -.9], fov: 40 }, b2: { pos: [SX(2) + .6, 1.4, .7], tgt: [SX(2) + .6, 1.4, -.9], fov: 40 },
+  a3: { pos: [SX(3) - 2.4, 2.2, .9], tgt: [SX(3) + 1.6, 2.35, -1.25], fov: 58 }, b3: { pos: [SX(3) - 2.4, .85, .9], tgt: [SX(3) + 1.6, 1.0, -1.25], fov: 58 },
+  a4: { pos: [SX(4) - .75, 1.45, .45], tgt: [SX(4) - .75, .95, -.7], fov: 50 }, b4: { pos: [SX(4) + .75, 1.45, .45], tgt: [SX(4) + .75, .95, -.7], fov: 50 },
+  a5: { pos: [SX(5) - .75, 1.5, 1.8], tgt: [SX(5) - .75, 1.5, -1.2], fov: 60 }, b5: { pos: [SX(5) + .7, 1.5, 1.8], tgt: [SX(5) + .7, 1.5, -1.2], fov: 60 },
+};
+window.setState = (state) => {
+  const st = state || 'on';
+  cheap.forEach((c, i) => st === 'off' ? c.off() : (st === 'flick' && i === 2 ? c.on(.12) : c.on()));
+  good.forEach((g) => st === 'off' ? g.off() : g.on());
+  scene.environmentIntensity = .05; renderer.toneMappingExposure = 1.0;
+};
