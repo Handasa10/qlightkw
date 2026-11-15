@@ -1,0 +1,136 @@
+// ===== Project of the week: one villa ground floor from open site to lit, room by room =====
+// Plan 12 x 9 m: open kitchen (back-left), entrance foyer (front-left), big family hall + dining (right). Walls 3 m.
+// state tokens joined by '+':
+//   site           raw concrete floor + block walls, no furniture, no ceiling boards
+//   plan           (with site) a blueprint on the floor: room outlines, spot circles, cove lines, sconce marks
+//   wire           (with site) metal ceiling studs, orange cables from the board to every point, drivers next to the coves
+//   done           finished: marble floor, plaster walls, gypsum ceiling, furniture
+//   lit:<0..1>     rooms switch on one by one: hall (cove + spots + linear pendant), kitchen (spots + under-cabinet + pendants), entrance (sconces + console spot)
+//   top            hide ceilings/studs boards for the bird's-eye view t (cables and drivers stay visible in wire)
+//   dim:<x>        scales the lights
+const X0 = -6, X1 = 6, Z0 = -4.5, Z1 = 4.5, HW = 3.0, CY = 2.8;
+scene.background = new THREE.Color('#0b0a0c');
+marbleTex.repeat.set(5, 4);
+const concrete = new THREE.MeshStandardMaterial({ map: canvasTex(512, 512, (g, w, h) => { g.fillStyle = '#8f8a83'; g.fillRect(0, 0, w, h); for (let i = 0; i < 9000; i++) { const c = 110 + R() * 60; g.fillStyle = `rgba(${c},${c - 4},${c - 8},.25)`; g.fillRect(R() * w, R() * h, 2, 2); } }, [6, 5]), roughness: .95 });
+const block = new THREE.MeshStandardMaterial({ map: canvasTex(512, 256, (g, w, h) => { g.fillStyle = '#a7a199'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(70,66,60,.55)'; g.lineWidth = 3; for (let y = 0; y < h; y += 32) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); for (let x = (y / 32) % 2 ? 0 : 64; x < w; x += 128) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 32); g.stroke(); } } }, [4, 3]), roughness: .95 });
+const plaster = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#ece5da', roughness: .9 });
+const floorFin = new THREE.MeshStandardMaterial({ map: marbleTex, roughness: .2 });
+const FLOOR = plane(X1 - X0, Z1 - Z0, concrete, [0, 0, 0], [-Math.PI / 2, 0, 0]);
+// walls: [x0, z0, x1, z1] runs; gaps are made by splitting runs
+const WALLS = [];
+function wall(x0, z0, x1, z1, h = HW) { const t = .16, len = Math.hypot(x1 - x0, z1 - z0); const m = new THREE.Mesh(new THREE.BoxGeometry(x1 === x0 ? t : len + t, h, z1 === z0 ? t : len + t), block); m.position.set((x0 + x1) / 2, h / 2, (z0 + z1) / 2); m.castShadow = m.receiveShadow = true; scene.add(m); WALLS.push(m); return m; }
+wall(X0, Z0, X1, Z0); wall(X0, Z0, X0, Z1); wall(X1, Z0, X1, Z1);
+wall(X0, Z1, -4.3, Z1); wall(-2.9, Z1, X1, Z1, 1.0);                                   // front: door gap x -4.3..-2.9; low wall + glass on the hall side
+const glassM = new THREE.MeshStandardMaterial({ color: '#16202c', roughness: .05, metalness: .3, transparent: true, opacity: .35 });
+const frontGlass = plane(X1 + 2.9, HW - 1.0, glassM, [(X1 - 2.9) / 2, 1.0 + (HW - 1.0) / 2, Z1], [0, 0, 0]);
+wall(-2.9, Z1, -2.9, Z1);
+wall(-1, Z0, -1, -3.9); wall(-1, -.1, -1, .9);                                           // kitchen | hall: open between z -3.9..-0.1
+wall(-1, 3.6, -1, Z1);                                                                   // entrance | hall: arch z .9..3.6
+wall(X0, .5, -4.2, .5); wall(-3.0, .5, -1, .5);                                         // kitchen | entrance: door x -4.2..-3.0
+// front door (finished)
+const door = box(1.3, 2.4, .08, new THREE.MeshStandardMaterial({ map: oakTex, color: '#6a4a30', roughness: .45 }), -4.25, 0, Z1 - .1);
+// ---------- ceiling: gypsum boards per room (done) / metal studs (wire) ----------
+const gypM = new THREE.MeshStandardMaterial({ color: '#f3efe8', roughness: .95 });
+const CEIL = [box(X1 + 1, .06, Z1 - Z0, gypM, -1, CY, Z0, { cast: false }), box(5, .06, 5, gypM, X0, CY, Z0, { cast: false }), box(5, .06, 4, gypM, X0, CY, .5, { cast: false })];
+// cove: the hall ceiling has a raised centre with a lit lip all round (back and right sides shown)
+const lipM = gypM;
+const LIPS = [box(6.4, .18, .08, lipM, -.7, CY - .2, -3.95, { cast: false }), box(.08, .18, 7.6, lipM, 5.4, CY - .2, -3.95, { cast: false })];
+const STUDS = new THREE.Group(); scene.add(STUDS);
+const studM = new THREE.MeshStandardMaterial({ color: '#b9bfc6', roughness: .35, metalness: .8 });
+for (let x = X0 + .3; x < X1; x += .6) box(.04, .05, Z1 - Z0, studM, x, CY + .03, Z0, { parent: STUDS, cast: false });
+for (let z = Z0 + .6; z < Z1; z += 1.2) box(X1 - X0, .04, .04, studM, X0, CY + .08, z, { parent: STUDS, cast: false });
+// ---------- the lighting points (shared by the plan, the cables, the fixtures) ----------
+const P_HALL = [[1.2, -3.0], [3.0, -3.0], [4.6, -3.0], [4.6, -.6], [1.0, 1.4], [3.0, 1.4]];
+const P_KIT = [[-5.0, -3.6], [-3.6, -3.6], [-2.2, -3.6], [-3.4, -1.2]];
+const P_ENT = [[-3.6, 2.6], [-2.0, 1.6]];
+const SCONCE = [[-5.9, 1.6], [-5.9, 3.6]];
+const BOARD = [-5.85, 1.0, -1.0];
+// blueprint on the floor (plan)
+const bp = canvasTex(1200, 900, (g, w, h) => {
+  const s = 100, X = (x) => (x - X0) * s, Z = (z) => (z - Z0) * s;
+  g.fillStyle = '#0f2b4a'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(140,190,255,.18)'; g.lineWidth = 1; for (let x = 0; x < w; x += 50) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } for (let y = 0; y < h; y += 50) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
+  g.strokeStyle = '#d8e9ff'; g.lineWidth = 6; g.strokeRect(6, 6, w - 12, h - 12);
+  g.beginPath(); g.moveTo(X(-1), 0); g.lineTo(X(-1), Z(-3.9)); g.moveTo(X(-1), Z(-.1)); g.lineTo(X(-1), Z(.9)); g.moveTo(X(-1), Z(3.6)); g.lineTo(X(-1), h); g.moveTo(0, Z(.5)); g.lineTo(X(-4.2), Z(.5)); g.moveTo(X(-3.0), Z(.5)); g.lineTo(X(-1), Z(.5)); g.stroke();
+  g.setLineDash([22, 14]); g.strokeStyle = '#ffb347'; g.lineWidth = 7; g.strokeRect(X(-.6), Z(-3.85), X(5.3) - X(-.6), Z(3.6) - Z(-3.85)); g.setLineDash([]);
+  for (const [x, z] of [...P_HALL, ...P_KIT, ...P_ENT]) { g.strokeStyle = '#ff7a1a'; g.lineWidth = 6; g.beginPath(); g.arc(X(x), Z(z), 20, 0, 7); g.stroke(); g.beginPath(); g.moveTo(X(x) - 28, Z(z)); g.lineTo(X(x) + 28, Z(z)); g.moveTo(X(x), Z(z) - 28); g.lineTo(X(x), Z(z) + 28); g.stroke(); }
+  for (const [x, z] of SCONCE) { g.fillStyle = '#ffd34d'; g.beginPath(); g.moveTo(X(x) + 4, Z(z) - 22); g.lineTo(X(x) + 40, Z(z)); g.lineTo(X(x) + 4, Z(z) + 22); g.closePath(); g.fill(); }
+  g.fillStyle = '#9fd0ff'; g.fillRect(X(BOARD[0]), Z(BOARD[2]) - 25, 30, 50);
+}, [1, 1]);
+const PLAN = plane(X1 - X0 - .1, Z1 - Z0 - .1, new THREE.MeshStandardMaterial({ map: bp, emissive: '#ffffff', emissiveMap: bp, emissiveIntensity: .35, roughness: .8 }), [0, .012, 0], [-Math.PI / 2, 0, 0]);
+// cables from the board to every point (wire), drivers by the cove
+const WIRE = new THREE.Group(); scene.add(WIRE);
+const cabM = emis('#ff7a1a', 1.6);
+function tube(pts) { const c = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p))); const m = new THREE.Mesh(new THREE.TubeGeometry(c, 40, .018, 6), cabM); WIRE.add(m); }
+const BY = CY + .12;
+tube([[BOARD[0], BOARD[1], BOARD[2]], [BOARD[0] + .1, BY, BOARD[2]], [-1, BY, -1.0], [2.5, BY, -1.0]]);
+for (const [x, z] of [...P_HALL, ...P_KIT, ...P_ENT]) tube([[x < -1 ? -3.5 : 2.5, BY, x < -1 ? (z < .5 ? -2.4 : 2.0) : -1.0], [(x + (x < -1 ? -3.5 : 2.5)) / 2, BY + .05, (z + (x < -1 ? (z < .5 ? -2.4 : 2.0) : -1.0)) / 2], [x, CY + .02, z]]);
+tube([[BOARD[0] + .1, BY, BOARD[2]], [-3.5, BY, -2.4]]); tube([[BOARD[0] + .1, BY, BOARD[2]], [-3.5, BY, 2.0]]);
+const DRV = [];
+for (const [x, z] of [[.2, -3.7], [2.6, -3.7], [5.1, -2.2], [5.1, 1.2]]) { const d = box(.4, .09, .18, new THREE.MeshStandardMaterial({ color: '#d8d8d8', roughness: .35, metalness: .6 }), x - .2, CY + .06, z - .09, { parent: WIRE }); const led = box(.04, .025, .02, emis('#2bff6a', 6), x + .12, CY + .15, z + .0, { parent: WIRE, cast: false }); DRV.push(d); }
+const boardBox = box(.3, .5, .12, new THREE.MeshStandardMaterial({ color: '#cfd3d6', roughness: .4, metalness: .5 }), BOARD[0] - .02, .75, BOARD[2] - .25);
+// ---------- furniture (done) ----------
+const FURN = new THREE.Group(); scene.add(FURN);
+const fab = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#cbbba3', roughness: .9 });
+const P = { parent: FURN };
+// hall: TV wall (fluted) on the back wall, L sofa, coffee table, rug, dining table + chairs at the front, plant
+box(3.6, 2.4, .06, M.fluted, 1.0, .1, Z0 + .09, { ...P, cast: false }); box(1.8, 1.0, .04, M.screen, 1.9, 1.0, Z0 + .16, P);
+box(3.2, .42, .95, fab, 1.2, 0, -1.7, { ...P, r: .06 }); box(3.2, .5, .22, fab, 1.2, .42, -.97, { ...P, r: .06 }); box(.95, .42, 1.8, fab, 4.4, 0, -1.7, { ...P, r: .06 });
+box(1.2, .36, .7, M.tableTop, 2.2, 0, -3.0, P);
+box(3.6, .012, 2.6, M.rug, 1.0, .002, -3.4, { ...P, cast: false });
+box(2.2, .05, 1.0, new THREE.MeshStandardMaterial({ map: oakTex, color: '#7a5a40', roughness: .4 }), 1.0, .74, 1.6, P);
+for (const [dx, dz] of [[.1, .1], [2.05, .1], [.1, .85], [2.05, .85]]) box(.05, .74, .05, M.black, 1.0 + dx, 0, 1.6 + dz, P);
+for (const x of [1.3, 2.0, 2.7]) { box(.42, .45, .42, fab, x - .21, 0, 1.0, { ...P, r: .04 }); box(.42, .45, .42, fab, x - .21, 0, 2.75, { ...P, r: .04 }); }
+// kitchen: back counter + wall cabinets + island
+const doorM = new THREE.MeshStandardMaterial({ color: '#6f7d73', roughness: .55 });
+box(4.6, .88, .62, doorM, X0 + .2, 0, Z0 + .08, P); box(4.6, .04, .66, M.tableTop, X0 + .2, .88, Z0 + .08, P);
+box(4.6, .7, .36, doorM, X0 + .2, 1.6, Z0 + .08, P);
+box(2.2, .9, .9, new THREE.MeshStandardMaterial({ map: oakTex, color: '#8c6a4c', roughness: .45 }), -4.6, 0, -1.65, P); box(2.3, .05, 1.0, M.tableTop, -4.65, .9, -1.7, P);
+// entrance: console + round mirror + plant
+box(1.4, .8, .4, new THREE.MeshStandardMaterial({ map: oakTex, color: '#6a4a30', roughness: .45 }), X0 + .1, 0, 1.9, P);
+const mir = new THREE.Mesh(new THREE.CircleGeometry(.45, 40), new THREE.MeshStandardMaterial({ color: '#cfd6da', roughness: .05, metalness: 1 })); mir.position.set(X0 + .1, 1.6, 2.6); mir.rotation.y = Math.PI / 2; FURN.add(mir);
+// ---------- light fixtures ----------
+const WARM = '#ffdcb0';
+function spotAt(x, z, ang = 40, room) { const ring = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .02, 18), emis('#000', 0)); ring.position.set(x, CY - .005, z); scene.add(ring); const s = new THREE.SpotLight(WARM, 0, 7, ang * Math.PI / 180, .55, 1.3); s.position.set(x, CY - .04, z); s.target.position.set(x, 0, z); scene.add(s, s.target); return { ring, s, room }; }
+const SPOTS = [...P_HALL.map(([x, z]) => spotAt(x, z, 40, 0)), ...P_KIT.map(([x, z]) => spotAt(x, z, 38, 1)), ...P_ENT.map(([x, z]) => spotAt(x, z, 34, 2))];
+const COVES = [[(-.7 + 5.7) / 2, -3.95, 6.2, 0], [5.4, (-3.95 + 3.65) / 2, 7.4, Math.PI / 2]].map(([x, z, len, ry]) => { const strip = box(ry ? .03 : len, .02, ry ? len : .03, emis('#000', 0), ry ? x - .1 : x - len / 2, CY - .05, ry ? z - len / 2 : z + .1, { cast: false }); const l = new THREE.RectAreaLight(WARM, 0, len, .3); l.position.set(ry ? x - .15 : x, CY - .02, ry ? z : z + .15); l.lookAt(ry ? x - 2 : x, CY - 1.4, ry ? z : z + 2); scene.add(l); return { strip, l }; });
+const linPend = box(1.8, .05, .08, M.black, 1.2, 1.55, 2.06, { cast: false }); const linGlow = box(1.7, .01, .05, emis('#000', 0), 1.25, 1.545, 2.075, { cast: false });
+for (const x of [1.4, 2.8]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.004, .004, CY - 1.58, 6), M.black); w.position.set(x, (CY + 1.58) / 2, 2.1); FURN.add(w); }
+const linL = new THREE.RectAreaLight(WARM, 0, 1.7, .08); linL.position.set(2.1, 1.53, 2.1); linL.lookAt(2.1, 0, 2.1); scene.add(linL);
+const under = box(4.4, .012, .03, emis('#000', 0), X0 + .3, 1.585, Z0 + .3, { cast: false }); const underL = new THREE.RectAreaLight(WARM, 0, 4.4, .1); underL.position.set(X0 + 2.5, 1.57, Z0 + .3); underL.lookAt(X0 + 2.5, 0, Z0 + .45); scene.add(underL);
+const KP = [-4.1, -3.0].map((x) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(.005, .005, 1.0, 6), M.black); c.position.set(x, CY - .5, -1.2); FURN.add(c); const d = new THREE.Mesh(new THREE.SphereGeometry(.16, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#1b1a19', roughness: .4, metalness: .5, emissive: '#000' })); d.position.set(x, CY - 1.0, -1.2); FURN.add(d); const pt = new THREE.PointLight('#ffc98a', 0, 2.5, 2); pt.position.set(x, CY - 1.1, -1.2); scene.add(pt); return { d, pt }; });
+const SC = SCONCE.map(([x, z]) => { const b = box(.1, .3, .12, M.brass, x, 1.75, z - .06, { cast: false }); const g = box(.02, .3, .08, emis('#000', 0), x + .1, 1.75, z - .04, { cast: false }); const up = new THREE.SpotLight(WARM, 0, 3, 30 * Math.PI / 180, .6, 1.5); up.position.set(x + .15, 2.0, z); up.target.position.set(x + .15, 3, z); const dn = new THREE.SpotLight(WARM, 0, 3, 30 * Math.PI / 180, .6, 1.5); dn.position.set(x + .15, 1.7, z); dn.target.position.set(x + .15, 0, z); scene.add(up, up.target, dn, dn.target); return { g, up, dn }; });
+const FIX = [...SPOTS.map((o) => o.ring), ...COVES.map((o) => o.strip), linPend, linGlow, under, ...SC.map((o) => o.g)];
+scene.children.filter((o) => o.isMesh && o.material === M.brass).forEach((o) => FIX.push(o));
+const hemi = new THREE.HemisphereLight('#cdd5e6', '#2a2018', .5); scene.add(hemi);
+const sun = new THREE.DirectionalLight('#dfe6f5', .6); sun.position.set(6, 14, 10); scene.add(sun);
+const VIEWS = {
+  t: { pos: [13.5, 17, 3.2], tgt: [-.4, 0, .1], fov: 50 },      // bird's eye over the whole floor
+  c: { pos: [2.8, 1.25, 3.8], tgt: [2.4, 3.2, -1.6], fov: 68 },     // hall ceiling looking up
+  h: { pos: [3.0, 1.65, 4.25], tgt: [2.4, 1.3, -3.2], fov: 64 },    // the hall
+  k: { pos: [1.4, 1.65, -1.2], tgt: [-4.2, 1.1, -2.9], fov: 62 },   // the open kitchen from the hall
+  e: { pos: [1.0, 1.6, 2.4], tgt: [-5.5, 1.45, 2.6], fov: 58 },     // the entrance through the arch
+};
+window.setState = (state) => {
+  const T = Object.fromEntries(state.split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const site = !!T.site, done = !!T.done, top = !!T.top, lit = T.lit ?? 0, dm = T.dim ?? 1;
+  FLOOR.material = done ? floorFin : concrete;
+  WALLS.forEach((w) => { w.material = done ? plaster : block; });
+  FURN.visible = done; door.visible = done; frontGlass.visible = done;
+  PLAN.visible = !!T.plan;
+  STUDS.visible = !!T.wire && !top;
+  WIRE.visible = !!T.wire;
+  CEIL.forEach((c) => { c.visible = done && !top; }); LIPS.forEach((c) => { c.visible = done && !top; });
+  const k = (room) => Math.max(0, Math.min(1, (lit * 1.2 - room / 3) / .35)) * (done ? 1 : 0);
+  SPOTS.forEach(({ ring, s, room }) => { const v = k(room); s.intensity = 34 * v * dm; ring.material = v > .02 ? emis('#fff3e2', 3 * v) : emis('#000', 0); });
+  COVES.forEach(({ strip, l }) => { const v = k(0); l.intensity = 14 * v * dm; strip.material = v > .02 ? emis(WARM, 6 * v) : emis('#000', 0); });
+  linL.intensity = 18 * k(0) * dm; linGlow.material = k(0) > .02 ? emis(WARM, 6) : emis('#000', 0);
+  underL.intensity = 20 * k(1) * dm; under.material = k(1) > .02 ? emis(WARM, 6) : emis('#000', 0);
+  KP.forEach(({ d, pt }) => { pt.intensity = 1.2 * k(1) * dm; d.material.emissive.set(k(1) > .1 ? '#5a3a1a' : '#000'); });
+  SC.forEach(({ g, up, dn }) => { const v = k(2); up.intensity = dn.intensity = 9 * v * dm; g.material = v > .02 ? emis(WARM, 5 * v) : emis('#000', 0); });
+  FIX.forEach((m) => { m.visible = done; });
+  const L = done ? Math.min(1, lit) : 0;
+  hemi.intensity = done ? .06 + .14 * L : .55; sun.intensity = done ? .05 : .6; scene.environmentIntensity = done ? .04 + .1 * L : .2;
+  scene.background.set(done ? '#0b0a0c' : '#1a1c22');
+  renderer.toneMappingExposure = done ? 1.05 : .95;
+};

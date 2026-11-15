@@ -22,7 +22,7 @@
 2. **Problem / tension**: why it happens, in plain words.
 3. **The reveal / the fix**: the lighting idea, visually explainable.
 4. **2–4 concrete points** with real numbers from `brand.md` (CCT, CRI, beam angle, IP, spacing…).
-5. **Offer**: «وبكواليتي لايت… [what we do for you]… وسعر التصميم ينخصم عند الشراء.»
+5. **What we do**: «وبكواليتي لايت… [what we do for you].» (no design-fee or discount line: the owner withdrew it)
    For product-led videos aimed at contractors or shops, lead with availability/quality and keep the design line short.
 6. **CTA + sign-off**: «زورنا بحولي، شارع تونس، مقابل مجمع الرحاب… أو كلمنا واتساب. خلّ بيتك ينوّر صح ✨»
    (short videos ≤ 20 s: «زورنا بحولي… أو كلمنا واتساب ✨»).

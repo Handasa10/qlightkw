@@ -11,7 +11,7 @@ Ready to copy, in a code block, Kuwaiti/Gulf Arabic, digits allowed:
 ✅ [point]
 ✅ [point]
 
-🎨 بكواليتي لايت [what we do for you]… وسعر التصميم ينخصم عند الشراء!
+🎨 بكواليتي لايت [what we do for you].
 
 📍 حولي – شارع تونس – مقابل مجمع الرحاب
 📲 واتساب: 51111725

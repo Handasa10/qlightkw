@@ -16,8 +16,9 @@
 - انستجرام: @quality_light1
 - Sign-off line: **«خلّ بيتك ينوّر صح ✨»** (for shop/café videos: «خلّ مكانك ينوّر صح ✨»)
 
-## Standing offer (confirmed by the owner)
-**سعر التصميم ينخصم عند الشراء**: the lighting-design fee is deducted when the customer buys from QUALITY LIGHT.
+## Offers
+The owner withdrew «سعر التصميم ينخصم عند الشراء» on 2026-11-14: never mention the design fee or any deduction.
+We can say what we do (help choose the right light, read the drawing / BOQ, prepare a quote, supply).
 Never invent other offers, prices, discounts, stock, warranties, delivery promises or "free" services. If a video needs a
 price or stock fact, ask the owner or write `[السعر المؤكد]` as a placeholder.
 
