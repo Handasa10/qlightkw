@@ -1,0 +1,185 @@
+// ===== Villa cut-away at night for contractors: one supplier for the whole villa =====
+// A two-storey villa with its front wall removed (dollhouse view), x -5..5, depth z -6..0, garden in front (z 0..8).
+// Ground: majlis (left), family hall (middle), kitchen (right). Upper: master (left), upper hall (middle), kids (right).
+// The ground-floor gypsum ceiling hangs below the slab: drivers sit in the void above it (detail view d).
+// state tokens joined by '+':
+//   off                      night, nothing on
+//   mix = ms+mh+mo           bought from 4 shops (ms spots, mh coves, mo outdoor): every room a different colour temperature, a cold cove, a yellow cove, greenish garden floods
+//   flick:<0..1>             (with mix) the cheap drivers dip: rooms on cheap drivers go dark by this amount
+//   in:<0..1>                3000 K spots, room by room   hid:<0..1>  hidden cove strips, room by room
+//   out:<0..1>               outdoor: wall washers, path bollards, palm up-lights, boundary-wall lights (IP65)
+//   drv                      matching drivers above the gypsum, highlighted with status LEDs   cheap  odd drivers, one red
+//   all = in+hid+out         dim:<x> scales everything
+const VW = 5, VD = 6, F1 = 0, F2 = 3.3, GC = 2.75, SL = 3.12, RF = 6.6;
+scene.background = new THREE.Color('#070b16');
+marbleTex.repeat.set(4, 2);
+const wallIn = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#ece5da', roughness: .9 });
+const facade = new THREE.MeshStandardMaterial({ color: '#d9cbb3', roughness: .85 });
+const slabM = new THREE.MeshStandardMaterial({ color: '#9a948b', roughness: .9 });
+const gypM = new THREE.MeshStandardMaterial({ color: '#f3efe8', roughness: .95 });
+const woodF = new THREE.MeshStandardMaterial({ map: oakTex, color: '#a07a55', roughness: .55 });
+// floors / slabs / roof
+box(VW * 2, .12, VD, M.floor, -VW, -.12, -VD);
+box(VW * 2 + .3, SL + .3 - SL, VD + .1, slabM, -VW - .15, SL, -VD - .05);                 // first-floor slab 3.12..3.42
+box(VW * 2, .06, VD, woodF, -VW, SL + .3, -VD, { cast: false });                            // upper floor finish (3.42)
+box(VW * 2 + .3, .3, VD + .1, slabM, -VW - .15, RF, -VD - .05);                             // roof slab
+box(VW * 2 + .3, .55, .2, facade, -VW - .15, RF + .3, -.15);                                // parapet front
+box(VW * 2 + .3, .55, .2, facade, -VW - .15, RF + .3, -VD - .05);
+// outer walls (back, left, right), with the front cut open
+box(VW * 2, RF, .2, wallIn, -VW, 0, -VD - .2);
+box(.25, RF + .3, VD + .2, facade, -VW - .25, 0, -VD - .2);
+box(.25, RF + .3, VD + .2, facade, VW, 0, -VD - .2);
+// front cut edges (thin facade frame so the cut reads like a section)
+const cutM = new THREE.MeshStandardMaterial({ color: '#4a443d', roughness: .8 });
+box(VW * 2 + .5, .3, .04, cutM, -VW - .25, SL, -.02, { cast: false });
+// partitions
+for (const x of [-1.7, 1.7]) { box(.14, GC, VD, wallIn, x - .07, 0, -VD); box(.14, RF - SL - .36, VD, wallIn, x - .07, SL + .36, -VD); }
+// ground gypsum ceiling (hung below the slab: the void in between holds drivers and cables)
+const gypsum = [];
+for (const [x0, x1] of [[-VW, -1.77], [-1.63, 1.63], [1.77, VW]]) gypsum.push(box(x1 - x0, .05, VD, gypM, x0, GC, -VD, { cast: false }));
+// upper ceiling under the roof slab
+box(VW * 2, .05, VD, gypM, -VW, RF - .05, -VD, { cast: false });
+// windows on the back wall (night outside)
+const nightTex = canvasTex(256, 320, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#0a1430'); gr.addColorStop(1, '#16223c'); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(255,255,255,.7)'; for (let i = 0; i < 14; i++) g.fillRect(R() * w, R() * h * .6, 2, 2); }, [1, 1]);
+const winM = new THREE.MeshStandardMaterial({ map: nightTex, emissive: '#ffffff', emissiveMap: nightTex, emissiveIntensity: .25, roughness: .2 });
+for (const [x, y] of [[-3.4, 1.0], [3.4, 1.0], [-3.4, 4.3], [0, 4.3], [3.4, 4.3]]) { plane(1.3, 1.3, winM, [x, y + .65, -VD + .01], [0, 0, 0]); box(1.4, .06, .06, M.black, x - .7, y - .03, -VD + .01); box(1.4, .06, .06, M.black, x - .7, y + 1.3, -VD + .01); }
+// ---------- furniture ----------
+const cushM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#b9a27f', roughness: .9 });
+const redM = new THREE.MeshStandardMaterial({ color: '#7a2b26', roughness: .85 });
+// majlis: low floor seating along the walls + a carpet + coffee pots tray
+box(3.0, .32, .7, cushM, -4.85, 0, -5.9, { r: .05 }); box(3.0, .45, .18, cushM, -4.85, .32, -5.9, { r: .05 });
+box(.7, .32, 3.2, cushM, -4.85, 0, -5.2, { r: .05 });
+for (let i = 0; i < 4; i++) box(.4, .32, .14, redM, -4.6 + i * .7, .34, -5.72, { r: .05 });
+box(2.4, .012, 2.6, M.rug, -4.0, .001, -4.6, { cast: false });
+box(.8, .06, .5, M.brass, -3.2, .2, -3.5); box(.05, .2, .05, M.brass, -2.85, 0, -3.3);
+// family hall: TV wall in fluted panel, sofa, coffee table
+box(3.1, 2.3, .06, M.fluted, -1.55, .2, -VD + .01, { cast: false });
+box(1.6, .9, .04, M.screen, -.8, 1.0, -VD + .08);
+box(2.4, .42, .9, M.fabric, -1.2, 0, -2.4, { r: .06 }); box(2.4, .5, .22, M.fabric, -1.2, .42, -1.72, { r: .06 });
+box(1.0, .34, .6, M.tableTop, -.5, 0, -4.0);
+plant(1.25, -5.3, 1.3, .45);
+// kitchen: back counter + wall cabinets + island + pendants
+const doorM = new THREE.MeshStandardMaterial({ color: '#6f7d73', roughness: .55 });
+box(3.0, .88, .62, doorM, 1.9, 0, -VD); box(3.0, .04, .66, M.tableTop, 1.9, .88, -VD);
+box(3.0, .7, .36, doorM, 1.9, 1.55, -VD);
+box(1.8, .9, .9, woodF, 2.5, 0, -3.6); box(1.9, .05, 1.0, M.tableTop, 2.45, .9, -3.65);
+const pendKit = [3.0, 3.85].map((x) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(.005, .005, .9, 6), M.black); c.position.set(x, GC - .45, -3.15); scene.add(c); const d = new THREE.Mesh(new THREE.SphereGeometry(.16, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#1b1a19', roughness: .4, metalness: .5 })); d.position.set(x, GC - .9, -3.15); scene.add(d); return d; });
+// master bedroom: bed with a padded headboard, side tables
+const U = SL + .36;
+box(2.0, .5, 2.2, M.fabric, -4.1, U, -5.8, { r: .06 }); box(2.2, 1.1, .12, M.cushion, -4.2, U, -5.95, { r: .04 });
+box(.45, .5, .4, M.darkWood, -4.85, U, -5.8); box(.45, .5, .4, M.darkWood, -1.95, U, -5.8);
+box(2.0, .05, 1.0, M.goldCush, -4.1, U + .5, -4.6, { cast: false });
+// upper hall: sofa + console
+box(2.2, .42, .85, M.fabric, -1.1, U, -5.4, { r: .06 }); box(2.2, .5, .2, M.fabric, -1.1, U + .42, -5.6, { r: .06 });
+box(1.2, .8, .35, woodF, -.6, U, -1.0);
+// kids room: two small beds, a toy box
+const kidM = new THREE.MeshStandardMaterial({ color: '#7fa8c9', roughness: .8 }), kidM2 = new THREE.MeshStandardMaterial({ color: '#e7b85c', roughness: .8 });
+box(.95, .4, 1.8, kidM, 2.0, U, -5.8, { r: .05 }); box(.95, .4, 1.8, kidM2, 3.8, U, -5.8, { r: .05 });
+box(.6, .4, .4, new THREE.MeshStandardMaterial({ color: '#c75b4a', roughness: .7 }), 2.9, U, -2.2, { r: .04 });
+// ---------- interior lights: rooms ----------
+// room = { x0, x1, yC (ceiling), spots:[[x,z],..], cove (strip along the back edge of the ceiling) }
+const ROOMS = [
+  { n: 'majlis', x0: -VW, x1: -1.77, yc: GC, sp: [[-4.0, -4.5], [-2.6, -2.4]], mixC: '#8fb4ff', mixK: 1.3 },   // 6500 K blue-white
+  { n: 'hall', x0: -1.63, x1: 1.63, yc: GC, sp: [[-.9, -4.6], [.2, -2.2]], mixC: '#ff8a2a', mixK: 1.0 },        // 2700 K orange
+  { n: 'kitchen', x0: 1.77, x1: VW, yc: GC, sp: [[2.6, -5.0], [4.2, -2.4]], mixC: '#c4ffa8', mixK: 1.2 },       // 5000 K greenish
+  { n: 'master', x0: -VW, x1: -1.77, yc: RF - .05, sp: [[-3.1, -4.4], [-3.1, -2.0]], mixC: '#ffa030', mixK: .9 },
+  { n: 'upper', x0: -1.63, x1: 1.63, yc: RF - .05, sp: [[-.5, -4.4], [.6, -2.0]], mixC: '#9ec0ff', mixK: 1.3 },
+  { n: 'kids', x0: 1.77, x1: VW, yc: RF - .05, sp: [[3.4, -4.4], [3.4, -2.0]], mixC: '#ffffff', mixK: 1.3 },
+];
+const WARM = '#ffdcb0';
+ROOMS.forEach((r) => {
+  r.rings = []; r.lights = [];
+  for (const [x, z] of r.sp) {
+    const ring = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .02, 20), emis('#000', 0)); ring.position.set(x, r.yc - .005, z); scene.add(ring);
+    const s = new THREE.SpotLight(WARM, 0, 7, 46 * Math.PI / 180, .6, 1.3); s.position.set(x, r.yc - .04, z); s.target.position.set(x, 0, z); scene.add(s, s.target);
+    r.rings.push(ring); r.lights.push(s);
+  }
+  // hidden cove: a strip along the back of the ceiling (a gypsum lip in front of it)
+  const w = r.x1 - r.x0 - .2;
+  box(w, .14, .06, gypM, r.x0 + .1, r.yc - .14, -VD + .32, { cast: false });
+  r.strip = box(w, .02, .03, emis('#000', 0), r.x0 + .1, r.yc - .04, -VD + .2, { cast: false });
+  r.cove = new THREE.RectAreaLight(WARM, 0, w, .25); r.cove.position.set((r.x0 + r.x1) / 2, r.yc - .06, -VD + .18); r.cove.lookAt((r.x0 + r.x1) / 2, r.yc - 2, -VD + 2.2); scene.add(r.cove);
+  r.fill = new THREE.PointLight(WARM, 0, 6, 2); r.fill.position.set((r.x0 + r.x1) / 2, r.yc - .7, -2.4); scene.add(r.fill);
+});
+// ---------- drivers in the void above the ground gypsum ----------
+const drivers = [];
+[-3.9, -2.6, -.9, .5, 2.6, 4.0].forEach((x, i) => {
+  const bx = box(.42, .1, .2, new THREE.MeshStandardMaterial({ color: '#d8d8d8', roughness: .4, metalness: .6 }), x - .21, GC + .05, -.9 - (i % 2) * .5);
+  const led = box(.04, .025, .02, emis('#000', 0), x + .12, GC + .1, -.71 - (i % 2) * .5, { cast: false });
+  const lab = box(.2, .055, .005, emis('#000', 0), x - .14, GC + .075, -.7 - (i % 2) * .5 + .001, { cast: false });
+  const cab = new THREE.Mesh(new THREE.CylinderGeometry(.008, .008, 1.2, 6), new THREE.MeshStandardMaterial({ color: '#222', roughness: .6 })); cab.rotation.z = Math.PI / 2; cab.position.set(x - .8, GC + .09, -.8 - (i % 2) * .5); scene.add(cab);
+  drivers.push({ bx, led, lab });
+});
+const voidL = new THREE.PointLight('#ffd9a8', 0, 3, 2); voidL.position.set(-1, GC + .3, -1.6); scene.add(voidL);
+// ---------- outside: lawn, path, palms, boundary wall, entrance ----------
+const lawn = new THREE.MeshStandardMaterial({ color: '#2a3a22', roughness: 1 });
+plane(40, 30, lawn, [0, -.13, 8], [-Math.PI / 2, 0, 0]);
+const pave = new THREE.MeshStandardMaterial({ color: '#b9ad99', roughness: .9 });
+box(2.0, .03, 8.5, pave, -1.0, -.12, 0, { cast: false });
+box(VW * 2 + 2, .03, 1.2, pave, -VW - 1, -.12, 0, { cast: false });
+const bwall = new THREE.MeshStandardMaterial({ color: '#cbb89b', roughness: .95 });
+box(6.0, 1.3, .25, bwall, -9.5, -.12, 8.4); box(6.0, 1.3, .25, bwall, 3.5, -.12, 8.4);
+box(.25, 1.3, 8.6, bwall, -9.5, -.12, 0); box(.25, 1.3, 8.6, bwall, 9.25, -.12, 0);
+const trunkM = new THREE.MeshStandardMaterial({ color: '#6b5034', roughness: .9 }), frondM = new THREE.MeshStandardMaterial({ color: '#3d5a2c', roughness: .8, side: THREE.DoubleSide });
+function palm(x, z, h) {
+  const t = new THREE.Mesh(new THREE.CylinderGeometry(.13, .2, h, 10), trunkM); t.position.set(x, h / 2 - .12, z); t.castShadow = true; scene.add(t);
+  for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2; const f = new THREE.Mesh(new THREE.PlaneGeometry(.35, 1.9), frondM); f.position.set(x + Math.cos(a) * .8, h - .2, z + Math.sin(a) * .8); f.rotation.set(-Math.PI / 2 + .55, 0, 0); f.rotation.y = -a + Math.PI / 2; f.rotateX(.0); f.lookAt(x + Math.cos(a) * 2, h - 1.0, z + Math.sin(a) * 2); scene.add(f); }
+}
+palm(-6.8, 3.2, 5.0); palm(6.9, 3.6, 4.6);
+for (const [x, z] of [[-4, 6.6], [4.5, 6.4], [-7.5, 6.8]]) { const b = new THREE.Mesh(new THREE.SphereGeometry(.55, 12, 10), M.leaf); b.position.set(x, .3, z); b.scale.y = .7; scene.add(b); }
+// outdoor fixtures
+const OUT = [];
+function outSpot(pos, tgt, ang, k, fix) { const s = new THREE.SpotLight(WARM, 0, 12, ang * Math.PI / 180, .5, 1.2); s.position.set(...pos); s.target.position.set(...tgt); scene.add(s, s.target); OUT.push({ s, k, fix }); return s; }
+const fixM = () => emis('#000', 0);
+// wall washers on the facade side walls (front face of the end walls) + up-lights on the palms + boundary-wall lights + path bollards
+for (const x of [-VW - .13, VW + .13]) { const f = box(.16, .1, .1, fixM(), x - .08, 0, .05, { cast: false }); outSpot([x, .05, .35], [x, RF, .1], 14, 60, f); }
+for (const [x, z, h] of [[-6.8, 3.2, 5.0], [6.9, 3.6, 4.6]]) { const f = box(.14, .06, .14, fixM(), x - .07 + .35, -.1, z - .07, { cast: false }); outSpot([x + .35, 0, z], [x, h, z], 22, 70, f); }
+for (const x of [-8.2, -6.0, -4.2, 4.4, 6.2, 8.0]) { const f = box(.14, .08, .06, fixM(), x - .07, 1.05, 8.37, { cast: false }); outSpot([x, 1.05, 8.3], [x, -.1, 7.2], 50, 10, f); }
+const bol = [];
+for (const z of [1.6, 3.4, 5.2, 7.0]) for (const x of [-1.25, 1.25]) { box(.12, .55, .12, M.black, x - .06, -.1, z - .06); const head = box(.12, .06, .12, fixM(), x - .06, .37, z - .06, { cast: false }); const l = new THREE.PointLight(WARM, 0, 2.2, 2); l.position.set(x, .35, z); scene.add(l); bol.push({ head, l }); }
+// entrance canopy light
+const moon = new THREE.DirectionalLight('#8ea6d8', .35); moon.position.set(-8, 14, 10); scene.add(moon);
+const hemi = new THREE.HemisphereLight('#3a4a74', '#141008', .25); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [0, 3.9, 21.5], tgt: [0, 2.7, -2], fov: 46 },      // the whole villa + garden, front elevation
+  a: { pos: [10.5, 3.2, 15], tgt: [0, 3.2, -2.5], fov: 50 },     // three-quarter from the right: side wall washer + palms
+  g: { pos: [0, 1.6, 8.2], tgt: [0, 1.45, -3], fov: 58 },      // ground floor close (majlis | hall | kitchen)
+  u: { pos: [0, 4.95, 8.2], tgt: [0, 4.8, -3], fov: 58 },      // upper floor close
+  e: { pos: [-2.6, .9, 11.5], tgt: [0, 2.6, 0], fov: 62 },      // garden, low: path bollards + palms + facade
+  d: { pos: [-1.25, 3.0, .75], tgt: [-.75, 2.84, -1.2], fov: 44 },  // the void above the gypsum: drivers
+};
+function stripMat(col, k) { return k > 0 ? emis(col, 6 * k) : emis('#000', 0); }
+window.setState = (state) => {
+  const T = Object.fromEntries(state.replace('all', 'in+hid+out').replace('mix', 'ms+mh+mo').split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const ms = T.ms ?? 0, mh = T.mh ?? 0, mo = T.mo ?? 0, mix = ms, inn = T.in ?? 0, hid = T.hid ?? 0, out = T.out ?? 0, fl = T.flick ?? 0, dm = T.dim ?? 1;
+  const order = [1, 0, 2, 4, 3, 5]; // which room comes on first
+  ROOMS.forEach((r, i) => {
+    const rank = order.indexOf(i);
+    const kIn = mix ? 1 : clamp01((inn * 1.15 - rank / 6) / .25);
+    const kHid = mh ? (i === 1 || i === 3 ? 1 : 0) : clamp01((hid * 1.15 - rank / 6) / .25);
+    const col = mix ? r.mixC : WARM;
+    const cheap = mix && (i === 0 || i === 4) ? 1 - fl * .85 : 1;
+    const kk = (mix ? r.mixK : 1) * cheap * dm;
+    r.lights.forEach((s) => { s.color.set(col); s.intensity = 38 * kIn * kk; });
+    r.rings.forEach((ring) => { ring.material = kIn * cheap > .02 ? emis(col, 3 * kIn * cheap) : emis('#000', 0); });
+    r.fill.color.set(col); r.fill.intensity = 1.4 * kIn * kk;
+    const cc = mh ? (i === 1 ? '#7fb0ff' : '#ff9a20') : WARM;
+    r.cove.color.set(cc); r.cove.intensity = 16 * kHid * cheap * dm; r.strip.material = stripMat(cc, kHid * cheap);
+  });
+  pendKit.forEach((d) => { d.material.emissive = new THREE.Color(inn > .5 || mix ? '#5a3a1a' : '#000'); });
+  // outdoor
+  const oc = mo ? '#b8ffb0' : WARM;
+  OUT.forEach(({ s, k, fix }, i) => { const on = mo ? (i % 3 === 1 ? 0 : 1) : clamp01((out * 1.2 - i / OUT.length) / .2); s.color.set(oc); s.intensity = k * on * dm * (mo ? 1.3 : 1); fix.material = on ? emis(oc, 4 * on) : emis('#000', 0); });
+  bol.forEach(({ head, l }, i) => { const on = mo ? 0 : clamp01((out * 1.2 - i / bol.length) / .2); l.intensity = 1.6 * on * dm; head.material = on ? emis(WARM, 5 * on) : emis('#000', 0); });
+  // drivers
+  const dv = T.drv ?? 0, ch = T.cheap ?? 0;
+  drivers.forEach(({ bx, led, lab }, i) => {
+    if (ch) { bx.material = new THREE.MeshStandardMaterial({ color: ['#e8e2d0', '#555', '#b9b2a0', '#2c2c2c', '#d0d0d0', '#8a8070'][i], roughness: .6 }); led.material = emis(i === 2 || i === 4 ? '#ff2a1a' : '#000', i === 2 || i === 4 ? 8 : 0); lab.material = emis('#000', 0); bx.scale.set([1, .7, 1.2, .8, 1, .9][i], [1, 1.3, .9, 1.4, 1, 1.1][i], 1); }
+    else { bx.material = new THREE.MeshStandardMaterial({ color: '#d8d8d8', roughness: .35, metalness: .6, emissive: dv ? '#3a2208' : '#000' }); led.material = emis(dv ? '#2bff6a' : '#000', dv ? 8 : 0); lab.material = emis(dv ? '#ff8a1e' : '#000', dv ? 3 : 0); bx.scale.set(1, 1, 1); }
+  });
+  voidL.intensity = dv || ch ? .06 : 0;
+  const lit = Math.max(ms, (inn + hid) / 2);
+  hemi.intensity = .25 + .1 * lit; scene.environmentIntensity = .05 + .1 * lit; moon.intensity = .35;
+  renderer.toneMappingExposure = 1.05;
+};
+function clamp01(v) { return Math.max(0, Math.min(1, v)); }
