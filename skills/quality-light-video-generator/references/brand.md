@@ -25,7 +25,7 @@ price or stock fact, ask the owner or write `[السعر المؤكد]` as a pla
 ## Audiences (QL sells products AND designs)
 | Audience | What moves them | Typical CTA |
 |---|---|---|
-| Villa & house owners (قسايم، فلل، شقق) finishing or renovating | how the home will look, comfort, avoiding expensive mistakes before the gypsum closes | زورنا وشوف الإضاءة قدام عينك / ابعت مخططك والتصميم ينخصم |
+| Villa & house owners (قسايم، فلل، شقق) finishing or renovating | how the home will look, comfort, avoiding expensive mistakes before the gypsum closes | زورنا وشوف الإضاءة قدام عينك / ابعت مخططك ونساعدك تختار |
 | Contractors, electricians, designers | reliability, flicker-free drivers, correct specs, stock & supply, one supplier for the whole villa | كلمنا واتساب للكميات والمواصفات |
 | Shops, offices, cafés, restaurants, clinics | atmosphere that sells, product display, customer photos, running cost | زورنا ونختار لك إضاءة مكانك |
 
