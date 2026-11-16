@@ -39,18 +39,18 @@ box(2.8, .08, .06, gateM, -1.4, 1.72, 8.09); box(2.8, .08, .06, gateM, -1.4, .3,
 // yard: path pavers, two palms, shrubs
 const paveM = new THREE.MeshStandardMaterial({ color: '#b5aa96', roughness: .85 });
 for (let z = .8; z < 7.8; z += .7) box(1.6, .03, .55, paveM, -.8, 0, z, { cast: false });
-const trunkM = new THREE.MeshStandardMaterial({ color: '#6b5236', roughness: .95 }), frondM = new THREE.MeshStandardMaterial({ color: '#3c5a2b', roughness: .8, side: THREE.DoubleSide });
+const trunkM = new THREE.MeshStandardMaterial({ color: '#6b5236', roughness: .95 }), frondM = new THREE.MeshStandardMaterial({ color: '#2a4020', roughness: .8, side: THREE.DoubleSide });
 function palm(x, z, h) {
   const t = new THREE.Mesh(new THREE.CylinderGeometry(.14, .22, h, 12), trunkM); t.position.set(x, h / 2, z); t.castShadow = true; scene.add(t);
-  for (let i = 0; i < 11; i++) { const a = i / 11 * Math.PI * 2; const f = new THREE.Mesh(new THREE.PlaneGeometry(.38, 2.2), frondM); f.position.set(x + Math.cos(a) * .95, h - .35, z + Math.sin(a) * .95); f.lookAt(x + Math.cos(a) * 2.4, h - 1.3, z + Math.sin(a) * 2.4); f.castShadow = true; scene.add(f); }
+  for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; const f = new THREE.Mesh(new THREE.PlaneGeometry(.3, 2.2), frondM); f.position.set(x + Math.cos(a) * .95, h - .35, z + Math.sin(a) * .95); f.lookAt(x + Math.cos(a) * 2.4, h - 1.3, z + Math.sin(a) * 2.4); f.castShadow = true; scene.add(f); }
 }
 palm(-3.4, 4.2, 5.6); palm(3.3, 4.6, 5.1);
-for (const [x, z] of [[-5.6, 2.2], [5.4, 2.0], [-2.1, 1.0], [1.9, 1.0]]) { const b = new THREE.Mesh(new THREE.SphereGeometry(.5, 14, 10), M.leaf); b.position.set(x, .3, z); b.scale.y = .65; scene.add(b); }
+for (const [x, z] of [[-5.6, 2.2], [5.4, 2.0], [-2.1, 2.9], [2.0, 2.9]]) { const b = new THREE.Mesh(new THREE.SphereGeometry(.5, 14, 10), M.leaf); b.position.set(x, .3, z); b.scale.y = .65; scene.add(b); }
 // neighbours (dark), street poles far
 for (const sx of [-1, 1]) { box(8, 6.5, 6, new THREE.MeshStandardMaterial({ color: '#4a4842', roughness: .95 }), sx * 9.5 - 4, 0, -6); box(8, 1.8, .3, bwM, sx * 9.5 - 4, 0, 8); }
 // lights
 const FX = () => emis('#000', 0);
-const WASH = [-4.0, -2.6, -1.0, 1.0, 2.6, 4.0].map((x) => { const f = box(.16, .03, .16, FX(), x - .08, .0, .27, { cast: false }); const s = new THREE.SpotLight(WARM, 0, 9, 13 * Math.PI / 180, .35, 1.2); s.position.set(x, .05, .42); s.target.position.set(x, 7, .05); scene.add(s, s.target); return { f, s, x }; });
+const WASH = [-4.0, -2.6, -1.0, 1.0, 2.6, 4.0].map((x) => { const f = box(.16, .03, .16, FX(), x - .08, .0, .06, { cast: false }); const s = new THREE.SpotLight(WARM, 0, 9, 13 * Math.PI / 180, .35, 1.2); s.position.set(x, .05, .17); s.target.position.set(x, 7, -.02); scene.add(s, s.target); return { f, s, x }; });
 const PALM = [];
 for (const [px, pz, h] of [[-3.4, 4.2, 5.6], [3.3, 4.6, 5.1]]) for (const dx of [-.55, .55]) { const f = box(.14, .03, .14, FX(), px + dx - .07, 0, pz + .5 - .07, { cast: false }); const s = new THREE.SpotLight(WARM, 0, 9, 18 * Math.PI / 180, .45, 1.2); s.position.set(px + dx, .05, pz + .5); s.target.position.set(px, h, pz); scene.add(s, s.target); PALM.push({ f, s }); }
 const PATH = [];
@@ -64,29 +64,29 @@ const floodBack = new THREE.SpotLight('#e6f0ff', 0, 12, 60 * Math.PI / 180, .3, 
 const glare = new THREE.Mesh(new THREE.SphereGeometry(.35, 16, 12), new THREE.MeshBasicMaterial({ color: '#eaf2ff', transparent: true, opacity: 0, depthWrite: false })); glare.position.set(-1.72, 2.41, 8.3); scene.add(glare);
 // rain around the detail fixture (x -2.6) and drops on its lens
 const RAIN = new THREE.Group(); scene.add(RAIN);
-const rainM = new THREE.MeshBasicMaterial({ color: '#bcd0ff', transparent: true, opacity: .45, depthWrite: false });
-for (let i = 0; i < 260; i++) { const r = new THREE.Mesh(new THREE.BoxGeometry(.004, .16 + Math.random() * .12, .004), rainM); r.position.set(-2.6 + (Math.random() - .5) * 2.4, Math.random() * 2.2, .2 + Math.random() * 2.2); r.rotation.z = .12; RAIN.add(r); }
-for (let i = 0; i < 9; i++) { const d = new THREE.Mesh(new THREE.SphereGeometry(.008 + Math.random() * .008, 8, 6), new THREE.MeshStandardMaterial({ color: '#dfe8ff', roughness: .02, metalness: .1, transparent: true, opacity: .8 })); d.position.set(-2.6 + (Math.random() - .5) * .12, .035, .35 + (Math.random() - .5) * .12); RAIN.add(d); }
-const moon = new THREE.DirectionalLight('#7f93c8', .35); moon.position.set(-10, 18, 20); scene.add(moon);
-const hemi = new THREE.HemisphereLight('#36446e', '#0d0b08', .22); scene.add(hemi);
+const rainM = new THREE.MeshBasicMaterial({ color: '#bcd0ff', transparent: true, opacity: .32, depthWrite: false });
+for (let i = 0; i < 260; i++) { const r = new THREE.Mesh(new THREE.BoxGeometry(.003, .1 + Math.random() * .08, .003), rainM); r.position.set(-2.6 + (Math.random() - .5) * 1.8, Math.random() * 2.2, .1 + Math.random() * .8); r.rotation.z = .12; RAIN.add(r); }
+for (let i = 0; i < 9; i++) { const d = new THREE.Mesh(new THREE.SphereGeometry(.008 + Math.random() * .008, 8, 6), new THREE.MeshStandardMaterial({ color: '#dfe8ff', roughness: .02, metalness: .1, transparent: true, opacity: .8 })); d.position.set(-2.6 + (Math.random() - .5) * .12, .035, .14 + (Math.random() - .5) * .12); RAIN.add(d); }
+const moon = new THREE.DirectionalLight('#7f93c8', .12); moon.position.set(-10, 18, 20); scene.add(moon);
+const hemi = new THREE.HemisphereLight('#36446e', '#0d0b08', .1); scene.add(hemi);
 const VIEWS = {
-  w: { pos: [0, 1.7, 17.5], tgt: [0, 3.0, 0], fov: 56 },          // from the street outside the gate
+  w: { pos: [0, 3.4, 17.5], tgt: [0, 2.9, 0], fov: 56 },          // from the street outside the gate
   g: { pos: [1.6, 1.5, 10.8], tgt: [0, 1.6, 3.5], fov: 62 },        // over the gate: path, palms, door
-  d: { pos: [-2.05, .55, 1.45], tgt: [-2.6, .4, .3], fov: 52 },     // an in-ground up-light in the rain, wash rising above
+  d: { pos: [-2.2, .45, 1.15], tgt: [-2.6, .8, 0], fov: 66 },     // an in-ground up-light in the rain, wash rising above
   s: { pos: [-11, 2.6, 34], tgt: [0, 3.0, 0], fov: 42 },            // far down the street: our villa among dark neighbours
 };
 const cl = (v) => Math.max(0, Math.min(1, v));
 window.setState = (state) => {
   const T = Object.fromEntries(state.replace('all', 'wash+palm+path+win').split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
   const bad = T.bad ?? 0, wa = T.wash ?? 0, pa = T.palm ?? 0, pt = T.path ?? 0, dm = T.dim ?? 1;
-  WASH.forEach(({ f, s, x }) => { const k = cl((wa * 1.2 - Math.abs(x) / 5) / .25); s.intensity = 60 * k * dm; f.material = k > .02 ? emis(WARM, 5 * k) : FX(); });
-  PALM.forEach(({ f, s }, i) => { const k = cl((pa * 1.2 - i / 5) / .3); s.intensity = 70 * k * dm; f.material = k > .02 ? emis(WARM, 5 * k) : FX(); });
+  WASH.forEach(({ f, s, x }) => { const k = cl((wa * 1.2 - Math.abs(x) / 5) / .25); s.intensity = 120 * k * dm; f.material = k > .02 ? emis(WARM, 5 * k) : FX(); });
+  PALM.forEach(({ f, s }, i) => { const k = cl((pa * 1.2 - i / 5) / .3); s.intensity = 32 * k * dm; f.material = k > .02 ? emis(WARM, 5 * k) : FX(); });
   PATH.forEach(({ head, l, z }) => { const k = cl((pt * 1.2 - (7 - z) / 7) / .25); l.intensity = 1.6 * k * dm; head.material = k > .02 ? emis(WARM, 6 * k) : FX(); });
   const anyOn = Math.max(wa, pa, pt);
   canSpot.intensity = 14 * cl(pt * 1.5 - .5) * dm; canRing.material = pt > .6 ? emis(WARM, 4) : FX();
   floodS.intensity = 160 * bad; floodBack.intensity = 30 * bad; floodFace.material = bad ? emis('#f2f7ff', 14) : FX(); glare.material.opacity = .55 * bad;
   WIN.forEach((m, i) => { const on = T.win && (i === 1 || i === 4); m.material.emissive = new THREE.Color(on ? '#ffbe7a' : '#000'); m.material.emissiveIntensity = on ? .55 : 0; });
   RAIN.visible = !!T.rain;
-  hemi.intensity = .22 + .05 * anyOn; scene.environmentIntensity = .03;
+  hemi.intensity = .1 + .06 * anyOn; scene.environmentIntensity = .03;
   renderer.toneMappingExposure = 1.0;
 };
