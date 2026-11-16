@@ -1,0 +1,116 @@
+// ===== Kuwaiti diwaniya, layer by layer (satisfying switch-on) =====
+// A long room (x -3..3, z -10..0) seen from the back toward the carved entrance door at z = -10.
+// Low Arabic seating (Sadu cushions) along both side walls, carpet + brass tray with a dallah in the middle,
+// raised gypsum ceiling with a hidden cove, wall-grazing spots over the seating, a tiered crystal chandelier,
+// up/down sconces flanking the door.
+// state tokens joined by '+':  off · cove:<0..1> (the hidden strip, side by side) · spots:<0..1> (wall grazers, front to back)
+//   · chand:<0..1> (chandelier tier by tier) · ent (door sconces) · all = cove+spots+chand+ent · dim:<x>
+const DX = 2.4, DZ = 10, DH = 3.4;
+scene.background = new THREE.Color('#050404');
+marbleTex.repeat.set(3, 5);
+plane(DX * 2, DZ, M.floor, [0, 0, -DZ / 2], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#e9dfcf', roughness: .9 });
+box(DX * 2, DH, .12, wallM, -DX, 0, -DZ - .12);                    // entrance wall
+box(.12, DH, DZ, wallM, -DX - .12, 0, -DZ); box(.12, DH, DZ, wallM, DX, 0, -DZ);
+box(DX * 2, DH, .12, wallM, -DX, 0, .3);                            // wall behind the camera
+// oak dado on the side walls
+const dado = new THREE.MeshStandardMaterial({ map: oakTex, color: '#7a5636', roughness: .5 });
+box(.04, .9, DZ, dado, -DX, 0, -DZ, { cast: false }); box(.04, .9, DZ, dado, DX - .04, 0, -DZ, { cast: false });
+// ceiling: a drop band all round (h .35) and a raised centre panel; the strip sits on the band's inner lip
+const gyp = new THREE.MeshStandardMaterial({ color: '#f3eee6', roughness: .95 });
+const IX = 1.55, IZ0 = -9.1, IZ1 = -.9, BAND = DH - .35;
+box(DX * 2, .06, DZ, gyp, -DX, DH, -DZ, { cast: false });                                 // raised centre (the true ceiling)
+box(DX - IX, .06, DZ, gyp, -DX, BAND, -DZ, { cast: false }); box(DX - IX, .06, DZ, gyp, IX, BAND, -DZ, { cast: false });
+box(IX * 2, .06, IZ0 + DZ, gyp, -IX, BAND, -DZ, { cast: false }); box(IX * 2, .06, -IZ1, gyp, -IX, BAND, IZ1, { cast: false });
+for (const x of [-IX, IX - .06]) box(.06, .14, IZ1 - IZ0, gyp, x, BAND, IZ0, { cast: false });  // lips
+for (const z of [IZ0, IZ1 - .06]) box(IX * 2, .14, .06, gyp, -IX, BAND, z, { cast: false });
+const WARM = '#ffd7a6';
+const COVE = [];
+for (const [x, z, w, d, lx, lz] of [[-IX + .1, IZ0, .03, IZ1 - IZ0, -1, 0], [IX - .13, IZ0, .03, IZ1 - IZ0, 1, 0], [-IX, IZ0 + .1, IX * 2, .03, 0, -1], [-IX, IZ1 - .13, IX * 2, .03, 0, 1]]) {
+  const s = box(w, .02, d, emis('#000', 0), x, BAND + .07, z, { cast: false });
+  const len = Math.max(w, d), l = new THREE.RectAreaLight(WARM, 0, len, .25);
+  l.position.set(x + w / 2, BAND + .1, z + d / 2); l.lookAt(x + w / 2 + lx * 1.5, DH + 1.2, z + d / 2 + lz * 1.5); scene.add(l);
+  COVE.push({ s, l });
+}
+// Sadu pattern for the cushions
+const sadu = canvasTex(512, 256, (g, w, h) => {
+  g.fillStyle = '#6e1f1b'; g.fillRect(0, 0, w, h);
+  const cols = ['#1a1414', '#e8d9b8', '#b8862f', '#2b3f5a'];
+  for (let y = 0; y < h; y += 32) { g.fillStyle = cols[(y / 32) % 4]; g.fillRect(0, y + 10, w, 8); for (let x = 0; x < w; x += 32) { g.save(); g.translate(x + 16, y + 14); g.rotate(Math.PI / 4); g.fillRect(-5, -5, 10, 10); g.restore(); } }
+}, [3, 1]);
+const saduM = new THREE.MeshStandardMaterial({ map: sadu, roughness: .9 });
+const seatM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#8a2a24', roughness: .9 });
+for (const sx of [-1, 1]) {
+  const x0 = sx < 0 ? -DX + .02 : DX - .82;
+  box(.8, .22, DZ - 1.6, seatM, x0, 0, -DZ + .2, { r: .04 });                                   // mattress
+  for (let z = -DZ + .4; z < -1.6; z += .75) box(.18, .5, .66, saduM, sx < 0 ? -DX + .04 : DX - .22, .22, z, { r: .05 }); // back cushions
+  for (let z = -DZ + 1.2; z < -1.6; z += 2.3) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.12, .12, .5, 18), saduM); p.rotation.x = Math.PI / 2; p.position.set(sx < 0 ? -DX + .62 : DX - .62, .34, z); p.castShadow = true; scene.add(p); }
+}
+box(DX * 2 - 1.8, .012, DZ - 3.0, M.rug, -DX + .9, .002, -DZ + 1.6, { cast: false });
+// brass tray, dallah, cups
+const tray = new THREE.Mesh(new THREE.CylinderGeometry(.55, .55, .03, 40), M.brass); tray.position.set(0, .3, -6.4); scene.add(tray);
+const stand = new THREE.Mesh(new THREE.CylinderGeometry(.3, .4, .28, 6), dado); stand.position.set(0, .14, -6.4); scene.add(stand);
+const dallah = new THREE.Group(); dallah.position.set(-.15, .315, -6.45); scene.add(dallah);
+{ const b = new THREE.Mesh(new THREE.CylinderGeometry(.06, .11, .22, 24), M.brass); b.position.y = .11; dallah.add(b); const n = new THREE.Mesh(new THREE.CylinderGeometry(.035, .06, .1, 20), M.brass); n.position.y = .27; dallah.add(n); const lid = new THREE.Mesh(new THREE.ConeGeometry(.05, .08, 20), M.brass); lid.position.y = .36; dallah.add(lid); const sp = new THREE.Mesh(new THREE.CylinderGeometry(.01, .018, .2, 8), M.brass); sp.position.set(.11, .22, 0); sp.rotation.z = -.9; dallah.add(sp); }
+for (let i = 0; i < 5; i++) { const c = new THREE.Mesh(new THREE.CylinderGeometry(.03, .022, .045, 16), new THREE.MeshStandardMaterial({ color: '#f4efe6', roughness: .3 })); c.position.set(.15 + (i % 3) * .09, .34, -6.25 - Math.floor(i / 3) * .1); scene.add(c); }
+// carved double door on the entrance wall + stone frame
+const doorM = new THREE.MeshStandardMaterial({ map: canvasTex(256, 512, (g, w, h) => { woodDraw('#5b3a22', '35,20,10')(g, w, h); g.strokeStyle = 'rgba(20,10,4,.6)'; g.lineWidth = 5; for (let y = 40; y < h - 20; y += 110) { g.strokeRect(24, y, w - 48, 90); g.beginPath(); g.moveTo(w / 2, y + 10); g.lineTo(w - 40, y + 45); g.lineTo(w / 2, y + 80); g.lineTo(40, y + 45); g.closePath(); g.stroke(); } }, [1, 1]), roughness: .5 });
+const frameM = new THREE.MeshStandardMaterial({ color: '#cbb894', roughness: .8 });
+box(2.1, 2.75, .1, frameM, -1.05, 0, -DZ - .02);
+box(.86, 2.45, .06, doorM, -.88, 0, -DZ + .07); box(.86, 2.45, .06, doorM, .02, 0, -DZ + .07);
+for (const x of [-.12, .12]) { const h = new THREE.Mesh(new THREE.TorusGeometry(.05, .01, 8, 20), M.brass); h.position.set(x, 1.2, -DZ + .14); scene.add(h); }
+// small high windows on the side walls (night)
+const nightTex = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#0d1630'; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(255,255,255,.6)'; for (let i = 0; i < 8; i++) g.fillRect(Math.random() * w, Math.random() * h, 2, 2); }, [1, 1]);
+const winM = new THREE.MeshStandardMaterial({ map: nightTex, emissive: '#ffffff', emissiveMap: nightTex, emissiveIntensity: .3 });
+for (const z of [-3.2, -6.8]) { plane(.9, .6, winM, [-DX + .005, 2.4, z], [0, Math.PI / 2, 0]); plane(.9, .6, winM, [DX - .005, 2.4, z], [0, -Math.PI / 2, 0]); }
+// wall grazers: recessed in the drop band near the side walls, aimed down the wall over the seating
+const SP = [];
+for (let z = -1.6; z > -9.2; z -= 1.5) for (const sx of [-1, 1]) {
+  const x = sx * (DX - .35);
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(.045, .045, .02, 18), emis('#000', 0)); ring.position.set(x, BAND - .005, z); scene.add(ring);
+  const s = new THREE.SpotLight(WARM, 0, 6, 24 * Math.PI / 180, .45, 1.4); s.position.set(x, BAND - .04, z); s.target.position.set(sx * DX, .6, z); scene.add(s, s.target);
+  SP.push({ ring, s, z });
+}
+// chandelier: three tiers of crystal drops around a brass hoop, hanging from the centre of the raised panel
+const CZ = -5.2, CY0 = DH - 1.15;
+const rod = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, 1.0, 8), M.brass); rod.position.set(0, DH - .5, CZ); scene.add(rod);
+const TIERS = [];
+[[.62, CY0 + .3], [.45, CY0], [.26, CY0 - .28]].forEach(([r, y], ti) => {
+  const hoop = new THREE.Mesh(new THREE.TorusGeometry(r, .015, 8, 48), M.brass); hoop.rotation.x = Math.PI / 2; hoop.position.set(0, y, CZ); scene.add(hoop);
+  const drops = [];
+  const n = Math.round(r * 40);
+  for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; const d = new THREE.Mesh(new THREE.OctahedronGeometry(.028, 0), new THREE.MeshStandardMaterial({ color: '#e9f0f5', roughness: .05, metalness: .2, emissive: '#000' })); d.scale.y = 1.8; d.position.set(Math.cos(a) * r, y - .08, CZ + Math.sin(a) * r); scene.add(d); drops.push(d); }
+  const bulbs = [];
+  for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; const b = new THREE.Mesh(new THREE.SphereGeometry(.03, 10, 8), emis('#000', 0)); b.position.set(Math.cos(a) * r, y + .04, CZ + Math.sin(a) * r); scene.add(b); bulbs.push(b); }
+  const pt = new THREE.PointLight('#ffd09a', 0, 7, 1.6); pt.position.set(0, y, CZ); scene.add(pt);
+  TIERS.push({ drops, bulbs, pt });
+});
+const chDown = new THREE.SpotLight('#ffd09a', 0, 6, 55 * Math.PI / 180, .6, 1.2); chDown.position.set(0, CY0 - .4, CZ); chDown.target.position.set(0, 0, CZ); scene.add(chDown, chDown.target);
+// door sconces: brass up/down cylinders either side of the door
+const SC = [-1.45, 1.45].map((x) => {
+  const b = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .32, 20), M.brass); b.position.set(x, 1.9, -DZ + .1); scene.add(b);
+  const capU = new THREE.Mesh(new THREE.CircleGeometry(.05, 16), emis('#000', 0)); capU.rotation.x = -Math.PI / 2; capU.position.set(x, 2.065, -DZ + .1); scene.add(capU);
+  const capD = new THREE.Mesh(new THREE.CircleGeometry(.05, 16), emis('#000', 0)); capD.rotation.x = Math.PI / 2; capD.position.set(x, 1.735, -DZ + .1); scene.add(capD);
+  const up = new THREE.SpotLight(WARM, 0, 3, 16 * Math.PI / 180, .5, 1.5); up.position.set(x, 2.08, -DZ + .14); up.target.position.set(x, DH, -DZ + .14);
+  const dn = new THREE.SpotLight(WARM, 0, 3, 16 * Math.PI / 180, .5, 1.5); dn.position.set(x, 1.72, -DZ + .14); dn.target.position.set(x, 0, -DZ + .14);
+  scene.add(up, up.target, dn, dn.target); return { capU, capD, up, dn };
+});
+const hemi = new THREE.HemisphereLight('#8ea2cc', '#1a120c', .1); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [0, 2.15, -.3], tgt: [0, 1.05, -10], fov: 70 },          // the whole diwaniya toward the door
+  c: { pos: [.9, 1.35, -2.6], tgt: [0, 2.35, -5.2], fov: 52 },        // the chandelier
+  s: { pos: [-.6, 1.2, -4.2], tgt: [2.4, .65, -5.6], fov: 56 },      // the seating along the wall and the door corner
+};
+const cl = (v) => Math.max(0, Math.min(1, v));
+window.setState = (state) => {
+  const T = Object.fromEntries(state.replace('all', 'cove+spots+chand+ent').split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const cv = T.cove ?? 0, sp = T.spots ?? 0, ch = T.chand ?? 0, en = T.ent ?? 0, dm = T.dim ?? 1;
+  COVE.forEach(({ s, l }, i) => { const k = cl((cv * 1.15 - [0, 0, .5, .5][i]) / .5); l.intensity = 14 * k * dm; s.material = k > .02 ? emis(WARM, 6 * k) : emis('#000', 0); });
+  SP.forEach(({ ring, s, z }) => { const k = cl((sp * 1.2 - (-z - 1.6) / 9) / .25); s.intensity = 28 * k * dm; ring.material = k > .02 ? emis('#fff1dc', 3 * k) : emis('#000', 0); });
+  TIERS.forEach(({ drops, bulbs, pt }, i) => { const k = cl((ch * 1.2 - i / 3) / .4); pt.intensity = 2.2 * k * dm; bulbs.forEach((b) => { b.material = k > .02 ? emis('#ffe2b8', 9 * k) : emis('#000', 0); }); drops.forEach((d) => { d.material.emissive.set(k > .02 ? '#ffcf90' : '#000'); d.material.emissiveIntensity = .9 * k; }); });
+  chDown.intensity = 10 * cl(ch * 1.2 - .6) * dm;
+  SC.forEach(({ capU, capD, up, dn }) => { up.intensity = dn.intensity = 10 * en * dm; capU.material = capD.material = en ? emis(WARM, 8) : emis('#000', 0); });
+  const lit = Math.min(1, cv * .3 + sp * .35 + ch * .25 + en * .1);
+  hemi.intensity = .1 + .1 * lit; scene.environmentIntensity = .03 + .1 * lit;
+  renderer.toneMappingExposure = 1.05;
+};
