@@ -39,7 +39,7 @@ export default function WhatsAppWidget() {
   };
 
   return (
-    <div className={`fixed bottom-6 ${isRTL ? 'left-6' : 'right-6'} z-50 flex flex-col items-end gap-3 font-cairo`}>
+    <div className={`fixed bottom-20 md:bottom-6 ${isRTL ? 'left-6' : 'right-6'} z-50 flex flex-col items-end gap-3 font-cairo`}>
       
       {/* 1. Expandable Floating Support Chat Box */}
       <AnimatePresence>

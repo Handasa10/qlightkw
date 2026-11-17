@@ -9,15 +9,17 @@ import { priceOf, searchCatalog, useCatalog } from '@/hooks/useCatalog';
 import { DEPARTMENTS } from '@/lib/store-nav';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
+import { motion } from 'framer-motion';
+import { useStoreUI } from '@/contexts/StoreUIContext';
+import { PhotoSearchButton, VoiceSearchButton } from './SmartSearch';
 import logo from '@/assets/logo.png';
-import MiniCartPreview from './MiniCartPreview';
 
 // Store header: announcement bar, logo + search + account/wishlist/cart, department menu
 const Header = () => {
   const { language, setLanguage, isRTL } = useLanguage();
   const { user, isAdmin } = useAuth();
   const { itemCount } = useCart();
+  const { setCartOpen, cartIconRef } = useStoreUI();
   const { wishlistCount } = useWishlist();
   const { products, categories } = useCatalog();
   const navigate = useNavigate();
@@ -63,9 +65,13 @@ const Header = () => {
           onFocus={() => setSearchOpen(true)}
           placeholder={isRTL ? 'ابحث عن منتج: بلاك، سبوت لايت، GU10…' : 'Search products: socket, spotlight, GU10…'}
           aria-label={isRTL ? 'بحث' : 'Search'}
-          className="h-11 w-full rounded-full border border-neutral-200 bg-neutral-50 ps-11 pe-4 text-sm text-neutral-900 outline-none transition focus:border-neutral-900 focus:bg-white"
+          className="h-11 w-full rounded-full border border-neutral-200 bg-neutral-50 ps-11 pe-24 text-sm text-neutral-900 outline-none transition focus:border-neutral-900 focus:bg-white"
         />
       </form>
+      <div className="absolute end-1.5 top-1/2 flex -translate-y-1/2 items-center">
+        <VoiceSearchButton onResult={(text) => { setQuery(text); setSearchOpen(true); }} />
+        <PhotoSearchButton />
+      </div>
       {searchOpen && query.trim().length >= 2 && (
         <div className="absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl">
           {suggestions.length === 0 ? (
@@ -144,6 +150,7 @@ const Header = () => {
                   </div>
                 ))}
                 <Link to="/shop?offers=true" className="block px-3 py-3.5 text-[15px] font-semibold text-red-600">{isRTL ? 'العروض' : 'Offers'}</Link>
+                <Link to="/configure" className="block px-3 py-3.5 text-[15px] font-semibold text-primary">✨ {isRTL ? 'صمّم مفتاحك' : 'Design a switch'}</Link>
                 <Link to="/quote" className="block px-3 py-3.5 text-[15px] font-semibold">{isRTL ? 'عرض سعر فوري' : 'Instant quotation'}</Link>
                 <Link to={user ? '/account' : '/auth'} className="block px-3 py-3.5 text-[15px] font-semibold">{user ? (isRTL ? 'حسابي' : 'My account') : (isRTL ? 'تسجيل الدخول' : 'Sign in')}</Link>
                 <Link to="/contact" className="block px-3 py-3.5 text-[15px] font-semibold">{isRTL ? 'اتصل بنا' : 'Contact us'}</Link>
@@ -173,17 +180,13 @@ const Header = () => {
             <Link to="/wishlist" className="relative hidden rounded-full p-2 hover:bg-neutral-100 sm:block" aria-label={isRTL ? 'المفضلة' : 'Wishlist'}>
               <Heart className="h-[22px] w-[22px]" />{badge(wishlistCount)}
             </Link>
-            <HoverCard openDelay={100} closeDelay={200}>
-              <HoverCardTrigger asChild>
-                <Link to="/cart" className="relative flex items-center gap-2 rounded-full p-2 hover:bg-neutral-100" aria-label={isRTL ? 'السلة' : 'Cart'}>
-                  <span className="relative"><ShoppingBag className="h-[22px] w-[22px]" />{badge(itemCount)}</span>
-                  <span className="hidden text-sm font-semibold lg:inline">{isRTL ? 'السلة' : 'Cart'}</span>
-                </Link>
-              </HoverCardTrigger>
-              <HoverCardContent align="end" sideOffset={8} className="hidden w-auto rounded-2xl border-neutral-200 bg-white p-4 text-neutral-900 shadow-xl sm:block">
-                <MiniCartPreview />
-              </HoverCardContent>
-            </HoverCard>
+            <button type="button" onClick={() => setCartOpen(true)} className="relative flex items-center gap-2 rounded-full p-2 hover:bg-neutral-100" aria-label={isRTL ? 'السلة' : 'Cart'}>
+              <motion.span key={itemCount} ref={cartIconRef as React.Ref<HTMLSpanElement>} className="relative"
+                initial={itemCount ? { scale: 1.35, rotate: -12 } : false} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 400, damping: 12 }}>
+                <ShoppingBag className="h-[22px] w-[22px]" />{badge(itemCount)}
+              </motion.span>
+              <span className="hidden text-sm font-semibold lg:inline">{isRTL ? 'السلة' : 'Cart'}</span>
+            </button>
           </div>
         </div>
         <div className="container pb-3 md:hidden">{searchBox}</div>
@@ -192,7 +195,7 @@ const Header = () => {
       {/* Department menu */}
       <nav className="hidden border-b border-neutral-200 lg:block" onMouseLeave={() => setOpenDept(null)}>
         <div className="container relative">
-          <ul className="flex items-center gap-5 whitespace-nowrap text-[13px] font-semibold xl:gap-7 xl:text-sm">
+          <ul className="flex items-center gap-5 overflow-x-auto whitespace-nowrap text-[13px] font-semibold [scrollbar-width:none] xl:gap-6 xl:text-sm [&::-webkit-scrollbar]:hidden">
             {DEPARTMENTS.map((d) => (
               <li key={d.id} onMouseEnter={() => setOpenDept(d.id)}>
                 <Link to={`/shop?dept=${d.id}`} className={`flex h-12 items-center gap-1 border-b-2 transition-colors ${openDept === d.id ? 'border-primary text-primary' : 'border-transparent hover:text-primary'}`}>
@@ -202,6 +205,7 @@ const Header = () => {
               </li>
             ))}
             <li onMouseEnter={() => setOpenDept(null)}><Link to="/shop?offers=true" className="flex h-12 items-center text-red-600 hover:text-red-700">{isRTL ? 'العروض' : 'Offers'}</Link></li>
+            <li onMouseEnter={() => setOpenDept(null)}><Link to="/configure" className="flex h-12 items-center gap-1 text-primary hover:text-neutral-900">✨ {isRTL ? 'صمّم مفتاحك' : 'Design a switch'}</Link></li>
             <li className="ms-auto hidden xl:block" onMouseEnter={() => setOpenDept(null)}><Link to="/quote" className="flex h-12 items-center text-neutral-500 hover:text-primary">{isRTL ? 'عرض سعر فوري' : 'Instant quotation'}</Link></li>
           </ul>
           {DEPARTMENTS.filter((d) => d.id === openDept && d.categories.length > 1).map((d) => (
