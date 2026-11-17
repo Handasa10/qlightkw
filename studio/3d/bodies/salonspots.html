@@ -1,0 +1,58 @@
+// ===== Living room: where do the spots go? =====
+// Room x -3..3, z 0..5 (back wall z=0 with a TV wall on the left and a framed painting on the right), sofa facing the TV
+// along the right... kept simple: the sofa sits against the right half of the back wall, the coffee table in front,
+// the TV wall on the left wall. Camera from the open front.
+// state tokens joined by '+':
+//   mid        the common mistake: one row of spots down the middle of the ceiling (walls dark, harsh pools on the floor)
+//   good:<0..1> spots along the seating ~60 cm off the wall, then one aimed at the painting, then one over the table
+//   tv         (with mid) a spot right above the TV: a hot reflection on the screen
+//   marks      orange rings on the ceiling where the good spots go (for the plan moment)
+const CH = 2.9, RX = 3.0, RZ = 5.0;
+const floorTex = canvasTex(1024, 1024, (g, w, h) => { woodDraw('#a07c58', '62,40,20')(g, w, h); }, [3, 3]);
+plane(RX * 2, RZ, new THREE.MeshStandardMaterial({ map: floorTex, roughness: .5 }), [0, 0, RZ / 2], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#e6dfd4', roughness: .9 });
+box(RX * 2, CH, .1, wallM, -RX, 0, -.1); box(.1, CH, RZ, wallM, -RX - .1, 0, -.1); box(.1, CH, RZ, wallM, RX, 0, -.1);
+box(RX * 2 + .2, .08, RZ, M.ceil, -RX - .1, CH, -.1, { cast: false });
+// TV wall on the left wall: dark stone panel + screen
+box(.05, 2.2, 2.4, M.stone, -RX + .01, .3, 1.2, { cast: false });
+const screenM = new THREE.MeshStandardMaterial({ color: '#06070a', roughness: .08, metalness: .6 });
+const screen = box(.03, .85, 1.5, screenM, -RX + .07, 1.0, 1.65);
+box(.4, .35, 1.8, M.darkWood, -RX + .06, 0, 1.5);
+// painting on the back wall
+const artTex = canvasTex(768, 512, (g, w, h) => { g.fillStyle = '#e7dcc8'; g.fillRect(0, 0, w, h); const cs = ['#b8553a', '#2f4d5c', '#d9a85b', '#5d7a52']; for (let i = 0; i < 4; i++) { g.fillStyle = cs[i]; g.globalAlpha = .85; g.beginPath(); g.ellipse(170 + i * 140, 260 + (i % 2 ? -50 : 50), 120, 160, i * .4, 0, 7); g.fill(); } }, [1, 1]);
+box(1.36, .92, .04, new THREE.MeshStandardMaterial({ color: '#1a1714', roughness: .5 }), .02, 1.38, -.04);
+plane(1.26, .82, new THREE.MeshStandardMaterial({ map: artTex, roughness: .8 }), [.7, 1.84, .01], [0, 0, 0]);
+// sofa against the back wall (right half), coffee table, rug, armchair, plant
+const sofaM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#cfc2ad', roughness: .95 });
+box(2.6, .42, .9, sofaM, -.6, 0, .15, { r: .06 }); box(2.6, .48, .22, sofaM, -.6, .42, .1, { r: .06 });
+box(1.2, .38, .7, M.tableTop, .1, 0, 1.6);
+box(3.2, .012, 2.2, M.rug, -.9, .002, .9, { cast: false });
+box(.8, .42, .8, M.cushion, 2.0, 0, 1.6, { r: .06 }); box(.8, .45, .18, M.cushion, 2.0, .42, 2.22, { r: .06 });
+plant(2.55, .5, 1.6, .5);
+// lights
+const WARM = '#ffdcb0';
+function spot(x, z, aim, ang = 30) { const ring = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .02, 18), emis('#000', 0)); ring.position.set(x, CH - .005, z); scene.add(ring); const mk = new THREE.Mesh(new THREE.TorusGeometry(.11, .015, 8, 28), emis('#000', 0)); mk.rotation.x = Math.PI / 2; mk.position.set(x, CH - .012, z); scene.add(mk); const s = new THREE.SpotLight(WARM, 0, 8, ang * Math.PI / 180, .5, 1.3); s.position.set(x, CH - .04, z); s.target.position.set(...aim); scene.add(s, s.target); return { ring, mk, s }; }
+const MID = [-1.8, -.6, .6, 1.8].map((x) => spot(x, 2.6, [x, 0, 2.6], 38));
+const TVS = spot(-RX + .45, 1.65, [-RX + .1, 1.4, 1.65], 30);
+const GOOD = [
+  ...[-.2, .7, 1.6].map((x) => spot(x, .6, [x, .9, .05], 30)),     // along the seating, ~60 cm off the wall, washing it
+  spot(.7, 1.0, [.7, 1.8, 0], 18),                                   // aimed at the painting
+  spot(.7, 1.95, [.7, .38, 1.95], 26),                                // over the coffee table
+];
+const hemi = new THREE.HemisphereLight('#efe7dc', '#2a2018', .06); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [.7, 1.6, 5.6], tgt: [.2, 1.15, .6], fov: 62 },        // the room from the front
+  p: { pos: [.9, 1.5, 2.9], tgt: [.6, 1.6, 0], fov: 50 },           // the sofa + painting
+  t: { pos: [.3, 1.3, 3.4], tgt: [-RX, 1.3, 1.6], fov: 52 },         // the TV wall
+  c: { pos: [.7, 1.2, 4.2], tgt: [.4, 2.9, 1.2], fov: 72 },          // looking up at the ceiling (plan / marks)
+};
+window.setState = (state) => {
+  const T = Object.fromEntries(state.split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const mid = T.mid ?? 0, g = T.good ?? 0, tv = T.tv ?? 0, mk = T.marks ?? 0;
+  MID.forEach(({ ring, s }) => { s.intensity = 40 * mid; ring.material = mid ? emis('#fff1dc', 3) : emis('#000', 0); });
+  TVS.s.intensity = 30 * tv; TVS.ring.material = tv ? emis('#fff1dc', 3) : emis('#000', 0);
+  GOOD.forEach(({ ring, mk: m, s }, i) => { const k = Math.max(0, Math.min(1, (g * 1.25 - [0, 0, 0, .4, .7][i]) / .3)); s.intensity = (i === 3 ? 30 : 32) * k; ring.material = k > .02 ? emis('#fff1dc', 3 * k) : emis('#000', 0); m.material = mk ? emis('#ff7a1a', 4) : emis('#000', 0); });
+  [MID, [TVS]].flat().forEach(({ mk: m }) => { m.material = emis('#000', 0); });
+  screenM.emissive = new THREE.Color(tv ? '#3a3226' : '#000');
+  hemi.intensity = .06 + .06 * Math.max(mid, g); scene.environmentIntensity = .04; renderer.toneMappingExposure = 1.0;
+};
