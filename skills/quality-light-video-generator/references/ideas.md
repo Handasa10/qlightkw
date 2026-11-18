@@ -4,7 +4,7 @@
 1. A clear problem or desire a buyer recognises in his own home or shop.
 2. The difference can be **seen** in a short vertical video (before/after, A vs B, light switching on).
 3. Fits Kuwait: majlis, diwaniya, villa finishing, gypsum ceilings, hot dusty outdoors, cafés and boutiques.
-4. A realistic CTA: visit the showroom, WhatsApp, send the villa plan (design fee deducted on purchase).
+4. A realistic CTA: visit the showroom, WhatsApp, send the villa plan (never mention a design fee or deduction: withdrawn by the owner).
 5. Not a repeat of something already produced.
 
 Content mix to aim for over a month: ~40% problems & fixes, ~30% products & comparisons, ~20% before/after &
