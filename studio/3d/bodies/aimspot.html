@@ -1,0 +1,96 @@
+// ===== Aim spot: fixed downlights vs an adjustable (gimbal) spot =====
+// back wall z=0 (x -2.6..3.2), left wall x=-2.6, right wall x=3.2, ceiling 3.0
+// tokens joined by '+': off | fixed (fixed spots light the passage) | aim:<0..1> (gimbal head turns from straight down
+// to its target) | t:p|s|v (target: painting / shelf / vase on plinth) | room (soft fill) | adj (gimbal on, pointing down)
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#a89a88', roughness: .92 });
+const floorTex = canvasTex(1024, 1024, (g, w, h) => { g.fillStyle = '#cfc6b8'; g.fillRect(0, 0, w, h); for (let i = 0; i < 9000; i++) { g.fillStyle = `rgba(${R() > .5 ? 255 : 120},${R() > .5 ? 250 : 110},${R() > .5 ? 240 : 100},0.05)`; g.fillRect(R() * w, R() * h, 3, 3); } g.strokeStyle = 'rgba(80,70,60,.35)'; g.lineWidth = 3; for (let y = 0; y <= h; y += 256) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } for (let x = 0; x <= w; x += 256) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } }, [3, 3]);
+plane(12, 12, new THREE.MeshStandardMaterial({ map: floorTex, roughness: .35 }), [.3, 0, 3], [-Math.PI / 2, 0, 0]);
+box(5.8, 3.0, .1, wallM, -2.6, 0, -.1);
+box(.1, 3.0, 7, wallM, -2.7, 0, -.1);
+box(.1, 3.0, 7, wallM, 3.2, 0, -.1);
+box(6, .1, 7, M.ceil, -2.7, 3.0, -.1, { cast: false });
+box(5.8, .08, .02, M.darkWood, -2.6, 0, 0, { cast: false });
+
+// ---- painting (geometric, warm/teal) at x=1.25 ----
+const PW = 1.0, PH = 1.25, PX = 1.25, PY = 1.75;
+const paintTex = canvasTex(1000, 1250, (g, w, h) => {
+  g.fillStyle = '#efe4d2'; g.fillRect(0, 0, w, h);
+  const cols = ['#ef5924', '#1d6f73', '#e8b04a', '#23324a', '#c9573a', '#7fb3a8'];
+  for (let i = 0; i < 7; i++) { g.fillStyle = cols[i % cols.length]; g.globalAlpha = .9; g.beginPath(); g.arc(w * (.2 + R() * .6), h * (.15 + R() * .7), 90 + R() * 200, R() * 3, R() * 3 + 2.2 + R() * 2); g.lineTo(w * (.3 + R() * .4), h * (.3 + R() * .4)); g.fill(); }
+  g.globalAlpha = 1; g.fillStyle = '#23324a'; g.fillRect(w * .12, h * .78, w * .76, 14);
+  g.strokeStyle = '#ef5924'; g.lineWidth = 10; g.beginPath(); g.arc(w * .62, h * .3, 120, 0, 7); g.stroke();
+  for (let i = 0; i < 9000; i++) { g.fillStyle = `rgba(0,0,0,0.035)`; g.fillRect(R() * w, R() * h, 3, 3); }
+});
+const frameM = new THREE.MeshStandardMaterial({ color: '#1b1b1b', roughness: .4, metalness: .3 });
+box(PW + .08, PH + .08, .05, frameM, PX - PW / 2 - .04, PY - PH / 2 - .04, 0);
+plane(PW, PH, new THREE.MeshStandardMaterial({ map: paintTex, roughness: .8 }), [PX, PY, .052], [0, 0, 0]);
+// low oak bench under the painting
+const oakM = new THREE.MeshStandardMaterial({ map: oakTex, color: '#6a4a2e', roughness: .5 });
+box(1.5, .06, .42, oakM, PX - .75, .42, .05); for (const x of [-.7, .64]) box(.06, .42, .4, oakM, PX + x, 0, .06);
+const book = (x, c) => box(.3, .04, .22, new THREE.MeshStandardMaterial({ color: c, roughness: .7 }), x, .48, .12, { r: .005 });
+book(PX - .5, '#2b2622'); book(PX - .48, '#c9b79c');
+// ---- floating shelf with ceramics at x=-1.05 ----
+const SX = -1.05, SY = 1.55;
+box(1.2, .05, .28, oakM, SX - .6, SY, .0);
+const ceramic = new THREE.MeshStandardMaterial({ color: '#e9e0d2', roughness: .5 });
+const lathe = (pts, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.LatheGeometry(pts.map(([r, yy]) => new THREE.Vector2(r, yy)), 48), mat); m.position.set(x, y, z); m.castShadow = true; scene.add(m); return m; };
+lathe([[0, 0], [.06, 0], [.09, .08], [.1, .18], [.07, .28], [.04, .33], [.05, .36]], ceramic, SX - .32, SY + .05, .14);
+lathe([[0, 0], [.08, 0], [.11, .06], [.11, .1], [.09, .13]], new THREE.MeshStandardMaterial({ color: '#b8562f', roughness: .45 }), SX + .02, SY + .05, .14);
+lathe([[0, 0], [.04, 0], [.06, .12], [.05, .22], [.02, .3], [.025, .34]], new THREE.MeshStandardMaterial({ color: '#2f4a4a', roughness: .35 }), SX + .32, SY + .05, .14);
+// ---- plinth + sculpture vase at x=2.55, z=.6 ----
+const VX = 2.55, VZ = .7;
+box(.42, .95, .42, new THREE.MeshStandardMaterial({ color: '#e7e1d8', roughness: .6 }), VX - .21, 0, VZ - .21);
+lathe([[0, 0], [.08, 0], [.15, .12], [.17, .28], [.12, .46], [.07, .56], [.09, .62]], new THREE.MeshStandardMaterial({ color: '#c46a3c', roughness: .3, metalness: .1 }), VX, .95, VZ);
+// armchair + plant on the left
+const chairM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#b9a383', roughness: .95 });
+box(.8, .42, .8, chairM, -2.4, .12, 1.4, { r: .06 }); box(.16, .5, .8, chairM, -2.4, .5, 1.4, { r: .06 });
+plant(-2.1, .45, 1.5, .5);
+plane(2.4, 1.6, M.rug, [.2, .005, 1.6], [-Math.PI / 2, 0, 0]);
+
+// ---- lights ----
+const hemi = new THREE.HemisphereLight('#ffe7cc', '#3a2c20', .1); scene.add(hemi);
+const fill = new THREE.PointLight('#ffd6a0', 0, 8, 1.6); fill.position.set(0, 2.4, 3.2); scene.add(fill);
+const ringM = new THREE.MeshStandardMaterial({ color: '#f2f0ec', roughness: .4 });
+function trim(x, z) { const r = new THREE.Mesh(new THREE.CylinderGeometry(.07, .07, .02, 32), ringM); r.position.set(x, 2.99, z); scene.add(r); const lm = emis('#000', 0); const l = new THREE.Mesh(new THREE.CircleGeometry(.04, 24), lm); l.rotation.x = Math.PI / 2; l.position.set(x, 2.978, z); scene.add(l); return lm; }
+// fixed spots: a row down the middle of the room (straight down)
+const fixedS = [];
+for (const [x, z] of [[-.4, .9], [-.4, 2.1], [-.4, 3.3], [2.0, 2.1]]) {
+  const s = new THREE.SpotLight('#ffd6a0', 0, 9, .45, .55, 1.5); s.position.set(x, 2.97, z); s.target.position.set(x, 0, z); s.castShadow = true; s.shadow.mapSize.set(1024, 1024); scene.add(s, s.target);
+  fixedS.push([s, trim(x, z)]);
+}
+// gimbal spot: ring in the ceiling + head that tilts
+const GX = 1.25, GZ = 1.05;
+const gim = new THREE.Group(); gim.position.set(GX, 2.99, GZ); scene.add(gim);
+const gRing = new THREE.Mesh(new THREE.CylinderGeometry(.1, .1, .02, 40), ringM); gim.add(gRing);
+const gHole = new THREE.Mesh(new THREE.CircleGeometry(.085, 32), new THREE.MeshStandardMaterial({ color: '#111', roughness: .6 })); gHole.rotation.x = Math.PI / 2; gHole.position.y = -.011; gim.add(gHole);
+const head = new THREE.Group(); head.position.y = -.02; gim.add(head);
+const headBody = new THREE.Mesh(new THREE.CylinderGeometry(.065, .06, .11, 32), new THREE.MeshStandardMaterial({ color: '#f4f2ee', roughness: .35 })); headBody.position.y = -.05; head.add(headBody);
+const gLensM = emis('#000', 0); const gLens = new THREE.Mesh(new THREE.CircleGeometry(.045, 28), gLensM); gLens.rotation.x = Math.PI / 2; gLens.position.y = -.106; head.add(gLens);
+const yoke = new THREE.Mesh(new THREE.TorusGeometry(.075, .006, 8, 32, Math.PI), new THREE.MeshStandardMaterial({ color: '#c9a063', metalness: 1, roughness: .3 })); yoke.rotation.y = Math.PI / 2; yoke.rotation.z = Math.PI; yoke.position.y = -.01; head.add(yoke);
+const gs = new THREE.SpotLight('#ffd6a0', 0, 12, .2, .35, 1.4); gs.castShadow = true; gs.shadow.mapSize.set(2048, 2048); gs.shadow.bias = -.0004; gs.shadow.camera.near = .2; scene.add(gs, gs.target);
+const TG = { p: [PX, PY - .05, .06], s: [SX, SY + .2, .14], v: [VX, 1.25, VZ] };
+
+const VIEWS = {
+  w: { pos: [.55, 1.55, 5.7], tgt: [.6, 1.3, 0], fov: 76 },
+  v: { pos: [1.85, 1.45, 2.5], tgt: [2.55, 1.15, .7], fov: 46 },
+  p: { pos: [1.1, 1.65, 3.0], tgt: [1.2, 1.6, 0], fov: 46 },
+  u: { pos: [GX - .55, 2.2, GZ + .9], tgt: [GX, 2.92, GZ], fov: 40 },
+  s: { pos: [-.6, 1.5, 2.6], tgt: [-.9, 1.4, 0], fov: 46 },
+  c: { pos: [-.4, 1.6, 4.4], tgt: [-.4, .6, 1.2], fov: 62 },
+};
+window.setState = (st) => {
+  const T = st.split('+'), has = k => T.includes(k), val = (k, d) => { const t = T.find(x => x.startsWith(k + ':')); return t ? t.split(':')[1] : d; };
+  const fx = has('fixed'), aimS = val('aim', null), adj = has('adj') || aimS !== null, a = aimS === null ? 0 : +aimS, tk = val('t', 'p'), room = has('room');
+  fixedS.forEach(([s, lm]) => { s.intensity = fx ? 16 : 0; lm.emissive.set('#ffd6a0'); lm.emissiveIntensity = fx ? 6 : 0; });
+  hemi.intensity = room ? .35 : .05; fill.intensity = room ? 2.2 : .5;
+  scene.environmentIntensity = room ? .25 : .04;
+  // gimbal direction: straight down (a=0) → target (a=1)
+  const from = new THREE.Vector3(GX, 2.96, GZ), down = new THREE.Vector3(GX, 0, GZ), to = new THREE.Vector3(...TG[tk]);
+  const d0 = down.clone().sub(from).normalize(), d1 = to.clone().sub(from).normalize();
+  const dir = d0.clone().lerp(d1, a).normalize();
+  gs.position.copy(from); gs.target.position.copy(from.clone().add(dir.clone().multiplyScalar(from.distanceTo(to))));
+  gs.angle = (a > .5 ? 30 : 40) / 2 * Math.PI / 180; gs.penumbra = .35;
+  gs.intensity = adj ? (a > .5 ? 11 : 18) : 0; gLensM.emissive.set('#ffd6a0'); gLensM.emissiveIntensity = adj ? 8 : 0;
+  head.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir);
+  renderer.toneMappingExposure = 1.0;
+};
