@@ -25,7 +25,7 @@ const MiniCartPreview = () => {
       <div className="flex flex-col items-center justify-center py-8 text-center">
         <ShoppingBag className="h-12 w-12 text-muted-foreground mb-3" />
         <p className="text-sm text-muted-foreground mb-4">
-          {t('cart.empty', 'Your cart is empty')}
+          {t('cart.empty.title', 'Your cart is empty')}
         </p>
         <Button asChild size="sm">
           <Link to="/shop">{t('cart.continueShopping', 'Continue Shopping')}</Link>
