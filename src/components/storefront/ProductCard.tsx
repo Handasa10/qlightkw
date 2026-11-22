@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Heart, ShoppingCart, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { resolveImageUrl, resolveSecondaryImageUrl } from '@/lib/image-resolver';
+import { effectivePrice, comparePrice, discountPercent } from '@/lib/price';
 
 interface Product {
   id: string;
@@ -38,11 +39,9 @@ const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(({ product, ind
   const [secondaryImgError, setSecondaryImgError] = useState(false);
 
   const name = language === 'ar' ? product.name_ar : product.name_en;
-  const price = product.sale_price || product.base_price;
-  const originalPrice = product.sale_price ? product.base_price : null;
-  const discount = originalPrice 
-    ? Math.round(((originalPrice - price) / originalPrice) * 100) 
-    : 0;
+  const price = effectivePrice(product);
+  const originalPrice = comparePrice(product);
+  const discount = discountPercent(product);
 
   // Check if there's a different secondary image
   const hasSecondaryImage = product.secondary_image_url && product.secondary_image_url !== product.image_url;

@@ -157,9 +157,14 @@
     font-family: 'Cairo', sans-serif;
   }
 
-  /* Smooth scrolling */
+  /* Smooth scrolling. overflow-x: clip stops decorative glows (e.g. .btn-glow::after) from widening the page on
+     phones, which shifted RTL pages sideways and cut off headings; clip (not hidden) keeps position: sticky working. */
   html {
     scroll-behavior: smooth;
+  }
+  html,
+  body {
+    overflow-x: clip;
   }
 
   /* Custom scrollbar */

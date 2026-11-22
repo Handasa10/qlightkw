@@ -43,7 +43,10 @@
     "login": "تسجيل الدخول",
     "register": "إنشاء حساب",
     "logout": "تسجيل الخروج",
-    "search": "ابحث عن منتجات..."
+    "search": "ابحث عن منتجات...",
+    "blog": "المدونة",
+    "myAccount": "حسابي",
+    "orders": "طلباتي"
   },
   "home": {
     "hero": {
@@ -86,7 +89,8 @@
     "projects": {
       "title": "مشاريعنا",
       "subtitle": "شاهد كيف حولنا المساحات",
-      "viewProject": "عرض المشروع"
+      "viewProject": "عرض المشروع",
+      "viewAll": "عرض كل المشاريع"
     },
     "whyChooseUs": {
       "title": "لماذا تختارنا",
@@ -105,7 +109,8 @@
       "easyReturns": {
         "title": "إرجاع سهل",
         "description": "سياسة إرجاع لمدة 30 يوم"
-      }
+      },
+      "subtitle": "هدفنا نقدم لك أفضل حلول الإضاءة"
     },
     "testimonials": {
       "title": "آراء عملائنا",
@@ -122,6 +127,20 @@
     "faq": {
       "title": "الأسئلة الشائعة",
       "subtitle": "إجابات على الأسئلة المتكررة"
+    },
+    "cta": {
+      "contact": "تواصل معنا",
+      "shopNow": "تسوق الآن",
+      "subtitle": "تواصل مع خبراء الإضاءة عندنا ونساعدك تختار الأنسب لمكانك.",
+      "title": "جاهز تنوّر مكانك؟"
+    },
+    "products": {
+      "bestseller": "الأكثر مبيعاً",
+      "featured": "مميزة",
+      "new": "وصل حديثاً",
+      "subtitle": "إضاءة بجودة عالية لكل مساحة",
+      "title": "منتجاتنا",
+      "viewAll": "عرض الكل"
     }
   },
   "products": {
@@ -204,7 +223,20 @@
       },
       "checkout": "متابعة الدفع"
     },
-    "continueShopping": "متابعة التسوق"
+    "continueShopping": "متابعة التسوق",
+    "addError": "تعذّر الإضافة للسلة",
+    "apply": "تطبيق",
+    "checkout": "إتمام الطلب",
+    "couponPlaceholder": "كود الخصم",
+    "itemAdded": "انضاف للسلة!",
+    "moreItems": "منتجات أخرى",
+    "orderSummary": "ملخص الطلب",
+    "qty": "الكمية",
+    "shipping": "التوصيل",
+    "startShopping": "ابدأ التسوق",
+    "subtotal": "المجموع الفرعي",
+    "total": "الإجمالي",
+    "viewCart": "عرض السلة"
   },
   "checkout": {
     "title": "إتمام الطلب",
@@ -255,7 +287,54 @@
       "card": "بطاقة ائتمان/خصم"
     },
     "placeOrder": "إتمام الطلب",
-    "terms": "أوافق على الشروط والأحكام وسياسة الخصوصية"
+    "terms": "أوافق على الشروط والأحكام وسياسة الخصوصية",
+    "addItemsFirst": "أضف منتجات للسلة أولاً",
+    "address": "العنوان",
+    "addressPlaceholder": "القطعة، الشارع، المبنى، الدور، الشقة",
+    "agreeTerms": "أوافق على",
+    "apply": "تطبيق",
+    "area": "المنطقة",
+    "back": "رجوع",
+    "businessDays": "أيام عمل",
+    "city": "المحافظة",
+    "cod": "الدفع عند الاستلام",
+    "codNote": "ادفع لما يوصلك الطلب",
+    "comingSoon": "قريباً",
+    "confirm": "تأكيد",
+    "confirmationMessage": "شكراً لطلبك. راح يوصلك إيميل تأكيد فيه تفاصيل الطلب ومتابعة التوصيل.",
+    "continue": "متابعة",
+    "continueShopping": "متابعة التسوق",
+    "couponCode": "كود الخصم",
+    "deliveryFee": "التوصيل",
+    "deliveryMethod": "طريقة التوصيل",
+    "discount": "الخصم",
+    "email": "البريد الإلكتروني",
+    "enterCode": "أدخل الكود",
+    "express": "توصيل سريع",
+    "firstName": "الاسم الأول",
+    "knet": "كي نت",
+    "lastName": "اسم العائلة",
+    "loginToOrder": "سجّل دخولك لإتمام الطلب",
+    "notes": "ملاحظات الطلب",
+    "notesPlaceholder": "أي تعليمات خاصة...",
+    "off": "خصم",
+    "orderFailed": "تعذّر إتمام الطلب",
+    "orderNumber": "رقم الطلب",
+    "orderPlaced": "تم الطلب!",
+    "orderSummary": "ملخص الطلب",
+    "paymentMethod": "طريقة الدفع",
+    "phone": "رقم الهاتف",
+    "placingOrder": "جاري إرسال الطلب...",
+    "sameDay": "توصيل بنفس اليوم",
+    "sameDayNote": "اطلب قبل الساعة 2 الظهر",
+    "shippingAddress": "عنوان التوصيل",
+    "standard": "توصيل عادي",
+    "subtotal": "المجموع الفرعي",
+    "termsLink": "الشروط والأحكام",
+    "total": "الإجمالي",
+    "viewOrders": "عرض طلباتي",
+    "wamad": "تحويل ومض",
+    "wamadNote": "تحويل بنكي عن طريق ومض"
   },
   "order": {
     "confirmation": {
@@ -317,7 +396,8 @@
       "email": "البريد الإلكتروني",
       "submit": "إرسال رابط إعادة التعيين",
       "backToLogin": "العودة لتسجيل الدخول"
-    }
+    },
+    "required": "تسجيل الدخول مطلوب"
   },
   "footer": {
     "about": {
@@ -345,7 +425,9 @@
     "newsletter": {
       "title": "النشرة الإخبارية",
       "placeholder": "بريدك الإلكتروني",
-      "subscribe": "اشترك"
+      "subscribe": "اشترك",
+      "button": "اشترك",
+      "subtitle": "آخر أخبار المنتجات الجديدة والعروض"
     },
     "copyright": "© {{year}} Quality Light. جميع الحقوق محفوظة.",
     "paymentMethods": "طرق الدفع المقبولة"
@@ -934,5 +1016,54 @@
     },
     "searchPlaceholder": "البحث في المنتجات والطلبات والمستخدمين...",
     "language": "اللغة"
+  },
+  "categories": {
+    "commercial": "تجاري",
+    "decorative": "ديكور",
+    "indoor": "إضاءة داخلية",
+    "outdoor": "إضاءة خارجية"
+  },
+  "currency": "د.ك",
+  "product": {
+    "addToCart": "أضف للسلة",
+    "available": "قطعة",
+    "bestseller": "الأكثر مبيعاً",
+    "description": "الوصف",
+    "easyReturns": "إرجاع سهل",
+    "freeShipping": "توصيل مجاني",
+    "inStock": "متوفر",
+    "new": "جديد",
+    "noReviews": "لا توجد تقييمات بعد. كن أول من يقيّم هذا المنتج!",
+    "noSpecifications": "لا توجد مواصفات.",
+    "outOfStock": "غير متوفر",
+    "relatedProducts": "منتجات مشابهة",
+    "reviews": "التقييمات",
+    "selectVariation": "اختر المقاس/القدرة",
+    "specifications": "المواصفات",
+    "warranty": "ضمان سنتين"
+  },
+  "shop": {
+    "allCategories": "كل الأقسام",
+    "brands": "الماركات",
+    "categories": "الأقسام",
+    "clearFilters": "مسح الفلاتر",
+    "filters": "الفلاتر",
+    "noProducts": "لا توجد منتجات",
+    "page": "صفحة",
+    "priceRange": "نطاق السعر",
+    "search": "بحث",
+    "searchPlaceholder": "ابحث عن منتج...",
+    "showingResults": "{{count}} منتج",
+    "sort": {
+      "name": "الاسم",
+      "newest": "الأحدث",
+      "priceHigh": "السعر: من الأعلى",
+      "priceLow": "السعر: من الأقل"
+    },
+    "sortBy": "ترتيب حسب",
+    "title": "كل المنتجات"
+  },
+  "wishlist": {
+    "added": "انضاف للمفضلة!"
   }
 }

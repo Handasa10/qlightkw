@@ -173,7 +173,7 @@ const Checkout = () => {
 
     if (cartItems.length === 0) {
       toast({
-        title: t('cart.empty', 'Cart is empty'),
+        title: t('cart.empty.title', 'Cart is empty'),
         description: t('checkout.addItemsFirst', 'Please add items to your cart first'),
         variant: 'destructive',
       });
@@ -664,7 +664,7 @@ const Checkout = () => {
                   {cartItems.map((item) => (
                     <div key={item.id} className="flex justify-between text-sm">
                       <span>
-                        {item.product?.name_en || 'Product'} × {item.quantity}
+                        {(isRTL && item.product?.name_ar ? item.product.name_ar : item.product?.name_en) || 'Product'} × {item.quantity}
                       </span>
                       <span>
                         {((item.product?.sale_price || item.product?.base_price || 0) * item.quantity).toFixed(3)} {t('currency', 'KWD')}
@@ -731,7 +731,7 @@ const Checkout = () => {
                     <span>{subtotal.toFixed(3)} {t('currency', 'KWD')}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t('checkout.delivery', 'Delivery')}</span>
+                    <span className="text-muted-foreground">{t('checkout.deliveryFee', 'Delivery')}</span>
                     <span>{deliveryCost.toFixed(3)} {t('currency', 'KWD')}</span>
                   </div>
                   {discountAmount > 0 && (

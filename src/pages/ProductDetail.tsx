@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { normalizeStorageUrl } from '@/lib/storage';
+import { effectivePrice, comparePrice } from '@/lib/price';
 
 interface ProductVariation {
   id: string;
@@ -301,17 +302,19 @@ const ProductDetail = () => {
   ];
 
   const displayProduct = product || demoProduct;
-  const displayVariations = variations.length > 0 ? variations : demoVariations;
+  // Demo sizes only for the demo product: a real product without variations must not show fake sizes or prices
+  const displayVariations = variations.length > 0 ? variations : product ? [] : demoVariations;
   const activeVariation = selectedVariation || displayVariations[0];
 
   const name = language === 'ar' ? displayProduct.name_ar : displayProduct.name_en;
   const description = language === 'ar' ? displayProduct.description_ar : displayProduct.description_en;
   const shortDescription = language === 'ar' ? displayProduct.short_description_ar : displayProduct.short_description_en;
 
-  const basePrice = displayProduct.sale_price || displayProduct.base_price;
+  const basePrice = effectivePrice(displayProduct);
   const priceModifier = activeVariation?.price_modifier || 0;
   const finalPrice = basePrice + priceModifier;
-  const originalPrice = displayProduct.sale_price ? displayProduct.base_price + priceModifier : null;
+  const compare = comparePrice(displayProduct);
+  const originalPrice = compare ? compare + priceModifier : null;
   const discount = originalPrice ? Math.round(((originalPrice - finalPrice) / originalPrice) * 100) : 0;
 
   const stockQuantity = activeVariation?.stock_quantity ?? displayProduct.stock_quantity ?? 0;

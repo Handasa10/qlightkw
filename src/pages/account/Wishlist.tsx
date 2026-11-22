@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { effectivePrice, comparePrice } from '@/lib/price';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -186,7 +187,7 @@ export default function AccountWishlist() {
                     {product.is_new && (
                       <Badge className="absolute top-2 left-2">{t('product.new', 'New')}</Badge>
                     )}
-                    {product.sale_price && (
+                    {comparePrice(product) && (
                       <Badge variant="destructive" className="absolute top-2 right-2">
                         {t('product.sale', 'Sale')}
                       </Badge>
@@ -202,10 +203,10 @@ export default function AccountWishlist() {
                   </Link>
 
                   <div className="flex items-center gap-2 mb-4">
-                    {product.sale_price ? (
+                    {comparePrice(product) ? (
                       <>
                         <span className="text-lg font-bold text-destructive">
-                          {product.sale_price.toFixed(3)} {t('common.kwd', 'KWD')}
+                          {effectivePrice(product).toFixed(3)} {t('common.kwd', 'KWD')}
                         </span>
                         <span className="text-sm text-muted-foreground line-through">
                           {product.base_price.toFixed(3)}
@@ -213,7 +214,7 @@ export default function AccountWishlist() {
                       </>
                     ) : (
                       <span className="text-lg font-bold">
-                        {product.base_price.toFixed(3)} {t('common.kwd', 'KWD')}
+                        {effectivePrice(product).toFixed(3)} {t('common.kwd', 'KWD')}
                       </span>
                     )}
                   </div>
