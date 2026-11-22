@@ -1,10 +1,13 @@
-import { forwardRef, useState } from 'react';
+import { forwardRef, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Loader2, MessageCircle, Plus } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Eye, Heart, Loader2, MessageCircle, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCart } from '@/hooks/useCart';
 import { useWishlist } from '@/hooks/useWishlist';
+import { useStoreUIOptional } from '@/contexts/StoreUIContext';
+import type { CatalogProduct } from '@/hooks/useCatalog';
 import { resolveImageUrl } from '@/lib/image-resolver';
 
 interface Product {
@@ -31,8 +34,11 @@ const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(({ product }, r
   const { isRTL } = useLanguage();
   const { addItem } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
+  const ui = useStoreUIOptional();
+  const imgRef = useRef<HTMLImageElement>(null);
   const [adding, setAdding] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [burst, setBurst] = useState(0);
 
   const name = isRTL ? product.name_ar || product.name_en : product.name_en;
   const price = product.sale_price && product.sale_price > 0 ? product.sale_price : product.base_price;
@@ -50,7 +56,8 @@ const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(({ product }, r
     setAdding(true);
     try {
       await addItem(product.id, 1);
-      toast.success(isRTL ? 'أضيف إلى السلة' : 'Added to cart', { description: name });
+      if (ui) ui.celebrateAdd(product as CatalogProduct, imgRef.current, image);
+      else toast.success(isRTL ? 'أضيف إلى السلة' : 'Added to cart', { description: name });
     } catch {
       toast.error(isRTL ? 'تعذّرت الإضافة إلى السلة' : 'Could not add to cart');
     } finally {
@@ -60,6 +67,7 @@ const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(({ product }, r
 
   const wish = async (e: React.MouseEvent) => {
     e.preventDefault();
+    if (!wished) setBurst((n) => n + 1);
     try { await toggleWishlist(product); } catch { toast.error(isRTL ? 'تعذّر تحديث المفضلة' : 'Could not update wishlist'); }
   };
 
@@ -75,7 +83,7 @@ const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(({ product }, r
       <Link to={`/product/${product.slug}`} className="relative block aspect-square overflow-hidden rounded-2xl bg-[#f5f5f6]">
         {image && !imgError ? (
           <>
-            <img src={image} alt={name} loading="lazy" onError={() => setImgError(true)}
+            <img ref={imgRef} src={image} alt={name} loading="lazy" onError={() => setImgError(true)}
               className={`h-full w-full object-cover transition duration-500 group-hover:scale-105 ${hover ? 'group-hover:opacity-0' : ''}`} />
             {hover && <img src={hover} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover opacity-0 transition duration-500 group-hover:opacity-100" />}
           </>
@@ -91,8 +99,20 @@ const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(({ product }, r
 
         <button type="button" onClick={wish} aria-label={isRTL ? 'المفضلة' : 'Wishlist'}
           className="absolute end-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm transition hover:scale-110">
-          <Heart className={`h-[18px] w-[18px] ${wished ? 'fill-red-500 text-red-500' : 'text-neutral-700'}`} />
+          <motion.span key={burst} initial={burst ? { scale: 0.4 } : false} animate={{ scale: [0.4, 1.35, 1] }} transition={{ duration: 0.45 }} className="flex">
+            <Heart className={`h-[18px] w-[18px] ${wished ? 'fill-red-500 text-red-500' : 'text-neutral-700'}`} />
+          </motion.span>
+          {burst > 0 && wished && (
+            <motion.span key={`ring-${burst}`} initial={{ scale: 0.6, opacity: 0.7 }} animate={{ scale: 2.2, opacity: 0 }} transition={{ duration: 0.6 }} className="pointer-events-none absolute inset-0 rounded-full border-2 border-red-400" />
+          )}
         </button>
+
+        {ui && 'category_slug' in product && (
+          <button type="button" onClick={(e) => { e.preventDefault(); ui.setQuickView(product as CatalogProduct); }} aria-label={isRTL ? 'نظرة سريعة' : 'Quick view'}
+            className="absolute bottom-3 start-3 hidden h-10 items-center gap-1.5 rounded-full bg-white/95 px-3.5 text-xs font-bold text-neutral-900 opacity-0 shadow-md backdrop-blur transition group-hover:opacity-100 md:flex">
+            <Eye className="h-4 w-4" />{isRTL ? 'نظرة سريعة' : 'Quick view'}
+          </button>
+        )}
 
         {onRequest ? (
           <button type="button" onClick={askPrice} aria-label={isRTL ? 'اطلب السعر عبر واتساب' : 'Ask for price on WhatsApp'}

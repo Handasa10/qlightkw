@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { motion } from 'framer-motion';
+import SwitchHero from '@/components/storefront/SwitchHero';
+import RecentlyViewed from '@/components/storefront/RecentlyViewed';
+import ConfiguratorBanner from '@/components/storefront/ConfiguratorBanner';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Banknote, Camera, FileSpreadsheet, MapPin, MessageCircle, Truck } from 'lucide-react';
 import StorefrontLayout from '@/layouts/StorefrontLayout';
@@ -40,7 +44,6 @@ const SLIDES = [
 const Index = () => {
   const { isRTL } = useLanguage();
   const { products, loading } = useCatalog();
-  const [slide, setSlide] = useState(0);
   const lang = isRTL ? 'ar' : 'en';
   useSEO({
     title: isRTL ? 'متجر الإضاءة والكهربائيات في الكويت | كواليتي لايت' : 'Lighting & Electrical Store in Kuwait | Quality Light',
@@ -48,11 +51,6 @@ const Index = () => {
       ? 'تسوق أونلاين: إضاءة LED، ثريات، سبوت لايت، شرائط LED، مفاتيح وأفياش، قواطع ولوازم التمديدات. توصيل لجميع مناطق الكويت والدفع عند الاستلام. معرضنا في حولي – شارع تونس.'
       : 'Shop online: LED lighting, chandeliers, spotlights, LED strips, switches and sockets, breakers and wiring accessories. Delivery across Kuwait, cash on delivery. Showroom on Tunis Street, Hawalli.',
   });
-
-  useEffect(() => {
-    const timer = setInterval(() => setSlide((s) => (s + 1) % SLIDES.length), 6000);
-    return () => clearInterval(timer);
-  }, []);
 
   const rails = useMemo(() => {
     // Products with a real or studio photo come first: they sell the store better than placeholders
@@ -78,29 +76,27 @@ const Index = () => {
   }).filter((d) => d.count > 0), [products]);
 
   const Arrow = isRTL ? ArrowLeft : ArrowRight;
-  const current = SLIDES[slide];
 
   return (
     <StorefrontLayout>
-      {/* Hero */}
-      <section className="container pt-5 md:pt-8">
-        <div className="relative grid overflow-hidden rounded-3xl bg-[#f5f5f6] md:grid-cols-2">
-          <div className="order-2 flex flex-col justify-center p-7 md:order-1 md:p-14">
-            <span className="inline-flex w-fit items-center rounded-full bg-white px-3 py-1 text-xs font-bold text-primary shadow-sm">{current.tag[lang]}</span>
-            <h1 className="mt-4 text-3xl font-extrabold leading-tight tracking-tight text-neutral-900 md:text-5xl">{current.title[lang]}</h1>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-neutral-600 md:text-base">{current.text[lang]}</p>
-            <Link to={current.href} className="mt-7 inline-flex w-fit items-center gap-2 rounded-full bg-neutral-900 px-6 py-3 text-sm font-bold text-white transition hover:bg-primary">
-              {current.cta[lang]} <Arrow className="h-4 w-4" />
-            </Link>
-            <div className="mt-8 flex gap-2">
-              {SLIDES.map((s, i) => (
-                <button key={s.href} type="button" onClick={() => setSlide(i)} aria-label={`${i + 1}`} className={`h-1.5 rounded-full transition-all ${i === slide ? 'w-8 bg-neutral-900' : 'w-3 bg-neutral-300'}`} />
-              ))}
-            </div>
-          </div>
-          <Link to={current.href} className="order-1 block aspect-[4/3] md:order-2 md:aspect-auto md:min-h-[440px]">
-            <img key={current.image} src={current.image} alt={current.title[lang]} className="h-full w-full animate-in fade-in object-cover duration-700" />
-          </Link>
+      <SwitchHero />
+
+      {/* Featured collections */}
+      <section className="container pt-5">
+        <div className="grid gap-3 md:grid-cols-3 md:gap-5">
+          {SLIDES.map((s, i) => (
+            <motion.div key={s.href} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
+              <Link to={s.href} className="group relative flex h-56 overflow-hidden rounded-3xl bg-[#f5f5f6] md:h-64">
+                <img src={s.image} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                <div className="relative mt-auto p-5 text-white">
+                  <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-bold backdrop-blur">{s.tag[lang]}</span>
+                  <p className="mt-2 text-lg font-extrabold leading-tight">{s.title[lang]}</p>
+                  <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-white/80">{s.cta[lang]}<Arrow className="h-3.5 w-3.5 transition group-hover:translate-x-1 rtl:group-hover:-translate-x-1" /></p>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
         </div>
       </section>
 
@@ -136,6 +132,7 @@ const Index = () => {
         </div>
       </section>
 
+      <ConfiguratorBanner />
       <ProductRail title={isRTL ? 'العروض' : 'On offer'} products={rails.offers} href="/shop?offers=true" loading={loading} />
       <ProductRail title={isRTL ? 'الأكثر مبيعاً' : 'Best sellers'} products={rails.best} href="/shop?sort=best" loading={loading} />
 
@@ -160,6 +157,7 @@ const Index = () => {
 
       <ProductRail title={isRTL ? 'المفاتيح والأفياش' : 'Switches & sockets'} products={rails.dept['switches-sockets'] || []} href="/shop?dept=switches-sockets" loading={loading} />
       <ProductRail title={isRTL ? 'الإضاءة الداخلية' : 'Indoor lighting'} products={rails.dept['indoor-lighting'] || []} href="/shop?dept=indoor-lighting" loading={loading} />
+      <RecentlyViewed />
       <ProductRail title={isRTL ? 'وصل حديثاً' : 'New in'} products={rails.fresh} href="/shop?sort=newest" loading={loading} />
       <ProductRail title={isRTL ? 'شرائط LED والبروفايل' : 'LED strips & profiles'} products={rails.dept['led-strips'] || []} href="/shop?dept=led-strips" loading={loading} />
       <ProductRail title={isRTL ? 'التمديدات والحماية' : 'Wiring & protection'} products={rails.dept.wiring || []} href="/shop?dept=wiring" loading={loading} />

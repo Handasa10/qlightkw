@@ -26,10 +26,10 @@ const spreadsheetMime = (f: File) =>
       : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 // Photos from phones are often 4000px+; 2000px is plenty to read handwriting
-async function downscaleImage(file: File): Promise<{ data: string; mimeType: string }> {
+export async function downscaleImage(file: File, max = 2000): Promise<{ data: string; mimeType: string }> {
   try {
     const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
+    const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(bitmap.width * scale);
     canvas.height = Math.round(bitmap.height * scale);

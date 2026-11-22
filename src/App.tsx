@@ -9,6 +9,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import { WishlistProvider } from "@/hooks/useWishlist";
+import { StoreUIProvider } from "@/contexts/StoreUIContext";
 import { AnimatePresence } from "framer-motion";
 import SplashScreen from "@/components/SplashScreen";
 import PageTransition from "@/components/PageTransition";
@@ -25,6 +26,7 @@ const Wishlist = lazy(() => import("./pages/Wishlist"));
 const ProductDetail = lazy(() => import("./pages/ProductDetail"));
 const Quote = lazy(() => import("./pages/Quote"));
 const QuoteView = lazy(() => import("./pages/QuoteView"));
+const Configure = lazy(() => import("./pages/Configure"));
 const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const About = lazy(() => import("./pages/About"));
@@ -103,6 +105,7 @@ const AnimatedRoutes = () => {
           <Route path="/product/:slug" element={<ProductDetail />} />
           <Route path="/quote" element={<Quote />} />
           <Route path="/quote/:id" element={<QuoteView />} />
+          <Route path="/configure" element={<Configure />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/checkout" element={<Checkout />} />
@@ -221,7 +224,9 @@ const App = () => {
                     )}
                   </AnimatePresence>
                   <BrowserRouter>
-                    <AnimatedRoutes />
+                    <StoreUIProvider>
+                      <AnimatedRoutes />
+                    </StoreUIProvider>
                   </BrowserRouter>
                 </TooltipProvider>
               </WishlistProvider>

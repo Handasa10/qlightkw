@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Banknote, ChevronDown, FileText, Heart, Loader2, MapPin, MessageCircle, Minus, Pencil, Plus, ShoppingBag, Truck } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Banknote, ChevronDown, FileText, Heart, Loader2, MapPin, MessageCircle, Minus, Pencil, Plus, ShoppingBag, Sparkles, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import StorefrontLayout from '@/layouts/StorefrontLayout';
 import ProductRail from '@/components/storefront/ProductRail';
@@ -10,12 +11,17 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/hooks/useCart';
 import { useWishlist } from '@/hooks/useWishlist';
-import { useCatalog } from '@/hooks/useCatalog';
+import { priceOf, useCatalog } from '@/hooks/useCatalog';
 import { useSEO } from '@/hooks/useSEO';
 import { absoluteUrl, breadcrumbSchema, productSchema } from '@/lib/seo';
 import { resolveImageUrl } from '@/lib/image-resolver';
 import { parseProductSpecs } from '@/lib/spec-helper';
 import { departmentOfCategory, isStudioImage } from '@/lib/store-nav';
+import { useStoreUI } from '@/contexts/StoreUIContext';
+import { companionsFor } from '@/lib/companions';
+import { rememberViewed } from '@/lib/recently-viewed';
+import LightSimulator from '@/components/storefront/LightSimulator';
+import RecentlyViewed from '@/components/storefront/RecentlyViewed';
 
 interface ProductVariation {
   id: string;
@@ -59,6 +65,10 @@ const ProductDetail = () => {
   const { addItem } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { products: catalog, categories } = useCatalog();
+  const { celebrateAdd } = useStoreUI();
+  const mainImage = useRef<HTMLImageElement>(null);
+  const buyBox = useRef<HTMLDivElement>(null);
+  const [showSticky, setShowSticky] = useState(false);
   const navigate = useNavigate();
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -94,6 +104,7 @@ const ProductDetail = () => {
       setVariations(variationRows || []);
       setVariation(variationRows?.[0] || null);
       setLoading(false);
+      rememberViewed(data.id);
     })();
     return () => { cancelled = true; };
   }, [slug]);
@@ -163,13 +174,38 @@ const ProductDetail = () => {
     try {
       await addItem(product.id, quantity, variation?.id);
       if (thenBuy) navigate('/checkout');
-      else toast.success(isRTL ? 'أضيف إلى السلة' : 'Added to cart', { description: `${name} × ${quantity}` });
+      else celebrateAdd(catalog.find((c) => c.id === product.id) || null, mainImage.current, gallery[selected]);
     } catch {
       toast.error(isRTL ? 'تعذّرت الإضافة إلى السلة' : 'Could not add to cart');
     } finally {
       setBusy(null);
     }
   };
+
+  // "Complete the installation" suggestions for this product
+  const companions = useMemo(() => (product ? companionsFor(product.name_en, catalog, [product.id], 3) : []), [product, catalog]);
+  const [addingCompanion, setAddingCompanion] = useState<string | null>(null);
+  const addCompanion = async (id: string, e: React.MouseEvent) => {
+    const p = catalog.find((c) => c.id === id) || null;
+    setAddingCompanion(id);
+    try {
+      await addItem(id, 1);
+      celebrateAdd(p, (e.currentTarget as HTMLElement).closest('[data-companion]')?.querySelector('img'), p?.image_url);
+    } catch {
+      toast.error(isRTL ? 'تعذّرت الإضافة إلى السلة' : 'Could not add to cart');
+    } finally {
+      setAddingCompanion(null);
+    }
+  };
+
+  // A compact buy bar slides in once the main buttons scroll out of view
+  useEffect(() => {
+    const el = buyBox.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([entry]) => setShowSticky(!entry.isIntersecting && entry.boundingClientRect.top < 0));
+    io.observe(el);
+    return () => io.disconnect();
+  }, [product, loading]);
 
   const whatsapp = () => {
     const link = `${window.location.origin}/product/${product?.slug}`;
@@ -237,7 +273,7 @@ const ProductDetail = () => {
           {/* Gallery */}
           <div className="lg:sticky lg:top-48 lg:self-start">
             <div className="relative aspect-square overflow-hidden rounded-3xl bg-[#f5f5f6]">
-              {gallery[selected] ? <img src={gallery[selected]} alt={name} className="h-full w-full object-cover" /> : <span className="flex h-full items-center justify-center text-7xl">💡</span>}
+              {gallery[selected] ? <img ref={mainImage} src={gallery[selected]} alt={name} className="h-full w-full object-cover transition duration-500 hover:scale-110" /> : <span className="flex h-full items-center justify-center text-7xl">💡</span>}
               <span className="absolute start-4 top-4 flex flex-col items-start gap-1.5">
                 {discount > 0 && <span className="rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white">−{discount}%</span>}
                 {product.is_new && <span className="rounded-full bg-neutral-900 px-3 py-1 text-xs font-bold text-white">{isRTL ? 'جديد' : 'New'}</span>}
@@ -299,7 +335,7 @@ const ProductDetail = () => {
               </div>
             </div>
 
-            <div className="mt-6 space-y-3">
+            <div ref={buyBox} className="mt-6 space-y-3">
               {onRequest ? (
                 <button type="button" onClick={whatsapp} className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-emerald-600 text-base font-bold text-white transition hover:bg-emerald-700">
                   <MessageCircle className="h-5 w-5" />{isRTL ? 'اطلب السعر عبر واتساب' : 'Ask for the price on WhatsApp'}
@@ -326,6 +362,31 @@ const ProductDetail = () => {
                 <FileText className="h-4 w-4" />{isRTL ? 'كمية كبيرة؟ اطلب عرض سعر رسمي' : 'Buying in bulk? Request an official quotation'}
               </Link>
             </div>
+
+            {companions.length > 0 && (
+              <div className="mt-6 rounded-3xl bg-gradient-to-br from-amber-50 to-orange-50 p-5">
+                <p className="flex items-center gap-2 text-sm font-extrabold"><Sparkles className="h-4 w-4 text-primary" />{isRTL ? 'أكمل التركيب' : 'Complete the installation'}</p>
+                <p className="mt-0.5 text-xs text-neutral-600">{isRTL ? companions[0].why.ar : companions[0].why.en}</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  {companions.map(({ product: c }) => (
+                    <div key={c.id} data-companion className="flex items-center gap-2 rounded-2xl bg-white p-2 shadow-sm sm:flex-col sm:items-stretch sm:p-3">
+                      <Link to={`/product/${c.slug}`} className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#f5f5f6] sm:aspect-square sm:h-auto sm:w-full">{c.image_url && <img src={c.image_url} alt="" className="h-full w-full object-cover" />}</Link>
+                      <div className="min-w-0 flex-1">
+                        <Link to={`/product/${c.slug}`} className="line-clamp-2 text-xs font-semibold hover:text-primary">{isRTL ? c.name_ar : c.name_en}</Link>
+                        <p className="text-xs font-bold">{priceOf(c).toFixed(3)} {currency}</p>
+                      </div>
+                      <button type="button" onClick={(e) => addCompanion(c.id, e)} disabled={addingCompanion === c.id} className="flex h-8 shrink-0 items-center justify-center gap-1 rounded-full bg-neutral-900 px-3 text-xs font-bold text-white hover:bg-primary disabled:opacity-60">
+                        {addingCompanion === c.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}{isRTL ? 'أضف' : 'Add'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {dept && ['indoor-lighting', 'decorative-lighting', 'led-strips', 'bulbs', 'outdoor-lighting'].includes(dept.id) && (
+              <div className="mt-6"><LightSimulator initial={Number((parseProductSpecs(product.specifications, product.slug, product.name_en).cct.match(/\d{4}/) || [])[0]) || undefined} /></div>
+            )}
 
             <ul className="mt-6 grid gap-2.5 rounded-2xl bg-[#f5f5f6] p-5 text-sm text-neutral-700">
               <li className="flex items-center gap-3"><Truck className="h-4 w-4 shrink-0 text-primary" />{isRTL ? 'توصيل لجميع مناطق الكويت' : 'Delivery across Kuwait'}</li>
@@ -359,6 +420,30 @@ const ProductDetail = () => {
       </div>
 
       <ProductRail title={isRTL ? 'منتجات مشابهة' : 'You may also like'} products={related} href={category ? `/shop?category=${category.slug}` : '/shop'} />
+      <RecentlyViewed excludeId={product.id} />
+
+      {/* Sticky buy bar once the main buttons are out of view */}
+      <AnimatePresence>
+        {showSticky && (
+          <motion.div initial={{ y: 100 }} animate={{ y: 0 }} exit={{ y: 100 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed inset-x-0 bottom-16 z-40 border-t border-neutral-200 bg-white/95 backdrop-blur md:bottom-0">
+            <div className="container flex items-center gap-3 py-3">
+              <span className="hidden h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[#f5f5f6] sm:block">{gallery[0] && <img src={gallery[0]} alt="" className="h-full w-full object-cover" />}</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold">{name}</p>
+                <p className="text-sm font-extrabold">{onRequest ? (isRTL ? 'السعر عند الطلب' : 'Price on request') : `${price.toFixed(3)} ${currency}`}</p>
+              </div>
+              {onRequest ? (
+                <button type="button" onClick={whatsapp} className="flex h-11 items-center gap-2 rounded-full bg-emerald-600 px-5 text-sm font-bold text-white"><MessageCircle className="h-4 w-4" />{isRTL ? 'اطلب السعر' : 'Ask price'}</button>
+              ) : (
+                <button type="button" onClick={() => add(false)} disabled={!!busy} className="flex h-11 items-center gap-2 rounded-full bg-neutral-900 px-5 text-sm font-bold text-white hover:bg-primary disabled:opacity-70">
+                  {busy === 'cart' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBag className="h-4 w-4" />}{isRTL ? 'أضف للسلة' : 'Add to cart'}
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="h-8" />
     </StorefrontLayout>
   );

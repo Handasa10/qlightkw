@@ -25,6 +25,8 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { Switch } from '@/components/ui/switch';
+import { downscaleImage } from '@/lib/quote-input';
 import {
   Upload,
   ImagePlus,
@@ -114,6 +116,9 @@ export default function ImageUploader({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'upload' | 'generate' | 'gallery'>('upload');
   const [isUploading, setIsUploading] = useState(false);
+  // Product photos become a studio shot with the QL logo (on by default for products)
+  const [proPhoto, setProPhoto] = useState(contextType === 'product');
+  const [uploadProgress, setUploadProgress] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isImprovingPrompt, setIsImprovingPrompt] = useState(false);
 
@@ -224,6 +229,23 @@ export default function ImageUploader({
           continue;
         }
 
+        if (proPhoto) {
+          setUploadProgress(`${uploadedUrls.length + 1} / ${files.length}`);
+          const prepared = await downscaleImage(file, 1600);
+          const { data: res, error: fnError } = await supabase.functions.invoke('photo-enhance', {
+            body: { ...prepared, hint: contextName, folder },
+          });
+          if (fnError || !res?.url) throw new Error(res?.error || fnError?.message || 'Photo processing failed');
+          if (!res.studio) {
+            toast({
+              title: 'Studio photo unavailable right now',
+              description: 'Your own photo was kept, with the QL logo. Try again later for the studio version.',
+            });
+          }
+          uploadedUrls.push(res.url);
+          continue;
+        }
+
         // Generate unique filename
         const ext = file.name.split('.').pop();
         const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
@@ -265,8 +287,9 @@ export default function ImageUploader({
       });
     } finally {
       setIsUploading(false);
+      setUploadProgress('');
     }
-  }, [bucket, folder, multiple, existingImages, onChange, onMultipleChange, toast, t]);
+  }, [bucket, folder, multiple, existingImages, onChange, onMultipleChange, toast, t, proPhoto, contextName]);
 
   // Handle reference image selection
   const handleReferenceImageSelect = (files: FileList | null) => {
@@ -604,6 +627,15 @@ Respond with ONLY the improved prompt, no explanations.`,
 
             {/* Upload Tab */}
             <TabsContent value="upload" className="space-y-4">
+              {bucket === 'product-images' && (
+                <label className="flex cursor-pointer items-start gap-3 rounded-lg border bg-gradient-to-r from-amber-50 to-orange-50 p-3 dark:from-amber-950/30 dark:to-orange-950/30">
+                  <Switch checked={proPhoto} onCheckedChange={setProPhoto} disabled={isUploading} className="mt-0.5" />
+                  <span className="text-sm">
+                    <span className="flex items-center gap-1.5 font-semibold"><Sparkles className="h-4 w-4 text-primary" />Professional photo + QL logo</span>
+                    <span className="block text-xs text-muted-foreground">AI turns your photo into a clean studio shot (the product stays exactly the same) and adds the QL logo. About 20 seconds per photo.</span>
+                  </span>
+                </label>
+              )}
               <Card
                 className="border-dashed cursor-pointer hover:border-primary/50 transition-colors"
                 onClick={() => fileInputRef.current?.click()}
@@ -633,7 +665,7 @@ Respond with ONLY the improved prompt, no explanations.`,
               {isUploading && (
                 <div className="flex items-center justify-center gap-2 text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  {t('admin.uploading', 'Uploading...')}
+                  {proPhoto ? `Making the studio photo… ${uploadProgress}` : t('admin.uploading', 'Uploading...')}
                 </div>
               )}
             </TabsContent>
