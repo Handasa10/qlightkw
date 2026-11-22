@@ -11,7 +11,8 @@
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.93.2";
 import { cropAndEnhance } from "./image.ts";
 import { searchCatalog, wordCount } from "./search.ts";
-import { studioShot } from "./studio.ts";
+import { studioShot } from "../_shared/studio.ts";
+import { brandedAsIs } from "../_shared/brand.ts";
 import { errorStatus, requireAdmin } from "../_shared/auth.ts";
 
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
@@ -300,7 +301,7 @@ async function handlePhoto(chat: number, userId: number, msg: Record<string, any
       if (p) add(toCandidate(p, Math.max(0, Math.min(100, Number(m.confidence) || 0)), m.why || ""));
     }
 
-    const enhanced = await cropAndEnhance(original, reading.box);
+    const enhanced = await brandedAsIs(await cropAndEnhance(original, reading.box));
     const studio = await studioJob;
     if (studio.error) console.error("studio photo failed", studio.error);
     const { data: job, error } = await db.from("photo_bot_jobs").insert({

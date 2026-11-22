@@ -1,7 +1,7 @@
 // Turns a showroom snapshot into a studio-style product photo with Gemini's image model
 // (Google directly, then the same model through OpenRouter). The product itself must stay
 // exactly as photographed; only background, lighting and framing change.
-import { decode, Image } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
+import { brandedSquare } from "./brand.ts";
 
 const GOOGLE_MODELS = ["gemini-2.5-flash-image"];
 const OPENROUTER_MODEL = "google/gemini-2.5-flash-image";
@@ -13,7 +13,7 @@ ${hint ? `The product is: ${hint}.\n` : ""}Rules:
 - Place the product, centred, on a clean seamless studio background (soft white to very light grey), with a natural soft shadow under or behind it.
 - Even, soft professional studio lighting, crisp focus, realistic colours, no colour cast. If the light fitting is switched on in the photo, keep a natural warm glow.
 - Square 1:1 framing with comfortable margins.
-- Do not add text, logos, watermarks, props or extra products.`;
+- Do not add text, logos, watermarks, props or extra products (our own logo is added afterwards).`;
 
 const toBase64 = (bytes: Uint8Array) => {
   let binary = "";
@@ -71,16 +71,8 @@ async function viaOpenRouter(image: Uint8Array, mime: string, prompt: string): P
   return fromBase64(b64);
 }
 
-// Square, at most 1200px, JPEG
-async function finish(bytes: Uint8Array): Promise<Uint8Array> {
-  const decoded = await decode(bytes);
-  if (!(decoded instanceof Image)) return bytes;
-  let img = decoded;
-  const side = Math.min(img.width, img.height);
-  if (img.width !== img.height) img = img.crop(Math.round((img.width - side) / 2), Math.round((img.height - side) / 2), side, side);
-  if (side > 1200) img = img.resize(1200, 1200);
-  return await img.encodeJPEG(88);
-}
+// Square, at most 1200px, QL logo stamped, JPEG
+const finish = (bytes: Uint8Array) => brandedSquare(bytes, 1200);
 
 export async function studioShot(image: Uint8Array, mime: string, hint = ""): Promise<Uint8Array> {
   const prompt = PROMPT(hint.slice(0, 120));
