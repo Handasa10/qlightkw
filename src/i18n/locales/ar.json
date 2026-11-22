@@ -207,7 +207,18 @@
       },
       "checkout": "متابعة الدفع"
     },
-    "continueShopping": "متابعة التسوق"
+    "continueShopping": "متابعة التسوق",
+    "apply": "تطبيق",
+    "checkout": "إتمام الطلب",
+    "couponPlaceholder": "كود الخصم",
+    "moreItems": "منتجات أخرى",
+    "orderSummary": "ملخص الطلب",
+    "qty": "الكمية",
+    "shipping": "التوصيل",
+    "startShopping": "ابدأ التسوق",
+    "subtotal": "المجموع الفرعي",
+    "total": "الإجمالي",
+    "viewCart": "عرض السلة"
   },
   "checkout": {
     "title": "إتمام الطلب",
@@ -258,7 +269,54 @@
       "card": "بطاقة ائتمان/خصم"
     },
     "placeOrder": "إتمام الطلب",
-    "terms": "أوافق على الشروط والأحكام وسياسة الخصوصية"
+    "terms": "أوافق على الشروط والأحكام وسياسة الخصوصية",
+    "addItemsFirst": "أضف منتجات للسلة أولاً",
+    "address": "العنوان",
+    "addressPlaceholder": "القطعة، الشارع، المبنى، الدور، الشقة",
+    "agreeTerms": "أوافق على",
+    "apply": "تطبيق",
+    "area": "المنطقة",
+    "back": "رجوع",
+    "businessDays": "أيام عمل",
+    "city": "المحافظة",
+    "cod": "الدفع عند الاستلام",
+    "codNote": "ادفع لما يوصلك الطلب",
+    "comingSoon": "قريباً",
+    "confirm": "تأكيد",
+    "confirmationMessage": "شكراً لطلبك. راح يوصلك إيميل تأكيد فيه تفاصيل الطلب ومتابعة التوصيل.",
+    "continue": "متابعة",
+    "continueShopping": "متابعة التسوق",
+    "couponCode": "كود الخصم",
+    "deliveryMethod": "طريقة التوصيل",
+    "discount": "الخصم",
+    "email": "البريد الإلكتروني",
+    "enterCode": "أدخل الكود",
+    "express": "توصيل سريع",
+    "firstName": "الاسم الأول",
+    "knet": "كي نت",
+    "lastName": "اسم العائلة",
+    "loginToOrder": "سجّل دخولك لإتمام الطلب",
+    "notes": "ملاحظات الطلب",
+    "notesPlaceholder": "أي تعليمات خاصة...",
+    "off": "خصم",
+    "orderFailed": "تعذّر إتمام الطلب",
+    "orderNumber": "رقم الطلب",
+    "orderPlaced": "تم الطلب!",
+    "orderSummary": "ملخص الطلب",
+    "paymentMethod": "طريقة الدفع",
+    "phone": "رقم الهاتف",
+    "placingOrder": "جاري إرسال الطلب...",
+    "sameDay": "توصيل بنفس اليوم",
+    "sameDayNote": "اطلب قبل الساعة 2 الظهر",
+    "shippingAddress": "عنوان التوصيل",
+    "standard": "توصيل عادي",
+    "subtotal": "المجموع الفرعي",
+    "termsLink": "الشروط والأحكام",
+    "total": "الإجمالي",
+    "viewOrders": "عرض طلباتي",
+    "wamad": "تحويل ومض",
+    "wamadNote": "تحويل بنكي عن طريق ومض",
+    "deliveryCost": "التوصيل"
   },
   "order": {
     "confirmation": {
@@ -320,7 +378,8 @@
       "email": "البريد الإلكتروني",
       "submit": "إرسال رابط إعادة التعيين",
       "backToLogin": "العودة لتسجيل الدخول"
-    }
+    },
+    "required": "تسجيل الدخول مطلوب"
   },
   "footer": {
     "about": {
@@ -869,5 +928,6 @@
     },
     "searchPlaceholder": "البحث في المنتجات والطلبات والمستخدمين...",
     "language": "اللغة"
-  }
+  },
+  "currency": "د.ك"
 }
