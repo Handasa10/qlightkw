@@ -133,3 +133,31 @@ window.setState = (state) => {
   hemi.intensity = done ? .05 + .55 * li : .4; scene.environmentIntensity = done ? .03 + .25 * li : .16;
   renderer.toneMappingExposure = done ? 1.0 : .9;
 };
+
+// ---- extras for the contractors video (tokens ward / wrong / wash / dimw / dims; all off by default) ----
+const WX = RW - .62, WZ = 1.05, WW = .6, WD = 1.4, WH = 2.45;               // tall wardrobe against the right wall
+const wardGh = new THREE.Group(); scene.add(wardGh); const wardR = new THREE.Group(); scene.add(wardR);
+{ const g = new THREE.Mesh(new THREE.BoxGeometry(WW, WH, WD), ghostM); g.position.set(WX + WW / 2, WH / 2, WZ + WD / 2); wardGh.add(g); const e = new THREE.LineSegments(new THREE.EdgesGeometry(g.geometry), edgeM); e.position.copy(g.position); wardGh.add(e);
+  const wm = new THREE.MeshStandardMaterial({ map: oakTex, color: '#8a6848', roughness: .5 }); box(WW, WH, WD, wm, WX, 0, WZ, { parent: wardR });
+  for (const z of [WZ + .35, WZ + .7, WZ + 1.05]) box(.012, 1.6, .012, M.brass, WX - .012, .7, z, { parent: wardR }); }
+const wrongMark = plane(.42, .42, markM, [RW - .33, DY - .004, WZ + WD / 2], [Math.PI / 2, 0, 0]);
+const wrongRing = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .012, 28), new THREE.MeshStandardMaterial({ color: '#f4f1ec', roughness: .4 })); wrongRing.position.set(RW - .33, DY - .006, WZ + WD / 2); scene.add(wrongRing);
+const wrongLens = new THREE.Mesh(new THREE.CircleGeometry(.03, 24), emis('#ffd9a8', 5)); wrongLens.rotation.x = Math.PI / 2; wrongLens.position.set(RW - .33, DY - .013, WZ + WD / 2); scene.add(wrongLens);
+const wrongS = new THREE.SpotLight('#ffd9a8', 0, 6, 26 * Math.PI / 180, .4, 1.4); wrongS.position.set(RW - .33, DY - .03, WZ + WD / 2); wrongS.target.position.set(RW - .33, 0, WZ + WD / 2); wrongS.castShadow = true; scene.add(wrongS, wrongS.target);
+const tapeM = new THREE.MeshBasicMaterial({ color: '#ff7a1a' });
+function tape(a, b, parent) { const A = new THREE.Vector3(...a), Bv = new THREE.Vector3(...b), len = A.distanceTo(Bv); const m = new THREE.Mesh(new THREE.BoxGeometry(.025, .025, len), tapeM); m.position.copy(A).lerp(Bv, .5); m.lookAt(Bv); parent.add(m);
+  for (const P of [A, Bv]) { const t = new THREE.Mesh(new THREE.BoxGeometry(.012, .16, .012), tapeM); t.position.copy(P); parent.add(t); } }
+const dimW = new THREE.Group(); scene.add(dimW); tape([-.5, DY - .03, -.02], [-.5, DY - .03, .55], dimW);
+const dimS = new THREE.Group(); scene.add(dimS); tape([-1.5, DY - .03, .55], [-.5, DY - .03, .55], dimS); tape([-.5, DY - .03, .55], [.5, DY - .03, .55], dimS);
+VIEWS.k = { pos: [-.3, 2.6, 3.9], tgt: [RW - .4, 2.05, 1.75], fov: 56 };     // the wardrobe and the spot right above it
+VIEWS.b = { pos: [.2, 1.35, 3.2], tgt: [0, 2.2, 0], fov: 66 };              // the back (TV) wall band from below: wash marks + tapes
+const _setState = window.setState;
+window.setState = (state) => {
+  _setState(state);
+  const T = Object.fromEntries(state.split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const done = !!T.done, li = (T.lights ?? 0) * (T.dim ?? 1), ward = !!T.ward, wr = T.wrong ?? 0;
+  wardGh.visible = ward && !done && (T.ghost ?? 0) > 0; wardR.visible = ward && done;
+  wrongMark.visible = wr > 0 && !done; wrongMark.scale.setScalar(.3 + .7 * Math.min(1, wr)); wrongRing.visible = wr > 0 && done; wrongLens.visible = wr > 0 && done && li > 0; wrongS.intensity = wr > 0 && done ? 40 * li : 0;
+  const wz = T.wash ? .55 : .32; spots.slice(0, 4).forEach(({ mark, ring, lens, s, cone }, i) => { mark.position.z = wz; ring.position.z = wz; lens.position.z = wz; s.position.z = wz; cone.position.z = wz + ( -.02 - wz) / 2; });
+  dimW.visible = (T.dimw ?? 0) > 0 && !done; dimW.scale.z = 1; dimS.visible = (T.dims ?? 0) > 0 && !done;
+};
