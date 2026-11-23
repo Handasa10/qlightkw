@@ -1,0 +1,129 @@
+// ===== GU10 spot: an integrated spot (whole fixture comes out of the gypsum) vs a GU10 spot (trim stays, lamp twists out) =====
+// room from aimspot (back wall z=0, ceiling 3.0). Tokens joined by '+':
+//   on (all room spots on) | broken (spot 1 dark) | cct:w|n|c (3000/4000/6000 K) | room (soft fill)
+//   int (hero = integrated spot) | out:<0..1> (integrated fixture pulled down out of the hole, hanging by its wires)
+//   gu (hero = GU10 trim + lamp) | twist:<0..1> (lamp turns 90°) | drop:<0..1> (lamp comes down out of the trim) | heroon (hero lamp lit)
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#a89a88', roughness: .92 });
+const floorTex = canvasTex(1024, 1024, (g, w, h) => { g.fillStyle = '#cfc6b8'; g.fillRect(0, 0, w, h); for (let i = 0; i < 9000; i++) { g.fillStyle = `rgba(${R() > .5 ? 255 : 120},${R() > .5 ? 250 : 110},${R() > .5 ? 240 : 100},0.05)`; g.fillRect(R() * w, R() * h, 3, 3); } g.strokeStyle = 'rgba(80,70,60,.35)'; g.lineWidth = 3; for (let y = 0; y <= h; y += 256) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } for (let x = 0; x <= w; x += 256) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } }, [3, 3]);
+plane(12, 12, new THREE.MeshStandardMaterial({ map: floorTex, roughness: .35 }), [.3, 0, 3], [-Math.PI / 2, 0, 0]);
+box(5.8, 3.0, .1, wallM, -2.6, 0, -.1);
+box(.1, 3.0, 7, wallM, -2.7, 0, -.1);
+box(.1, 3.0, 7, wallM, 3.2, 0, -.1);
+// ceiling with a small square opening over the hero fixture (x 0, z 1.8): the trim ring covers its edge
+{ const hx0 = -.06, hx1 = .06, hz0 = 1.74, hz1 = 1.86;
+  box(hx0 + 2.7, .1, 7, M.ceil, -2.7, 3.0, -.1, { cast: false }); box(3.3 - hx1, .1, 7, M.ceil, hx1, 3.0, -.1, { cast: false });
+  box(hx1 - hx0, .1, hz0 + .1, M.ceil, hx0, 3.0, -.1, { cast: false }); box(hx1 - hx0, .1, 6.9 - hz1, M.ceil, hx0, 3.0, hz1, { cast: false }); }
+box(5.8, .08, .02, M.darkWood, -2.6, 0, 0, { cast: false });
+
+// ---- painting (geometric, warm/teal) at x=1.25 ----
+const PW = 1.0, PH = 1.25, PX = 1.25, PY = 1.75;
+const paintTex = canvasTex(1000, 1250, (g, w, h) => {
+  g.fillStyle = '#efe4d2'; g.fillRect(0, 0, w, h);
+  const cols = ['#ef5924', '#1d6f73', '#e8b04a', '#23324a', '#c9573a', '#7fb3a8'];
+  for (let i = 0; i < 7; i++) { g.fillStyle = cols[i % cols.length]; g.globalAlpha = .9; g.beginPath(); g.arc(w * (.2 + R() * .6), h * (.15 + R() * .7), 90 + R() * 200, R() * 3, R() * 3 + 2.2 + R() * 2); g.lineTo(w * (.3 + R() * .4), h * (.3 + R() * .4)); g.fill(); }
+  g.globalAlpha = 1; g.fillStyle = '#23324a'; g.fillRect(w * .12, h * .78, w * .76, 14);
+  g.strokeStyle = '#ef5924'; g.lineWidth = 10; g.beginPath(); g.arc(w * .62, h * .3, 120, 0, 7); g.stroke();
+  for (let i = 0; i < 9000; i++) { g.fillStyle = `rgba(0,0,0,0.035)`; g.fillRect(R() * w, R() * h, 3, 3); }
+});
+const frameM = new THREE.MeshStandardMaterial({ color: '#1b1b1b', roughness: .4, metalness: .3 });
+box(PW + .08, PH + .08, .05, frameM, PX - PW / 2 - .04, PY - PH / 2 - .04, 0);
+plane(PW, PH, new THREE.MeshStandardMaterial({ map: paintTex, roughness: .8 }), [PX, PY, .052], [0, 0, 0]);
+// low oak bench under the painting
+const oakM = new THREE.MeshStandardMaterial({ map: oakTex, color: '#6a4a2e', roughness: .5 });
+box(1.5, .06, .42, oakM, PX - .75, .42, .05); for (const x of [-.7, .64]) box(.06, .42, .4, oakM, PX + x, 0, .06);
+const book = (x, c) => box(.3, .04, .22, new THREE.MeshStandardMaterial({ color: c, roughness: .7 }), x, .48, .12, { r: .005 });
+book(PX - .5, '#2b2622'); book(PX - .48, '#c9b79c');
+// ---- floating shelf with ceramics at x=-1.05 ----
+const SX = -1.05, SY = 1.55;
+box(1.2, .05, .28, oakM, SX - .6, SY, .0);
+const ceramic = new THREE.MeshStandardMaterial({ color: '#e9e0d2', roughness: .5 });
+const lathe = (pts, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.LatheGeometry(pts.map(([r, yy]) => new THREE.Vector2(r, yy)), 48), mat); m.position.set(x, y, z); m.castShadow = true; scene.add(m); return m; };
+lathe([[0, 0], [.06, 0], [.09, .08], [.1, .18], [.07, .28], [.04, .33], [.05, .36]], ceramic, SX - .32, SY + .05, .14);
+lathe([[0, 0], [.08, 0], [.11, .06], [.11, .1], [.09, .13]], new THREE.MeshStandardMaterial({ color: '#b8562f', roughness: .45 }), SX + .02, SY + .05, .14);
+lathe([[0, 0], [.04, 0], [.06, .12], [.05, .22], [.02, .3], [.025, .34]], new THREE.MeshStandardMaterial({ color: '#2f4a4a', roughness: .35 }), SX + .32, SY + .05, .14);
+// ---- plinth + sculpture vase at x=2.55, z=.6 ----
+const VX = 2.55, VZ = .7;
+box(.42, .95, .42, new THREE.MeshStandardMaterial({ color: '#e7e1d8', roughness: .6 }), VX - .21, 0, VZ - .21);
+lathe([[0, 0], [.08, 0], [.15, .12], [.17, .28], [.12, .46], [.07, .56], [.09, .62]], new THREE.MeshStandardMaterial({ color: '#c46a3c', roughness: .3, metalness: .1 }), VX, .95, VZ);
+// armchair + plant on the left
+const chairM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#b9a383', roughness: .95 });
+box(.8, .42, .8, chairM, -2.4, .12, 1.4, { r: .06 }); box(.16, .5, .8, chairM, -2.4, .5, 1.4, { r: .06 });
+plant(-2.1, .45, 1.5, .5);
+plane(2.4, 1.6, M.rug, [.2, .005, 1.6], [-Math.PI / 2, 0, 0]);
+
+// ---- lights ----
+const hemi = new THREE.HemisphereLight('#ffe7cc', '#3a2c20', .1); scene.add(hemi);
+const fill = new THREE.PointLight('#ffd6a0', 0, 8, 1.6); fill.position.set(0, 2.4, 3.2); scene.add(fill);
+const ringM = new THREE.MeshStandardMaterial({ color: '#f2f0ec', roughness: .4 });
+const CCT = { w: '#ffcf94', n: '#fff1dc', c: '#e6eeff' };
+function trim(x, z) { const r = new THREE.Mesh(new THREE.CylinderGeometry(.07, .07, .02, 32), ringM); r.position.set(x, 2.99, z); scene.add(r); const lm = emis('#000', 0); const l = new THREE.Mesh(new THREE.CircleGeometry(.045, 24), lm); l.rotation.x = Math.PI / 2; l.position.set(x, 2.978, z); scene.add(l); return lm; }
+const roomS = [];
+for (const [x, z] of [[-1.3, 1.0], [-1.3, 2.6], [1.25, 1.0], [1.25, 2.6]]) {
+  const s = new THREE.SpotLight('#ffd6a0', 0, 9, .5, .6, 1.5); s.position.set(x, 2.97, z); s.target.position.set(x, 0, z); s.castShadow = true; s.shadow.mapSize.set(1024, 1024); scene.add(s, s.target);
+  roomS.push([s, trim(x, z)]);
+}
+// ---- hero fixture (between the spots, nearer the camera) ----
+const HX = 0, HZ = 1.8, HY = 3.0;
+const holeM = new THREE.MeshStandardMaterial({ color: '#0c0b0a', roughness: .9 });
+const whiteM = new THREE.MeshStandardMaterial({ color: '#f5f3ef', roughness: .35 });
+const alu = new THREE.MeshStandardMaterial({ color: '#c9ccd0', roughness: .3, metalness: .9 });
+const heroS = new THREE.SpotLight('#ffd6a0', 0, 9, .5, .6, 1.5); heroS.castShadow = true; heroS.shadow.mapSize.set(1024, 1024); scene.add(heroS, heroS.target);
+// integrated spot: one sealed body (LED + heat sink) with the driver on a cable
+const INT = new THREE.Group(); scene.add(INT);
+const iHole = new THREE.Mesh(new THREE.CircleGeometry(.082, 40), holeM); iHole.rotation.x = Math.PI / 2; iHole.position.set(HX, HY - .004, HZ); scene.add(iHole);
+const iRough = new THREE.Mesh(new THREE.RingGeometry(.082, .105, 40, 1), new THREE.MeshStandardMaterial({ color: '#d9d2c6', roughness: 1 })); iRough.rotation.x = Math.PI / 2; iRough.position.set(HX, HY - .005, HZ); scene.add(iRough);
+const iTrim = new THREE.Mesh(new THREE.CylinderGeometry(.095, .095, .018, 40), whiteM); INT.add(iTrim);
+const iBody = new THREE.Mesh(new THREE.CylinderGeometry(.07, .065, .07, 32), alu); iBody.position.y = .045; INT.add(iBody);
+for (let k = 0; k < 10; k++) { const f = new THREE.Mesh(new THREE.BoxGeometry(.004, .05, .14), alu); f.position.y = .1; f.rotation.y = k * Math.PI / 10; INT.add(f); }
+const iLensM = new THREE.MeshStandardMaterial({ color: '#cfcac2', roughness: .3, emissive: '#000', emissiveIntensity: 0 }); const iLens = new THREE.Mesh(new THREE.CircleGeometry(.06, 32), iLensM); iLens.rotation.x = Math.PI / 2; iLens.position.y = -.0095; INT.add(iLens);
+const springM = new THREE.MeshStandardMaterial({ color: '#888', metalness: 1, roughness: .3 });
+for (const s of [-1, 1]) { const sp = new THREE.Mesh(new THREE.TorusGeometry(.03, .004, 6, 16, Math.PI), springM); sp.position.set(s * .085, .03, 0); sp.rotation.z = s > 0 ? -Math.PI / 2 : Math.PI / 2; INT.add(sp); }
+const drv = new THREE.Mesh(new THREE.BoxGeometry(.13, .04, .07), new THREE.MeshStandardMaterial({ color: '#2a2a2c', roughness: .5 })); scene.add(drv);
+const wireM = new THREE.LineBasicMaterial({ color: '#202020' });
+let wires = [];
+function wire(a, b, sag) { const c = new THREE.QuadraticBezierCurve3(a, new THREE.Vector3((a.x + b.x) / 2, Math.min(a.y, b.y) - sag, (a.z + b.z) / 2), b); const g = new THREE.TubeGeometry(c, 20, .004, 6); const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: '#1d1d1d', roughness: .6 })); scene.add(m); wires.push(m); }
+// GU10: trim ring stays in the ceiling, the lamp (reflector + glass + 2 pins) twists and comes out
+const GU = new THREE.Group(); GU.position.set(HX, HY, HZ); scene.add(GU);
+const gTrim = new THREE.Mesh(new THREE.RingGeometry(.056, .09, 48, 1), new THREE.MeshStandardMaterial({ color: '#f5f3ef', roughness: .35, side: THREE.DoubleSide })); gTrim.rotation.x = Math.PI / 2; gTrim.position.y = -.004; GU.add(gTrim);
+const gLip = new THREE.Mesh(new THREE.TorusGeometry(.09, .004, 8, 48), whiteM); gLip.rotation.x = Math.PI / 2; gLip.position.y = -.004; GU.add(gLip);
+const gCup = new THREE.Mesh(new THREE.CylinderGeometry(.056, .056, .07, 40, 1, true), new THREE.MeshStandardMaterial({ color: '#e8e6e2', roughness: .5, side: THREE.DoubleSide })); gCup.position.y = .03; GU.add(gCup);
+const gBack = new THREE.Mesh(new THREE.CircleGeometry(.056, 32), holeM); gBack.rotation.x = Math.PI / 2; gBack.position.y = .064; GU.add(gBack);
+const sock = new THREE.Mesh(new THREE.CylinderGeometry(.022, .022, .02, 24), new THREE.MeshStandardMaterial({ color: '#e9e3d6', roughness: .6 })); sock.position.y = .06; GU.add(sock);
+const LAMP = new THREE.Group(); GU.add(LAMP);
+const lRef = new THREE.Mesh(new THREE.LatheGeometry([[.0, .055], [.018, .055], [.022, .045], [.03, .03], [.045, .008], [.048, 0]].map(([r, y]) => new THREE.Vector2(r, y)), 40), new THREE.MeshStandardMaterial({ color: '#f1f1f1', roughness: .25, metalness: .2, side: THREE.DoubleSide })); LAMP.add(lRef);
+const lGlassM = new THREE.MeshStandardMaterial({ color: '#d6d1c8', roughness: .3, emissive: '#000', emissiveIntensity: 0 }); const lGlass = new THREE.Mesh(new THREE.CircleGeometry(.047, 32), lGlassM); lGlass.rotation.x = Math.PI / 2; lGlass.position.y = .0005; LAMP.add(lGlass);
+const pinM = new THREE.MeshStandardMaterial({ color: '#d8d8d8', metalness: 1, roughness: .25 });
+for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.0028, .0028, .012, 10), pinM); p.position.set(s * .0065, .061, 0); LAMP.add(p); const k = new THREE.Mesh(new THREE.CylinderGeometry(.0045, .0045, .003, 10), pinM); k.position.set(s * .0065, .067, 0); LAMP.add(k); }
+LAMP.position.y = .0;
+
+const VIEWS = {
+  w: { pos: [.2, 1.6, 5.6], tgt: [.2, 1.6, 0], fov: 74 },           // room
+  r: { pos: [.0, 1.25, 4.6], tgt: [0, 2.6, 1.6], fov: 62 },          // room looking up at the ceiling
+  u: { pos: [HX + .2, 2.45, HZ + .5], tgt: [HX, 2.93, HZ], fov: 44 },  // hero close-up from below
+  i: { pos: [HX + .45, 2.25, HZ + .85], tgt: [HX + .04, 2.78, HZ], fov: 46 }, // integrated spot hanging out of the hole
+  m: { pos: [HX + .12, 2.7, HZ + .3], tgt: [HX, 2.94, HZ], fov: 40 },  // macro of the GU10 lamp
+};
+window.setState = (st) => {
+  const T = st.split('+'), has = k => T.includes(k), val = (k, d) => { const t = T.find(x => x.startsWith(k + ':')); return t ? t.split(':')[1] : d; };
+  const on = has('on'), broken = has('broken'), col = CCT[val('cct', 'w')], room = has('room');
+  const isInt = has('int'), out = +val('out', 0), twist = +val('twist', 0), drop = +val('drop', 0), heroOn = has('heroon');
+  roomS.forEach(([s, lm], i) => { const lit = on && !(broken && i === 1); s.color.set(col); s.intensity = lit ? 15 : 0; lm.emissive.set(col); lm.emissiveIntensity = lit ? 6 : 0; });
+  hemi.intensity = room ? .35 : .08; fill.intensity = room ? 2.0 : .4; fill.color.set(col);
+  scene.environmentIntensity = room ? .25 : .05;
+  // hero
+  INT.visible = isInt; drv.visible = isInt && out > 0; iHole.visible = isInt && out > 0; iRough.visible = isInt && out > 0; GU.visible = !isInt;
+  wires.forEach(m => { scene.remove(m); m.geometry.dispose(); }); wires = [];
+  const lit = heroOn && (isInt ? out === 0 : (twist === 0 && drop === 0));
+  heroS.position.set(HX, HY - .03, HZ); heroS.target.position.set(HX, 0, HZ); heroS.color.set(col); heroS.intensity = lit ? 15 : 0;
+  if (isInt) {
+    const y = HY - .012 - out * .38;
+    INT.position.set(HX, y, HZ); INT.rotation.set(out * .25, 0, out * .35);
+    iLensM.emissive.set(col); iLensM.emissiveIntensity = lit ? 6 : 0;
+    drv.position.set(HX + .14 * out, HY - .03 - out * .26, HZ - .04 * out); drv.rotation.set(0, .4 * out, .2 * out);
+    if (out > 0) { const top = new THREE.Vector3(HX, HY + .02, HZ); wire(top, new THREE.Vector3(drv.position.x - .05, drv.position.y + .02, drv.position.z), .02); wire(new THREE.Vector3(drv.position.x + .02, drv.position.y, drv.position.z), new THREE.Vector3(INT.position.x, INT.position.y + .12, INT.position.z), .06); }
+  } else {
+    LAMP.rotation.set(0, twist * Math.PI / 2, 0); LAMP.position.y = .003 - drop * .3; LAMP.rotation.x = drop * .5; LAMP.position.z = drop * .06;
+    lGlassM.emissive.set(col); lGlassM.emissiveIntensity = lit ? 7 : (heroOn ? .0 : 0);
+  }
+  renderer.toneMappingExposure = 1.0;
+};
