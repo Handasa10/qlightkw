@@ -1,0 +1,102 @@
+// ===== Home cinema: where the light goes so it never hits the screen =====
+// screen wall at z=0 (x -3..3), floor y=0, ceiling 2.9; front row of recliners at z≈3.3, a 0.3 m riser from z=4.6 with
+// the back row at z≈5.6; aisle on the right (x 2.1..3). State tokens joined by '+':
+//   movie        picture on the screen
+//   bad          downlights in front of / above the screen (they wash the picture with hot spots)
+//   good         spots on the side walls + behind the back row, pointing away from the screen
+//   dim:<0..1>   dimmer level for the room light (good/bad), default 1
+//   bias         hidden LED strip behind the screen (soft halo on the wall)
+//   steps        low step / aisle lights
+//   room         plain work light (to read the room)
+const CH = 2.9, RX = 3.0, RZ = 7.2;
+const carpetTex = canvasTex(512, 512, (g, w, h) => { g.fillStyle = '#2a2330'; g.fillRect(0, 0, w, h); for (let i = 0; i < 14000; i++) { g.fillStyle = `rgba(${R() > .5 ? 90 : 10},${R() > .5 ? 70 : 10},${R() > .5 ? 100 : 20},0.08)`; g.fillRect(R() * w, R() * h, 2, 2); } }, [6, 6]);
+const carpetM = new THREE.MeshStandardMaterial({ map: carpetTex, roughness: 1 });
+plane(6, RZ, carpetM, [0, 0, RZ / 2], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#6e626c', roughness: .97 });
+const panelM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#55485a', roughness: .97 });
+box(6.2, CH, .1, new THREE.MeshStandardMaterial({ color: '#1d1a1f', roughness: .95 }), -3.1, 0, -.1);
+box(.1, CH, RZ + .2, wallM, -RX - .1, 0, -.1); box(.1, CH, RZ + .2, wallM, RX, 0, -.1); box(6.2, CH, .1, wallM, -3.1, 0, RZ);
+box(6.2, .1, RZ + .2, new THREE.MeshStandardMaterial({ color: '#2b2730', roughness: .95 }), -3.1, CH, -.1, { cast: false });
+// acoustic panels on the side walls
+for (const sx of [-1, 1]) for (let i = 0; i < 4; i++) box(.05, 1.5, 1.1, panelM, sx < 0 ? -RX : RX - .05, .7, 1.0 + i * 1.45, { r: .02 });
+// screen with a thin black frame, a little off the wall
+const SW = 2.9, SH = 1.63, SY = .75, SZ = .12;
+const movieTex = canvasTex(1280, 720, (g, w, h) => {
+  const sky = g.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, '#1b2a4a'); sky.addColorStop(.55, '#d9774a'); sky.addColorStop(.62, '#f2b35e'); sky.addColorStop(1, '#2a1a14'); g.fillStyle = sky; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#ffd98a'; g.beginPath(); g.arc(w * .62, h * .6, 70, 0, 7); g.fill();
+  g.fillStyle = '#1a120e'; g.beginPath(); g.moveTo(0, h * .7); for (let x = 0; x <= w; x += 40) g.lineTo(x, h * (.66 + .05 * Math.sin(x / 90) + .03 * Math.sin(x / 31))); g.lineTo(w, h); g.lineTo(0, h); g.fill();
+  g.fillStyle = '#0d0907'; for (const [x, s] of [[.3, 1], [.36, .85]]) { g.beginPath(); g.ellipse(w * x, h * .64 - 70 * s, 18 * s, 20 * s, 0, 0, 7); g.fill(); g.fillRect(w * x - 22 * s, h * .64 - 52 * s, 44 * s, 90 * s); }
+  g.fillStyle = 'rgba(0,0,0,1)'; g.fillRect(0, 0, w, 50); g.fillRect(0, h - 50, w, 50);
+}, [1, 1]);
+const screenM = new THREE.MeshStandardMaterial({ color: '#0b0b0d', roughness: .35, metalness: 0, emissive: '#fff', emissiveMap: movieTex, emissiveIntensity: 0 });
+box(SW + .08, SH + .08, .05, new THREE.MeshStandardMaterial({ color: '#0a0a0a', roughness: .6 }), -SW / 2 - .04, SY - .04, SZ - .06);
+plane(SW, SH, screenM, [0, SY + SH / 2, SZ], [0, 0, 0]);
+// bias light: soft halo on the wall behind the screen
+const haloTex = canvasTex(512, 320, (g, w, h) => { g.fillStyle = '#000'; g.fillRect(0, 0, w, h); g.filter = 'blur(28px)'; g.fillStyle = '#fff'; g.fillRect(w * .16, h * .17, w * .68, h * .66); g.filter = 'none'; }, [1, 1], false);
+const haloM = new THREE.MeshBasicMaterial({ map: haloTex, color: '#000', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+plane(SW * 1.5, SH * 1.55, haloM, [0, SY + SH / 2, .005], [0, 0, 0]);
+// hot spots on the screen from badly placed downlights
+const hotTex = canvasTex(256, 256, (g, w, h) => { const gr = g.createRadialGradient(w / 2, h * .25, 0, w / 2, h * .25, w * .6); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.4, 'rgba(255,255,255,.4)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }, [1, 1], false);
+const hots = [-.95, 0, .95].map(x => { const m = new THREE.MeshBasicMaterial({ map: hotTex, color: '#000', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }); plane(1.2, 1.4, m, [x, SY + SH - .55, SZ + .004], [0, 0, 0]); return m; });
+// speakers either side + low console
+const spkM = new THREE.MeshStandardMaterial({ color: '#141416', roughness: .5 });
+for (const sx of [-1, 1]) box(.32, 1.1, .3, spkM, sx * 2.05 - .16, 0, .15, { r: .02 });
+box(2.2, .32, .45, M.darkWood, -1.1, 0, .15);
+// riser with the back row; aisle on the right
+const riserM = new THREE.MeshStandardMaterial({ map: carpetTex, roughness: 1 });
+box(6, .3, RZ - 4.6, riserM, -3, 0, 4.6);
+const leatherM = new THREE.MeshStandardMaterial({ color: '#2a1d18', roughness: .45, metalness: .05 });
+const leatherL = new THREE.MeshStandardMaterial({ color: '#3a2a22', roughness: .5 });
+function recliner(x, y, z) {
+  box(.72, .42, .8, leatherM, x - .36, y + .05, z - .4, { r: .06 });
+  box(.72, .62, .2, leatherL, x - .36, y + .42, z + .22, { r: .07 });
+  for (const s of [-1, 1]) box(.14, .55, .86, leatherM, x + s * .43 - .07, y + .05, z - .43, { r: .05 });
+}
+for (const x of [-1.95, -1.05, -.15, .75]) recliner(x, 0, 3.35);
+for (const x of [-1.95, -1.05, -.15, .75]) recliner(x, .3, 5.7);
+// aisle: steps up to the riser
+box(.9, .15, .35, riserM, 2.1, 0, 4.25);
+
+// ---- lights ----
+const COL = '#ffcf94';
+const bads = [], goods = [];
+const lensAt = (x, y, z) => { const m = emis('#000', 0); const l = new THREE.Mesh(new THREE.CircleGeometry(.035, 20), m); l.rotation.x = Math.PI / 2; l.position.set(x, y, z); scene.add(l); const r = new THREE.Mesh(new THREE.RingGeometry(.035, .05, 20), new THREE.MeshStandardMaterial({ color: '#9a9aa0', roughness: .4, side: THREE.DoubleSide })); r.rotation.x = Math.PI / 2; r.position.set(x, y - .001, z); scene.add(r); return m; };
+for (const x of [-.95, 0, .95]) { // in front of the screen, aimed down at it
+  const s = new THREE.SpotLight(COL, 0, 8, .42, .5, 1.4); s.position.set(x, CH - .02, .55); s.target.position.set(x, .4, .1); s.castShadow = true; s.shadow.mapSize.set(512, 512); scene.add(s, s.target);
+  bads.push({ s, m: lensAt(x, CH - .005, .55) });
+}
+for (const [x, z, tx, tz] of [[-2.7, 1.5, -3.0, 1.5], [-2.7, 3.2, -3.0, 3.2], [-2.7, 4.9, -3.0, 4.9], [2.7, 1.5, 3.0, 1.5], [2.7, 3.2, 3.0, 3.2], [2.7, 4.9, 3.0, 4.9], [-1.5, 6.6, -1.5, 7.2], [0, 6.6, 0, 7.2], [1.5, 6.6, 1.5, 7.2]]) {
+  const s = new THREE.SpotLight(COL, 0, 7, .45, .7, 1.5); s.position.set(x, CH - .02, z); s.target.position.set(tx, .2, tz); s.castShadow = true; s.shadow.mapSize.set(512, 512); scene.add(s, s.target);
+  goods.push({ s, m: lensAt(x, CH - .005, z) });
+}
+// step lights: small warm bricks low on the riser face and the aisle step
+const stepM = emis('#000', 0); const steps = [];
+for (const x of [-2.4, -1.4, -.4, .6, 1.6]) steps.push(box(.16, .03, .01, stepM, x, .12, 4.59, { cast: false }));
+steps.push(box(.5, .02, .01, stepM, 2.3, .06, 4.24, { cast: false }));
+const stepGlow = [];
+for (const x of [-2.4, -1.4, -.4, .6, 1.6, 2.5]) { const p = new THREE.PointLight('#ffb870', 0, 1.1, 2); p.position.set(x + .08, .12, 4.45); scene.add(p); stepGlow.push(p); }
+const screenL = new THREE.RectAreaLight('#e8a070', 0, SW, SH); screenL.position.set(0, SY + SH / 2, SZ + .02); screenL.lookAt(0, SY + SH / 2, 5); scene.add(screenL);
+const haloL = new THREE.RectAreaLight(COL, 0, SW, SH); haloL.position.set(0, SY + SH / 2, .06); haloL.lookAt(0, SY + SH / 2, -1); scene.add(haloL);
+const hemi = new THREE.HemisphereLight('#ffe7cc', '#201820', .05); scene.add(hemi);
+const work = new THREE.PointLight('#fff1dc', 0, 14, 1.2); work.position.set(0, 2.6, 3.6); scene.add(work);
+
+const VIEWS = {
+  f: { pos: [0, 2.05, 6.95], tgt: [0, 1.25, 0], fov: 62 },          // from the back row: the whole room and the screen
+  s: { pos: [.35, 1.15, 3.6], tgt: [0, 1.65, 0], fov: 52 },         // from the front row: the screen
+  b: { pos: [2.35, 1.7, .6], tgt: [-.8, .9, 4.8], fov: 66 },        // from the screen corner back to the seats
+  d: { pos: [-2.4, 1.95, 6.95], tgt: [1.9, 1.25, 1.6], fov: 66 },      // back-left corner: right wall scallops + screen
+  l: { pos: [2.65, .7, 1.4], tgt: [1.6, .25, 4.6], fov: 62 },       // low on the aisle: step lights
+};
+window.setState = (st) => {
+  const T = st.split('+'), has = k => T.includes(k), val = (k, d) => { const t = T.find(x => x.startsWith(k + ':')); return t ? +t.split(':')[1] : d; };
+  const movie = has('movie'), bad = has('bad'), good = has('good'), d = val('dim', 1), bias = has('bias'), stp = has('steps'), room = has('room');
+  bads.forEach(b => { b.s.intensity = bad ? 16 * d : 0; b.m.emissive.set(COL); b.m.emissiveIntensity = bad ? 6 * d : 0; });
+  goods.forEach(g => { g.s.intensity = good ? 22 * d : 0; g.m.emissive.set(COL); g.m.emissiveIntensity = good ? 5 * d : 0; });
+  hots.forEach(m => m.color.set(new THREE.Color('#ffe9cf').multiplyScalar(bad ? .75 * d : 0)));
+  screenM.emissiveIntensity = movie ? (bad ? .55 : .9) : 0; screenL.intensity = movie ? 3.2 : 0;
+  haloM.color.set(new THREE.Color('#ffcf94').multiplyScalar(bias ? .6 : 0)); haloL.intensity = bias ? 3 : 0;
+  stepM.emissive.set('#ffb870'); stepM.emissiveIntensity = stp ? 5 : 0; stepGlow.forEach(p => p.intensity = stp ? .5 : 0);
+  work.intensity = room ? 6 : 0; hemi.intensity = room ? .4 : .05;
+  scene.environmentIntensity = room ? .2 : .03;
+  renderer.toneMappingExposure = 1.05;
+};
