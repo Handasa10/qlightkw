@@ -50,3 +50,12 @@ verify_jwt = false
 
 [functions.photo-enhance]
 verify_jwt = false
+
+[functions.instagram-agent]
+verify_jwt = false
+
+[functions.content-studio]
+verify_jwt = false
+
+[functions.content-events]
+verify_jwt = false
