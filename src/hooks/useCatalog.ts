@@ -27,6 +27,8 @@ export interface CatalogCategory {
   slug: string;
   name_en: string;
   name_ar: string;
+  description_en: string | null;
+  description_ar: string | null;
 }
 
 interface ImageRow { url: string; is_primary: boolean | null; sort_order: number | null }
@@ -35,7 +37,7 @@ interface ImageRow { url: string; is_primary: boolean | null; sort_order: number
 // Supabase returns at most 1000 rows per request, so products are read page by page.
 async function loadCatalog(): Promise<{ products: CatalogProduct[]; categories: CatalogCategory[] }> {
   const { data: categories, error: catError } = await supabase
-    .from('categories').select('id, slug, name_en, name_ar').eq('is_active', true);
+    .from('categories').select('id, slug, name_en, name_ar, description_en, description_ar').eq('is_active', true);
   if (catError) throw catError;
   const slugOf = new Map((categories || []).map((c) => [c.id, c.slug]));
 
