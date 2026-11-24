@@ -1,0 +1,101 @@
+// ===== Corridor: how far apart the spots go, beam angle, and anti-glare =====
+// x -.75...75 (1.5 m wide), floor y=0, ceiling 2.8, corridor runs from z=2.4 (camera end) to z=-8.2 (console wall).
+// State tokens joined by '+':
+//   on            spots lit (else only a faint fill)
+//   sp:3 | sp:7   3 spots ~3.3 m apart (bad) or 7 spots 1.35 m apart (good)
+//   ang:n | ang:w narrow 24° beam (pools of light) or wide 60° beam with a soft edge
+//   ag            anti-glare trims (lens set deep in a black cup) instead of flush lenses
+//   cone          show the beams as faint light cones
+//   room          soft room fill (to read the architecture when the spots are off)
+const CH = 2.8, XW = .75, ZA = 2.4, ZB = -8.2;
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#d9cfc1', roughness: .9 });
+marbleTex.repeat.set(1, 6);
+plane(1.5, ZA - ZB, M.floor, [0, 0, (ZA + ZB) / 2], [-Math.PI / 2, 0, 0]);
+box(.1, CH, ZA - ZB + .2, wallM, -XW - .1, 0, ZB - .1); box(.1, CH, ZA - ZB + .2, wallM, XW, 0, ZB - .1);
+box(1.7, CH, .1, wallM, -.85, 0, ZB - .1); box(1.7, CH, .1, wallM, -.85, 0, ZA);
+box(1.7, .1, ZA - ZB + .2, M.ceil, -.85, CH, ZB - .1, { cast: false });
+// skirting
+const skM = new THREE.MeshStandardMaterial({ color: '#efe9e0', roughness: .5 });
+box(.015, .1, ZA - ZB, skM, -XW, 0, ZB); box(.015, .1, ZA - ZB, skM, XW - .015, 0, ZB);
+// doors: left at z -1.9, right at z -4.6 (walnut slab + frame)
+const doorM = new THREE.MeshStandardMaterial({ map: oakTex, color: '#6b4a32', roughness: .5 });
+const frameM = new THREE.MeshStandardMaterial({ color: '#f2ede6', roughness: .4 });
+for (const [sx, zc] of [[-1, -1.9], [1, -4.6]]) {
+  const x = sx < 0 ? -XW : XW - .03;
+  box(.03, 2.2, .9, doorM, x, 0, zc - .45);
+  box(.04, .06, 1.02, frameM, sx < 0 ? -XW : XW - .04, 2.2, zc - .51);
+  for (const dz of [-.51, .45]) box(.04, 2.26, .06, frameM, sx < 0 ? -XW : XW - .04, 0, zc + dz);
+  box(.05, .02, .14, M.brass, sx < 0 ? -XW + .03 : XW - .08, 1.02, zc + .25);
+}
+// framed photos along the right wall
+const photoTex = (seed) => canvasTex(400, 500, (g, w, h) => { g.fillStyle = '#e9e1d4'; g.fillRect(0, 0, w, h); const c = ['#c9573a', '#23324a', '#7fb3a8', '#e8b04a', '#8a6a4a']; for (let i = 0; i < 5; i++) { g.fillStyle = c[(i + seed) % 5]; g.globalAlpha = .85; g.beginPath(); g.arc(w * (.2 + R() * .6), h * (.2 + R() * .6), 40 + R() * 110, 0, 7); g.fill(); } g.globalAlpha = 1; });
+const pf = new THREE.MeshStandardMaterial({ color: '#1b1b1b', roughness: .4 });
+[[-1.2, 0], [-2.6, 1], [-6.6, 2]].forEach(([z, s]) => {
+  box(.03, .62, .5, pf, XW - .03, 1.3, z - .25);
+  plane(.42, .54, new THREE.MeshStandardMaterial({ map: photoTex(s), roughness: .8 }), [XW - .032, 1.61, z], [0, -Math.PI / 2, 0]);
+});
+// console wall at the end: fluted panel, console, vase, round mirror
+box(1.3, 2.3, .05, M.fluted, -.65, .1, ZB);
+box(1.0, .06, .34, M.darkWood, -.5, .82, ZB + .05); for (const x of [-.47, .41]) box(.06, .82, .3, M.darkWood, x, 0, ZB + .07);
+const vase = new THREE.Mesh(new THREE.LatheGeometry([[0, 0], [.07, 0], [.12, .1], [.13, .24], [.08, .38], [.05, .44], [.06, .48]].map(([r, y]) => new THREE.Vector2(r, y)), 40), new THREE.MeshStandardMaterial({ color: '#c46a3c', roughness: .3 }));
+vase.position.set(.22, .88, ZB + .22); vase.castShadow = true; scene.add(vase);
+const mir = new THREE.Mesh(new THREE.TorusGeometry(.32, .025, 12, 48), M.brass); mir.position.set(0, 1.62, ZB + .07); scene.add(mir);
+const mirG = new THREE.Mesh(new THREE.CircleGeometry(.31, 48), new THREE.MeshStandardMaterial({ color: '#8c939a', roughness: .05, metalness: 1 })); mirG.position.set(0, 1.62, ZB + .06); scene.add(mirG);
+plane(1.0, 7.6, M.rug, [0, .005, -3.2], [-Math.PI / 2, 0, 0]);
+
+// ---- spots ----
+const glowTex = canvasTex(128, 128, (g, w, h) => { const gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.18, 'rgba(255,240,215,.55)'); gr.addColorStop(.5, 'rgba(255,220,180,.12)'); gr.addColorStop(1, 'rgba(255,220,180,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }, [1, 1], false);
+const coneTex = canvasTex(8, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,255,255,.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }, [1, 1], false);
+const trimM = new THREE.MeshStandardMaterial({ color: '#f5f3ef', roughness: .35 });
+const cupM = new THREE.MeshStandardMaterial({ color: '#0d0c0b', roughness: .6, side: THREE.DoubleSide });
+const Z3 = [.9, -2.4, -5.7], Z7 = [1.2, -.15, -1.5, -2.85, -4.2, -5.55, -6.9];
+const SP = [];
+for (const z of [...new Set([...Z3, ...Z7])]) {
+  const g = new THREE.Group(); g.position.set(0, CH, z); scene.add(g);
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .012, 32), trimM); ring.position.y = -.006; g.add(ring);
+  const flushM = emis('#000', 0); const flush = new THREE.Mesh(new THREE.CircleGeometry(.045, 28), flushM); flush.rotation.x = Math.PI / 2; flush.position.y = -.0125; g.add(flush);
+  const cup = new THREE.Mesh(new THREE.CylinderGeometry(.045, .045, .05, 28, 1, true), cupM); cup.position.y = -.0125 + .025; g.add(cup);
+  const cupRim = new THREE.Mesh(new THREE.RingGeometry(.045, .06, 28), new THREE.MeshStandardMaterial({ color: '#f5f3ef', roughness: .35, side: THREE.DoubleSide })); cupRim.rotation.x = Math.PI / 2; cupRim.position.y = -.0128; g.add(cupRim);
+  const deepM = emis('#000', 0); const deep = new THREE.Mesh(new THREE.CircleGeometry(.018, 20), deepM); deep.rotation.x = Math.PI / 2; deep.position.y = .03; g.add(deep);
+  const glowM = new THREE.MeshBasicMaterial({ map: glowTex, color: '#ffe4c0', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+  const glow = new THREE.Mesh(new THREE.CircleGeometry(1, 40), glowM); glow.rotation.x = Math.PI / 2; glow.position.y = -.016; g.add(glow);
+  const coneM = new THREE.MeshBasicMaterial({ map: coneTex, color: '#ffd9a8', transparent: true, opacity: .1, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(1, 1, 48, 1, true), coneM); g.add(cone);
+  const s = new THREE.SpotLight('#ffd6a0', 0, 8, .3, .5, 1.4); s.position.set(0, CH - .03, z); s.target.position.set(0, 0, z); s.castShadow = true; s.shadow.mapSize.set(512, 512); s.shadow.bias = -.0005; scene.add(s, s.target);
+  SP.push({ z, g, ring, flush, flushM, cup, cupRim, deep, deepM, glow, glowM, cone, coneM, s });
+}
+const hemi = new THREE.HemisphereLight('#ffe7cc', '#3a2c20', .08); scene.add(hemi);
+const fill = new THREE.PointLight('#ffd6a0', 0, 12, 1.4); fill.position.set(0, 2.2, -2.5); scene.add(fill);
+const endL = new THREE.PointLight('#ffcf9a', 0, 4, 2); endL.position.set(0, 1.4, ZB + .8); scene.add(endL);
+
+const VIEWS = {
+  h: { pos: [0, 1.55, 2.25], tgt: [0, 1.25, -8], fov: 64 },          // down the corridor
+  e: { pos: [-.18, 1.62, 2.1], tgt: [0, 2.35, -5], fov: 62 },         // eye level walking, spots in view (glare)
+  s: { pos: [.55, 1.3, 2.2], tgt: [-.15, 1.15, -3.2], fov: 70 },      // off-centre, floor + wall pools
+  m: { pos: [.1, 2.42, -1.05], tgt: [0, 2.78, -1.5], fov: 38 },       // macro on one fixture (z -1.5)
+  t: { pos: [0, 1.05, 1.9], tgt: [0, 2.55, -2.6], fov: 72 },            // low, looking up the ceiling line (spacing)
+};
+const COL = '#ffd6a0';
+window.setState = (st) => {
+  const T = st.split('+'), has = k => T.includes(k), val = (k, d) => { const t = T.find(x => x.startsWith(k + ':')); return t ? t.split(':')[1] : d; };
+  const on = has('on'), n = val('sp', '7'), wide = val('ang', n === '3' ? 'n' : 'w') === 'w', ag = has('ag'), cone = has('cone'), room = has('room');
+  const set = n === '3' ? Z3 : Z7;
+  const ang = wide ? .52 : .21, pen = wide ? .75 : .35;
+  for (const p of SP) {
+    const vis = set.includes(p.z);
+    p.g.visible = vis; p.s.visible = vis;
+    p.flush.visible = !ag; p.cup.visible = ag; p.cupRim.visible = ag; p.deep.visible = ag; p.ring.visible = !ag;
+    p.s.angle = ang; p.s.penumbra = pen; p.s.color.set(COL);
+    p.s.intensity = vis && on ? (wide ? 9 : 13) : 0;
+    p.flushM.emissive.set(COL); p.flushM.emissiveIntensity = on ? 9 : 0;
+    p.deepM.emissive.set(COL); p.deepM.emissiveIntensity = on ? 3 : 0;
+    p.glow.visible = on; const gs = ag ? .05 : .32; p.glow.scale.set(gs, gs, 1); p.glowM.opacity = ag ? .4 : 1;
+    p.cone.visible = on && cone; const r = Math.tan(ang * (wide ? .9 : 1)) * (CH - .02);
+    p.cone.scale.set(r, CH - .02, r); p.cone.position.y = -(CH - .02) / 2; p.coneM.opacity = wide ? .07 : .12;
+  }
+  hemi.intensity = room ? .35 : on ? .06 : .12;
+  fill.intensity = room ? 1.6 : on ? .15 : .35;
+  endL.intensity = on ? .25 : .1;
+  scene.environmentIntensity = room ? .22 : .04;
+  renderer.toneMappingExposure = 1.0;
+};
