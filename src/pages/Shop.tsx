@@ -9,6 +9,8 @@ import { useSEO } from '@/hooks/useSEO';
 import { priceOf, searchCatalog, useCatalog } from '@/hooks/useCatalog';
 import { DEPARTMENTS, departmentById, departmentOfCategory } from '@/lib/store-nav';
 
+import { collectionIntro } from '@/lib/collection-intro';
+
 const PAGE_SIZE = 24;
 
 type Sort = 'featured' | 'best' | 'newest' | 'price-low' | 'price-high' | 'name';
@@ -48,6 +50,8 @@ const Shop = () => {
       : dept ? (isRTL ? dept.ar : dept.en)
         : offers ? (isRTL ? 'العروض' : 'Offers')
           : (isRTL ? 'جميع المنتجات' : 'All products');
+
+  const intro = collectionIntro({ categories, categorySlug, department: dept, isRTL, suppressed: !!q || offers || pricedOnly || !!min || !!max });
 
   useSEO({
     title: category || dept
@@ -162,6 +166,7 @@ const Shop = () => {
         </nav>
 
         <h1 className="text-2xl font-extrabold tracking-tight text-neutral-900 md:text-4xl">{title}</h1>
+        {intro && <p data-collection-intro className="mt-3 max-w-3xl text-sm leading-7 text-neutral-600 md:text-base">{intro}</p>}
 
         {tiles.length > 1 && (
           <div className="-mx-4 mt-6 flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] md:mx-0 md:gap-4 md:px-0 [&::-webkit-scrollbar]:hidden">
