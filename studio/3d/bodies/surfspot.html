@@ -1,0 +1,114 @@
+// ===== Apartment living room with a bare concrete ceiling (no gypsum): surface-mounted spots instead of recessed ones =====
+// x -2.4..2.4, floor y=0, flat slab ceiling at 2.8 (no gypsum, no cut-outs), back wall z=0 with the sofa and a framed painting,
+// camera side z=5.  Four surface spots in a row at z=1.0 wash the back wall, two more at z=3.0 light the middle of the room,
+// an adjustable surface spot near the right wall (x 1.7, z 1.6) tilts toward the painting.
+// State tokens joined by '+':
+//   bare          the one cold bare bulb in the middle of the ceiling (the "before")
+//   on            the surface spots lit (warm)
+//   sh:r | sh:s   round cylinders (default) or square boxes
+//   fin:w | fin:b white (default) or black body
+//   mix           the four wall-wash spots become round-white, round-black, square-white, square-black (the range)
+//   adj           the adjustable spot lit, aimed at the painting
+//   room          soft room fill
+const CH = 2.8, RW = 2.4, RD = 5.2;
+const COL = '#ffd6a0';
+plane(RW * 2, RD, new THREE.MeshStandardMaterial({ map: oakTex, color: '#b8946e', roughness: .55 }), [0, 0, RD / 2], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#e6ddd0', roughness: .9 });
+box(RW * 2, CH, .1, wallM, -RW, 0, -.1); box(.1, CH, RD + .1, wallM, -RW - .1, 0, -.1); box(.1, CH, RD + .1, wallM, RW, 0, -.1);
+// slab ceiling: a light concrete finish, flat, no bulkheads
+const slabTex = canvasTex(512, 512, (g, w, h) => { g.fillStyle = '#d9d6d0'; g.fillRect(0, 0, w, h); for (let i = 0; i < 2600; i++) { const v = 190 + R() * 50 | 0; g.fillStyle = `rgba(${v},${v - 2},${v - 6},.35)`; g.fillRect(R() * w, R() * h, 2 + R() * 3, 2 + R() * 3); } }, [3, 3]);
+box(RW * 2 + .2, .12, RD + .1, new THREE.MeshStandardMaterial({ map: slabTex, color: '#ece9e3', roughness: .95 }), -RW - .1, CH, -.1, { cast: false });
+// skirting
+const skM = new THREE.MeshStandardMaterial({ color: '#f1ece4', roughness: .5 });
+box(RW * 2, .09, .015, skM, -RW, 0, 0);
+// sofa against the back wall, cushions, coffee table, rug
+box(2.4, .42, .9, M.fabric, -1.2, 0, .05, { r: .06 }); box(2.4, .48, .22, M.fabric, -1.2, .42, .05, { r: .06 });
+for (const x of [-1.3, 1.1]) box(.22, .6, .9, M.fabric, x, 0, .05, { r: .06 });
+box(.45, .38, .14, M.cushion, -.9, .42, .3, { r: .05 }); box(.45, .38, .14, M.goldCush, .45, .42, .3, { r: .05 });
+plane(2.6, 1.8, M.rug, [0, .005, 1.9], [-Math.PI / 2, 0, 0]);
+box(1.1, .06, .6, M.darkWood, -.55, .38, 1.55); for (const [x, z] of [[-.5, 1.6], [.49, 1.6], [-.5, 2.09], [.49, 2.09]]) box(.04, .38, .04, M.black, x, 0, z);
+// framed painting on the back wall, right of the sofa, and a side table with a plant
+const artTex = canvasTex(500, 640, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#e9d7bd'); gr.addColorStop(1, '#c7a17a'); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.fillStyle = '#b4532f'; g.beginPath(); g.arc(w * .58, h * .38, w * .2, 0, 7); g.fill(); g.fillStyle = '#2f4a52'; g.beginPath(); g.moveTo(0, h * .78); g.quadraticCurveTo(w * .4, h * .55, w, h * .74); g.lineTo(w, h); g.lineTo(0, h); g.fill(); g.fillStyle = '#5e7a6f'; g.beginPath(); g.moveTo(0, h * .86); g.quadraticCurveTo(w * .6, h * .7, w, h * .88); g.lineTo(w, h); g.lineTo(0, h); g.fill(); });
+box(.78, .98, .04, M.black, 1.42, 1.12, -.005);
+plane(.7, .9, new THREE.MeshStandardMaterial({ map: artTex, roughness: .8 }), [1.81, 1.61, .037], [0, 0, 0]);
+box(.42, .55, .42, M.darkWood, 1.6, 0, .1);
+const pot = new THREE.Mesh(new THREE.CylinderGeometry(.11, .08, .22, 24), M.pot); pot.position.set(1.81, .66, .31); scene.add(pot);
+for (let i = 0; i < 9; i++) { const l = new THREE.Mesh(new THREE.SphereGeometry(.09, 10, 8), M.leaf); l.scale.set(.5, 1.4, .25); l.position.set(1.81 + Math.cos(i * 2.4) * .08, .9 + (i % 3) * .07, .31 + Math.sin(i * 2.4) * .08); l.rotation.z = Math.cos(i * 2.4) * .5; scene.add(l); }
+
+// ---- the bare bulb (before) ----
+const bulbM = emis('#000', 0);
+const cord = new THREE.Mesh(new THREE.CylinderGeometry(.006, .006, .35, 8), M.black); cord.position.set(0, CH - .175, 2.6); scene.add(cord);
+const holder = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, .06, 16), new THREE.MeshStandardMaterial({ color: '#f2f0ec', roughness: .4 })); holder.position.set(0, CH - .37, 2.6); scene.add(holder);
+const bulb = new THREE.Mesh(new THREE.SphereGeometry(.05, 24, 16), bulbM); bulb.position.set(0, CH - .43, 2.6); scene.add(bulb);
+const bulbL = new THREE.PointLight('#eaf2ff', 0, 9, 1.5); bulbL.position.set(0, CH - .5, 2.6); bulbL.castShadow = true; bulbL.shadow.mapSize.set(512, 512); scene.add(bulbL);
+
+// ---- surface spots ----
+const glowTex = canvasTex(128, 128, (g, w, h) => { const gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.2, 'rgba(255,240,215,.5)'); gr.addColorStop(.55, 'rgba(255,220,180,.1)'); gr.addColorStop(1, 'rgba(255,220,180,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }, [1, 1], false);
+const finW = new THREE.MeshStandardMaterial({ color: '#f4f2ee', roughness: .35 });
+const finB = new THREE.MeshStandardMaterial({ color: '#141414', roughness: .35, metalness: .3 });
+const innerM = new THREE.MeshStandardMaterial({ color: '#0c0b0a', roughness: .6, side: THREE.DoubleSide });
+function surfSpot(x, z, aim) { // a surface-mounted spot hanging from the slab; aim = [x, y, z] target
+  const g = new THREE.Group(); g.position.set(x, CH, z); scene.add(g);
+  const round = new THREE.Group(), square = new THREE.Group(); g.add(round, square);
+  const rb = new THREE.Mesh(new THREE.CylinderGeometry(.045, .045, .13, 36), finW); rb.position.y = -.065; rb.castShadow = true; round.add(rb);
+  const rIn = new THREE.Mesh(new THREE.CylinderGeometry(.038, .038, .03, 28, 1, true), innerM); rIn.position.y = -.118; round.add(rIn);
+  const sb = new THREE.Mesh(new THREE.BoxGeometry(.088, .13, .088), finW); sb.position.y = -.065; sb.castShadow = true; square.add(sb);
+  const sIn = new THREE.Mesh(new THREE.BoxGeometry(.074, .03, .074), innerM); sIn.position.y = -.117; square.add(sIn);
+  const ledM = emis('#000', 0);
+  const led = new THREE.Mesh(new THREE.CircleGeometry(.02, 24), ledM); led.rotation.x = Math.PI / 2; led.position.y = -.104; g.add(led);
+  const glowM = new THREE.MeshBasicMaterial({ map: glowTex, color: '#ffe4c0', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+  const glow = new THREE.Mesh(new THREE.CircleGeometry(.09, 32), glowM); glow.rotation.x = Math.PI / 2; glow.position.y = -.132; g.add(glow);
+  const s = new THREE.SpotLight(COL, 0, 8, .48, .6, 1.4); s.position.set(x, CH - .14, z); s.target.position.set(...(aim || [x, 0, z])); s.castShadow = true; s.shadow.mapSize.set(512, 512); s.shadow.bias = -.0005; scene.add(s, s.target);
+  return { g, round, square, rb, sb, led, ledM, glow, s };
+}
+const WASH = [-1.65, -.55, .55, 1.65].map((x) => surfSpot(x, 1.0, [x, .6, -.1]));
+const MID = [-.9, .9].map((x) => surfSpot(x, 3.0));
+// adjustable: base disc on the slab, a short stem, a tilting cylinder pointed at the painting
+const AJ = (() => {
+  const x = 1.75, z = 1.75, tgt = new THREE.Vector3(1.81, 1.6, .04);
+  const g = new THREE.Group(); g.position.set(x, CH, z); scene.add(g);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(.055, .055, .025, 32), finW); base.position.y = -.0125; g.add(base);
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, .07, 12), finW); stem.position.y = -.06; g.add(stem);
+  const head = new THREE.Group(); head.position.y = -.1; g.add(head);
+  const dir = tgt.clone().sub(new THREE.Vector3(x, CH - .1, z)).normalize();
+  head.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(.042, .042, .15, 32), finW); body.position.y = -.04; body.castShadow = true; head.add(body);
+  const inner = new THREE.Mesh(new THREE.CylinderGeometry(.034, .034, .03, 24, 1, true), innerM); inner.position.y = -.1; head.add(inner);
+  const ledM = emis('#000', 0); const led = new THREE.Mesh(new THREE.CircleGeometry(.018, 20), ledM); led.rotation.x = Math.PI / 2; led.position.y = -.1; head.add(led);
+  const p0 = new THREE.Vector3(x, CH - .1, z).add(dir.clone().multiplyScalar(.12));
+  const s = new THREE.SpotLight(COL, 0, 6, .22, .5, 1.3); s.position.copy(p0); s.target.position.copy(tgt); s.castShadow = true; s.shadow.mapSize.set(512, 512); s.shadow.bias = -.0005; scene.add(s, s.target);
+  return { g, body, base, stem, ledM, s };
+})();
+const hemi = new THREE.HemisphereLight('#ffe7cc', '#3a2c20', .1); scene.add(hemi);
+const fill = new THREE.PointLight('#ffd6a0', 0, 12, 1.4); fill.position.set(0, 2.2, 3.2); scene.add(fill);
+const bounce = new THREE.PointLight('#ffdcb4', 0, 7, 1.2); bounce.position.set(0, 1.1, 2.2); scene.add(bounce); // light bounced off the floor and wall, reaching the slab
+
+const VIEWS = {
+  w: { pos: [-.3, 1.62, 5.0], tgt: [.2, 1.75, 0], fov: 68 },           // the living room, ceiling and back wall
+  u: { pos: [-.2, 1.25, 3.6], tgt: [.1, 2.75, .6], fov: 64 },          // low, looking up at the ceiling: the spots on the bare slab
+  c: { pos: [-.12, 2.42, 1.55], tgt: [-.52, 2.72, 1.0], fov: 34 },     // macro on one wall-wash spot (x -.55)
+  r: { pos: [-2.2, 2.3, 1.6], tgt: [1.4, 2.7, .95], fov: 44 },         // along the row of four wall-wash spots (the range)
+  p: { pos: [.55, 1.55, 3.1], tgt: [1.55, 1.75, .3], fov: 52 },        // the painting with the adjustable spot
+};
+window.setState = (st) => {
+  const T = st.split('+'), has = k => T.includes(k), val = (k, d) => { const t = T.find(x => x.startsWith(k + ':')); return t ? t.split(':')[1] : d; };
+  const bare = has('bare'), on = has('on'), mix = has('mix'), adj = has('adj'), room = has('room');
+  const sh = val('sh', 'r'), fin = val('fin', 'w');
+  const look = [['r', 'w'], ['r', 'b'], ['s', 'w'], ['s', 'b']];
+  [...WASH, ...MID].forEach((p, i) => {
+    const [s1, f1] = mix && i < 4 ? look[i] : [sh, fin];
+    p.round.visible = s1 === 'r'; p.square.visible = s1 === 's';
+    const m = f1 === 'b' ? finB : finW; p.rb.material = m; p.sb.material = m;
+    p.s.intensity = on ? (i < 4 ? 11 : 9) : 0;
+    p.ledM.emissive.set(COL); p.ledM.emissiveIntensity = on ? 8 : 0;
+    p.glow.visible = on;
+  });
+  AJ.s.intensity = adj ? 6 : 0; AJ.ledM.emissive.set(COL); AJ.ledM.emissiveIntensity = adj ? 8 : 0;
+  for (const m of [cord, holder, bulb]) m.visible = bare;
+  bounce.intensity = on ? 2.2 : 0;
+  bulbM.emissive.set('#eaf2ff'); bulbM.emissiveIntensity = bare ? 6 : 0; bulbL.intensity = bare ? 7 : 0;
+  hemi.intensity = room ? .4 : (on || bare) ? .1 : .16;
+  fill.intensity = room ? 1.6 : on ? .35 : .3;
+  scene.environmentIntensity = room ? .25 : .05;
+  renderer.toneMappingExposure = 1.0;
+};
