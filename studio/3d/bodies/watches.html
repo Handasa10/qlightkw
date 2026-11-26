@@ -1,0 +1,98 @@
+// ===== Watch shop: a glass display counter of watches under one cold flat panel (steel looks grey, gold looks brass-dull, the watches
+//       melt into the background) vs a narrow spot on every watch (steel and crystal sparkle), a hidden strip inside the case, high CRI =====
+// back wall z=0 (x -2.4..2.4) dark walnut with lit niches, the counter runs along x at z 1.2..1.9 (customer side z > 1.9), ceiling 3.0
+// State tokens joined by '+':
+//   cold          one flat 6500 K ceiling panel (the "before")
+//   sp            narrow 3000 K spots, one aimed at each pair of watches, with glints on the steel and the crystal
+//   strip         a hidden warm strip inside the case (the watches lift off the black velvet)
+//   cri           true colours (gold is gold, leather is brown, dials are deep); without it the colours are washed out
+//   room          soft fill so the shop reads
+const CH = 3.0, RW = 2.4, RD = 5.0, CZ0 = 1.2, CZ1 = 1.9, CX0 = -1.6, CX1 = 1.6, CTH = .95;
+plane(RW * 2, RD, new THREE.MeshStandardMaterial({ color: '#cfc6ba', roughness: .3 }), [0, 0, RD / 2], [-Math.PI / 2, 0, 0]);
+const walnut = new THREE.MeshStandardMaterial({ map: flutedTex, color: '#6b4a32', roughness: .5, bumpMap: flutedBump, bumpScale: 1.5 });
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#e9e1d6', roughness: .9 });
+box(RW * 2, CH, .1, walnut, -RW, 0, -.1); box(.1, CH, RD + .1, wallM, -RW - .1, 0, -.1); box(.1, CH, RD + .1, wallM, RW, 0, -.1);
+box(RW * 2 + .2, .1, RD + .1, M.ceil, -RW - .1, CH, -.1, { cast: false });
+// three niches in the back wall with watch boxes
+const nicheM = new THREE.MeshStandardMaterial({ color: '#1a1512', roughness: .7 });
+for (const x of [-1.5, -.3, .9]) { box(.6, .7, .02, nicheM, x, 1.35, .0); box(.6, .02, .14, M.brass, x, 1.35, .0); for (let i = 0; i < 3; i++) box(.12, .08, .1, new THREE.MeshStandardMaterial({ color: i % 2 ? '#2a1d14' : '#0f2a22', roughness: .4 }), x + .08 + i * .18, 1.37, .02); }
+// the counter: base, black velvet bed, glass case
+box(CX1 - CX0, CTH - .05, CZ1 - CZ0, new THREE.MeshStandardMaterial({ color: '#2b211b', roughness: .4 }), CX0, 0, CZ0);
+const velvet = new THREE.MeshStandardMaterial({ color: '#0d0c0c', roughness: .95 });
+box(CX1 - CX0, .05, CZ1 - CZ0, velvet, CX0, CTH - .05, CZ0);
+box(CX1 - CX0, .02, .02, M.brass, CX0, CTH - .07, CZ1);
+const glassM = new THREE.MeshPhysicalMaterial({ color: '#e6f1f4', roughness: .02, transmission: .95, transparent: true, opacity: .14, thickness: .01, depthWrite: false });
+const CTT = CTH + .42;
+box(CX1 - CX0, .01, CZ1 - CZ0 - .05, glassM, CX0, CTT, CZ0, { cast: false });
+{ const front = new THREE.Mesh(new THREE.PlaneGeometry(CX1 - CX0, .45), glassM); front.position.set(0, CTH + .21, CZ1 - .02); front.rotation.x = -.1; scene.add(front); }
+for (const x of [CX0, CX1 - .01]) box(.01, .42, CZ1 - CZ0, glassM, x, CTH, CZ0, { cast: false });
+// ---- watches (vivid = high CRI, dull = low CRI) ----
+const VIVID = { steel: '#d6d9dd', gold: '#d9a93c', leather: '#7a3f1e', blue: '#173a86', green: '#1d5a3c', black: '#111111', cream: '#efe6d2', pillow: '#1a1816' };
+const dullOf = (c) => { const k = new THREE.Color(c); const hsl = {}; k.getHSL(hsl); return new THREE.Color().setHSL(hsl.h, hsl.s * .3, hsl.l * .85 + .03); };
+const MATS = {}; for (const [k, c] of Object.entries(VIVID)) MATS[k] = new THREE.MeshStandardMaterial({ color: c, roughness: k === 'steel' || k === 'gold' ? .18 : k === 'pillow' ? .95 : .6, metalness: k === 'steel' || k === 'gold' ? 1 : 0 });
+const crystal = new THREE.MeshPhysicalMaterial({ color: '#dfe8ff', roughness: 0, metalness: 0, transparent: true, opacity: .06, depthWrite: false });
+const glintTex = canvasTex(128, 128, (g, w, h) => { g.translate(w / 2, h / 2); const gr = g.createRadialGradient(0, 0, 0, 0, 0, w / 2); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.15, 'rgba(255,245,225,.6)'); gr.addColorStop(1, 'rgba(255,240,210,0)'); g.fillStyle = gr; g.fillRect(-w / 2, -h / 2, w, h); g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(-w / 2, -1.5, w, 3); g.fillRect(-1.5, -h / 2, 3, h); }, [1, 1], false);
+const GLINTS = [];
+function watch(x, z, y, caseK, dialK, strapK) {
+  const g = new THREE.Group(); g.position.set(x, y, z); scene.add(g);
+  const pil = new THREE.Mesh(new THREE.CapsuleGeometry(.026, .04, 6, 16), MATS.pillow); pil.rotation.z = Math.PI / 2; pil.position.y = .026; g.add(pil);
+  const w = new THREE.Group(); w.position.set(0, .062, .012); w.rotation.x = -.35; g.add(w);
+  const cs = new THREE.Mesh(new THREE.CylinderGeometry(.024, .024, .011, 40), MATS[caseK]); cs.rotation.x = Math.PI / 2; cs.castShadow = true; w.add(cs);
+  const bez = new THREE.Mesh(new THREE.TorusGeometry(.022, .0028, 10, 40), MATS[caseK]); bez.position.z = .006; w.add(bez);
+  const dial = new THREE.Mesh(new THREE.CircleGeometry(.0205, 40), MATS[dialK]); dial.position.z = .0058; w.add(dial);
+  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; const ix = new THREE.Mesh(new THREE.BoxGeometry(.0016, .004, .001), MATS[caseK === 'gold' ? 'gold' : 'steel']); ix.position.set(Math.sin(a) * .016, Math.cos(a) * .016, .0062); ix.rotation.z = -a; w.add(ix); }
+  const hh = new THREE.Mesh(new THREE.BoxGeometry(.0018, .011, .0008), MATS.steel); hh.position.set(.003, .004, .0068); hh.rotation.z = -.7; w.add(hh);
+  const mh = new THREE.Mesh(new THREE.BoxGeometry(.0014, .016, .0008), MATS.steel); mh.position.set(-.004, .006, .0072); mh.rotation.z = .55; w.add(mh);
+  const cr = new THREE.Mesh(new THREE.CircleGeometry(.021, 40), crystal); cr.position.z = .0075; w.add(cr);
+  const crown = new THREE.Mesh(new THREE.CylinderGeometry(.003, .003, .005, 12), MATS[caseK]); crown.rotation.z = Math.PI / 2; crown.position.x = .026; w.add(crown);
+  for (const s of [1, -1]) { const st = new THREE.Mesh(new THREE.BoxGeometry(.02, .028, .004), MATS[strapK]); st.position.set(0, s * .03, -.014); st.rotation.x = -1.35; w.add(st); }
+  const glM = new THREE.MeshBasicMaterial({ map: glintTex, color: '#fff6e8', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+  const gl = new THREE.Mesh(new THREE.PlaneGeometry(.018, .018), glM); gl.position.set(-.012, .012, .009); w.add(gl); GLINTS.push(glM);
+  return g;
+}
+const KINDS = [['steel', 'blue', 'steel'], ['gold', 'black', 'leather'], ['steel', 'cream', 'steel'], ['steel', 'green', 'leather'], ['gold', 'cream', 'gold']];
+for (let i = 0; i < 10; i++) { const x = -1.35 + i * .3; const [c, d, st] = KINDS[i % 5]; watch(x, 1.55, CTH, c, d, st); }
+// ---- lights ----
+const panelM = new THREE.MeshStandardMaterial({ color: '#f4f4f2', roughness: .6, emissive: '#000' });
+box(.6, .02, .6, panelM, -.3, CH - .02, 1.3, { cast: false });
+const panel = new THREE.RectAreaLight('#e8f0ff', 0, .6, .6); panel.position.set(0, CH - .025, 1.6); panel.lookAt(0, 0, 1.6); scene.add(panel);
+const panelPt = new THREE.PointLight('#e8f0ff', 0, 7, 1.3); panelPt.position.set(0, CH - .3, 1.8); scene.add(panelPt);
+const WARM = '#ffd9b0';
+const spotM = new THREE.MeshStandardMaterial({ color: '#141414', roughness: .4, metalness: .4 });
+const SPOTS = [-1.2, -.6, 0, .6, 1.2].map((x) => {
+  const g = new THREE.Group(); g.position.set(x, CH, 2.3); scene.add(g);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .02, 24), spotM); base.position.y = -.01; g.add(base);
+  const head = new THREE.Group(); head.position.y = -.06; g.add(head);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, .12, 24), spotM); head.add(body);
+  const lensM = emis('#000', 0); const lens = new THREE.Mesh(new THREE.CircleGeometry(.02, 20), lensM); lens.position.y = -.061; lens.rotation.x = Math.PI / 2; head.add(lens);
+  const s = new THREE.SpotLight(WARM, 0, 6, .2, .4, 1.3); s.castShadow = true; s.shadow.mapSize.set(1024, 1024); s.shadow.bias = -.0004; scene.add(s, s.target);
+  const from = new THREE.Vector3(x, CH - .06, 2.3), tgt = new THREE.Vector3(x, CTH + .08, 1.55); const dir = tgt.clone().sub(from).normalize();
+  head.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir); s.position.copy(from).add(dir.clone().multiplyScalar(.07)); s.target.position.copy(tgt);
+  return { lensM, s };
+});
+const strip = new THREE.RectAreaLight(WARM, 0, CX1 - CX0 - .1, .03); strip.position.set(0, CTT - .015, CZ0 + .15); strip.lookAt(0, 0, CZ0 + .45); scene.add(strip);
+const stripM = emis('#000', 0); box(CX1 - CX0 - .1, .008, .015, stripM, CX0 + .05, CTT - .02, CZ0 + .14, { cast: false });
+const nicheL = [-1.2, 0, 1.2].map(x => { const p = new THREE.PointLight(WARM, 0, 1.2, 2); p.position.set(x, 1.95, .2); scene.add(p); return p; });
+const hemi = new THREE.HemisphereLight('#fff2e2', '#3a2c20', .1); scene.add(hemi);
+const fill = new THREE.PointLight('#ffe2c4', 0, 10, 1.4); fill.position.set(0, 2.3, 3.6); scene.add(fill);
+const VIEWS = {
+  d: { pos: [-.75, 1.2, 2.2], tgt: [-.75, 1.0, 1.55], fov: 75 },        // the display case from the customer's side
+  g: { pos: [-.45, 1.08, 1.85], tgt: [-.45, 1.01, 1.56], fov: 30 },   // macro on the steel watch (green dial, leather)
+  c: { pos: [-1.05, 1.08, 1.85], tgt: [-1.05, 1.01, 1.56], fov: 30 },   // macro on the gold watch (cream dial, leather)
+  m: { pos: [-1.35, 1.08, 1.85], tgt: [-1.35, 1.01, 1.56], fov: 30 }, // macro on the steel watch (blue dial)
+  w: { pos: [.4, 1.62, 4.7], tgt: [0, 1.3, .8], fov: 62 },           // the shop: wall, counter, spots on the ceiling
+};
+window.setState = (st) => {
+  const T = st.split('+'), has = k => T.includes(k);
+  const cold = has('cold'), sp = has('sp'), stp = has('strip'), cri = has('cri'), room = has('room');
+  for (const [k, c] of Object.entries(VIVID)) { MATS[k].color.copy(cri ? new THREE.Color(c) : dullOf(c)); if (k === 'steel' || k === 'gold') MATS[k].roughness = sp ? .12 : .42; }
+  panelM.emissive.set('#e8f0ff'); panelM.emissiveIntensity = cold ? 4 : 0; panel.intensity = cold ? 14 : 0; panelPt.intensity = cold ? 3.5 : 0;
+  SPOTS.forEach(o => { o.s.intensity = sp ? 3.2 : 0; o.lensM.emissive.set(WARM); o.lensM.emissiveIntensity = sp ? 9 : 0; });
+  GLINTS.forEach((m, i) => m.opacity = sp ? .4 : 0);
+  strip.intensity = stp ? 7 : 0; stripM.emissive.set(WARM); stripM.emissiveIntensity = stp ? 5 : 0;
+  nicheL.forEach(p => p.intensity = (sp || stp) ? .8 : 0);
+  hemi.intensity = room ? .35 : .12;
+  fill.intensity = room ? 1.4 : (sp || stp) ? .45 : .2;
+  scene.environmentIntensity = room ? .22 : sp ? .35 : .06;
+  renderer.toneMappingExposure = 1.0;
+};
