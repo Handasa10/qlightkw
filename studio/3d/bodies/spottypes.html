@@ -1,0 +1,115 @@
+// ===== Four spot types as product heroes on a dark studio stage + a modern room with square spots =====
+// Products float at y=1.0, z=0, face tilted toward the camera, right to left: 1 fixed recessed (x .9), 2 adjustable gimbal (x .3),
+// 3 square recessed (x -.3), 4 surface-mounted cylinder (x -.9).  The modern room sits at x 17..23 (ceiling 2.8, 2x3 square spots).
+// State tokens joined by '+':  on (lenses lit) · room (square-spot room lights on) · rim (warm rim light on the products)
+const PY = 1.0, D = .24, XS = [D / 2, -D / 2, D / 2, -D / 2], YS = [PY + D / 2, PY + D / 2, PY - D / 2, PY - D / 2];
+// ---- stage: dark floor + backdrop with a soft warm glow ----
+const backTex = canvasTex(1024, 1024, (g, w, h) => {
+  g.fillStyle = '#0f0d0c'; g.fillRect(0, 0, w, h);
+  const r = g.createRadialGradient(w * .5, h * .55, 10, w * .5, h * .55, w * .55);
+  r.addColorStop(0, 'rgba(255,120,45,.38)'); r.addColorStop(.45, 'rgba(120,52,22,.18)'); r.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = r; g.fillRect(0, 0, w, h);
+});
+plane(9, 5, new THREE.MeshBasicMaterial({ map: backTex }), [0, 1.2, -2.2], [0, 0, 0]);
+plane(9, 6, new THREE.MeshStandardMaterial({ color: '#141110', roughness: .35, metalness: .2 }), [0, 0, 0], [-Math.PI / 2, 0, 0]);
+// ---- materials ----
+const white = new THREE.MeshStandardMaterial({ color: '#f1efea', roughness: .38 });
+const whiteD = new THREE.MeshStandardMaterial({ color: '#f1efea', roughness: .38, side: THREE.DoubleSide });
+const alu = new THREE.MeshStandardMaterial({ color: '#b8bcc2', roughness: .32, metalness: .85 });
+const refl = new THREE.MeshStandardMaterial({ color: '#e9e6df', roughness: .18, metalness: .7, side: THREE.DoubleSide });
+const darkIn = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: .5 });
+const lens = []; const lensMat = () => { const m = emis('#ffd29a', 0); lens.push(m); return m; };
+const lathe = (pts, mat, parent, y = 0, seg = 56) => { const m = new THREE.Mesh(new THREE.LatheGeometry(pts.map(([r, yy]) => new THREE.Vector2(r, yy)), seg), mat); m.position.y = y; m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; };
+const cyl = (r1, r2, h, mat, parent, y, seg = 48, open = false) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, seg, 1, open), mat); m.position.y = y; m.castShadow = true; parent.add(m); return m; };
+const disc = (r, mat, parent, y) => { const m = new THREE.Mesh(new THREE.CircleGeometry(r, 40), mat); m.rotation.x = Math.PI / 2; m.position.y = y; parent.add(m); return m; };
+const bx = (w, h, d, mat, parent, x, y, z, ry = 0) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.rotation.y = ry; m.castShadow = true; parent.add(m); return m; };
+// fins: radial (round body) or parallel (square body); y = bottom of the fins
+function radialFins(parent, y, r0, r1, h, n = 18) { cyl(r0, r0, h, alu, parent, y + h / 2); for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, rm = (r0 + r1) / 2; bx(r1 - r0, h * .96, .0035, alu, parent, Math.cos(a) * rm, y + h / 2, Math.sin(a) * rm, -a); } cyl(r1 * .55, r1 * .55, .006, alu, parent, y + h + .003); }
+function clips(parent, r) { for (const s of [-1, 1]) { const c = bx(.004, .045, .012, alu, parent, s * (r + .006), .026, 0); c.rotation.z = s * .5; } }
+function product(k) {
+  const g = new THREE.Group(); g.position.set(XS[k - 1], YS[k - 1], 0); scene.add(g);
+  if (k === 1) {        // fixed recessed: round white trim, deep reflector, finned heat sink
+    lathe([[.03, 0], [.062, 0], [.064, .004], [.05, .007], [.044, .007]], white, g);
+    lathe([[.044, .002], [.034, .02], [.024, .036]], refl, g); disc(.024, lensMat(), g, .0355);
+    radialFins(g, .036, .026, .05, .05); clips(g, .05);
+  } else if (k === 2) { // adjustable gimbal: trim ring, a head tilted inside a yoke
+    lathe([[.046, 0], [.064, 0], [.066, .004], [.054, .008], [.048, .008]], white, g);
+    const hd = new THREE.Group(); hd.position.y = .03; hd.rotation.z = .42; g.add(hd);
+    lathe([[.036, -.03], [.04, -.02], [.04, .02], [.03, .03]], white, hd); lathe([[.034, -.029], [.026, -.012], [.018, 0]], refl, hd); disc(.018, lensMat(), hd, -.001);
+    radialFins(hd, .03, .018, .032, .03, 14);
+    const yk = new THREE.Mesh(new THREE.TorusGeometry(.046, .003, 8, 40, Math.PI), alu); yk.rotation.y = Math.PI / 2; yk.position.y = .015; g.add(yk);
+    clips(g, .052);
+  } else if (k === 3) { // square recessed: square trim, square reflector, parallel fins
+    const fr = .064, op = .044;
+    for (const [w, d, x, z] of [[fr * 2, fr - op, 0, (fr + op) / 2], [fr * 2, fr - op, 0, -(fr + op) / 2], [fr - op, op * 2, (fr + op) / 2, 0], [fr - op, op * 2, -(fr + op) / 2, 0]]) bx(w, .006, d, white, g, x, .003, z);
+    const cup = new THREE.Mesh(new THREE.CylinderGeometry(.02, .044 * 1.414, .03, 4, 1, true), refl); cup.rotation.y = Math.PI / 4; cup.position.y = .021; g.add(cup);
+    disc(.02, lensMat(), g, .035); bx(.066, .008, .066, alu, g, 0, .04, 0);
+    for (let i = 0; i < 9; i++) bx(.003, .045, .066, alu, g, -.03 + i * .0075, .067, 0);
+    clips(g, .05);
+  } else {              // surface: a white cylinder, lens deep inside, round mounting plate on top
+    cyl(.045, .045, .12, whiteD, g, .06, 56, true); cyl(.05, .05, .006, white, g, .123); lathe([[.045, 0], [.04, 0], [.04, .006]], white, g);
+    lathe([[.043, .001], [.03, .02], [.02, .032]], refl, g); disc(.02, lensMat(), g, .031);
+    lathe([[.0438, -.0005], [.0446, .0015]], darkIn, g);
+  }
+  // face toward the camera (+z) and a little down
+  g.rotation.x = -1.0;
+  return g;
+}
+const P = [1, 2, 3, 4].map(product);
+// ---- studio lights ----
+const hemi = new THREE.HemisphereLight('#ffe9d2', '#1c1410', .25); scene.add(hemi);
+const key = new THREE.SpotLight('#fff2e2', 0, 10, .5, .6, 1.2); key.position.set(1.6, 2.6, 2.6); key.target.position.set(0, PY, 0); key.castShadow = true; scene.add(key, key.target);
+const fillL = new THREE.PointLight('#ffd8b4', 0, 8, 1.5); fillL.position.set(-1.8, 1.2, 2.2); scene.add(fillL);
+const rim = new THREE.SpotLight('#ff8a3c', 0, 8, .6, .7, 1.2); rim.position.set(0, 2.2, -1.6); rim.target.position.set(0, PY, 0); scene.add(rim, rim.target);
+
+// ---- modern room with square spots (x 17..23) ----
+const OX = 20, CHR = 2.8;
+const wallR = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#d9d2c7', roughness: .92 });
+plane(7, 7, M.floor, [OX, 0, 2.5], [-Math.PI / 2, 0, 0]);
+box(6.4, CHR, .1, wallR, OX - 3.2, 0, -.1);
+box(.1, CHR, 6, wallR, OX - 3.3, 0, -.1); box(.1, CHR, 6, wallR, OX + 3.2, 0, -.1);
+box(6.2, .08, 6, M.ceil, OX - 3.1, CHR, .05, { cast: false });
+// shadow gap around the ceiling edge
+const gapM = new THREE.MeshStandardMaterial({ color: '#2a2622', roughness: 1 });
+box(6.4, .05, .06, gapM, OX - 3.2, CHR - .05, -.0, { cast: false }); box(.06, .05, 6, gapM, OX - 3.2, CHR - .05, 0, { cast: false }); box(.06, .05, 6, gapM, OX + 3.14, CHR - .05, 0, { cast: false });
+// fluted feature panel + console + art + sofa
+box(2.4, 2.3, .06, M.fluted, OX - 1.2, 0, 0);
+box(1.8, .5, .38, M.darkWood, OX - .9, 0, .08);
+const artTex = canvasTex(800, 600, (g, w, h) => { g.fillStyle = '#e8e0d2'; g.fillRect(0, 0, w, h); g.fillStyle = '#23324a'; g.fillRect(w * .1, h * .55, w * .8, h * .3); g.fillStyle = '#ef5924'; g.beginPath(); g.arc(w * .66, h * .38, 90, 0, 7); g.fill(); g.fillStyle = '#c9b79c'; g.fillRect(w * .18, h * .2, w * .25, h * .3); });
+box(1.12, .84, .03, M.black, OX - .56, 1.18, .06); plane(1.06, .78, new THREE.MeshStandardMaterial({ map: artTex, roughness: .8 }), [OX, 1.6, .095], [0, 0, 0]);
+const sofaM = new THREE.MeshStandardMaterial({ map: fabricTex, color: '#cfc3b0', roughness: .95 });
+box(2.3, .42, .9, sofaM, OX - 1.15, .1, 1.9, { r: .06 }); box(2.3, .4, .22, sofaM, OX - 1.15, .45, 2.6, { r: .06 });
+for (const x of [-1.3, 1.08]) box(.22, .58, .9, sofaM, OX + x, .1, 1.9, { r: .06 });
+box(1.0, .32, .6, M.tableTop, OX - .5, 0, 1.05, { r: .02 });
+plane(3.0, 2.0, M.rug, [OX, .005, 1.7], [-Math.PI / 2, 0, 0]);
+plant(OX + 2.4, .5, 1.5, .5); plant(OX - 2.5, .5, 1.2, .45);
+// square spots: 2 rows x 3
+const sqSpots = [];
+for (const z of [.75, 2.25]) for (const x of [-1.6, 0, 1.6]) {
+  const tr = box(.13, .012, .13, white, OX + x - .065, CHR - .012, z - .065, { cast: false });
+  const lm = emis('#ffd29a', 0); const l = new THREE.Mesh(new THREE.PlaneGeometry(.085, .085), lm); l.rotation.x = Math.PI / 2; l.position.set(OX + x, CHR - .013, z); scene.add(l);
+  const s = new THREE.SpotLight('#ffd6a0', 0, 9, .5, .55, 1.5); s.position.set(OX + x, CHR - .03, z); s.target.position.set(OX + x, 0, z + (z < 1 ? -.35 : 0)); s.castShadow = true; s.shadow.mapSize.set(1024, 1024); scene.add(s, s.target);
+  sqSpots.push([s, lm]);
+}
+const roomFill = new THREE.PointLight('#ffd6a0', 0, 9, 1.6); roomFill.position.set(OX, 2.0, 3.6); scene.add(roomFill);
+
+const VIEWS = {
+  all: { pos: [0, PY + .05, .82], tgt: [0, PY, 0], fov: 46 },        // the four products, 2 x 2
+  a1: { pos: [XS[0] + .03, YS[0] + .07, .42], tgt: [XS[0], YS[0], 0], fov: 34 },
+  a2: { pos: [XS[1] + .03, YS[1] + .07, .42], tgt: [XS[1], YS[1], 0], fov: 34 },
+  a3: { pos: [XS[2] + .03, YS[2] + .07, .42], tgt: [XS[2], YS[2], 0], fov: 34 },
+  a4: { pos: [XS[3] + .03, YS[3] + .07, .42], tgt: [XS[3], YS[3] + .02, 0], fov: 34 },
+  q: { pos: [OX + .2, 1.65, 4.3], tgt: [OX, 1.95, .8], fov: 66 },          // the modern room, ceiling with the square spots
+  qu: { pos: [OX + .3, 1.5, 3.4], tgt: [OX - .2, 2.8, 1.2], fov: 60 },    // looking up at the square spots
+};
+window.setState = (st) => {
+  const T = st.split('+'), has = k => T.includes(k);
+  const on = has('on'), room = has('room');
+  lens.forEach(m => { m.emissiveIntensity = on ? 7 : 0; });
+  key.intensity = 9; fillL.intensity = 1.4; rim.intensity = has('rim') ? 14 : 0;
+  sqSpots.forEach(([s, lm]) => { s.intensity = room ? 22 : 0; lm.emissiveIntensity = room ? 6 : 0; });
+  roomFill.intensity = room ? 2.6 : .3;
+  hemi.intensity = room ? .15 : .25;
+  scene.environmentIntensity = .12;
+  renderer.toneMappingExposure = .95;
+};
