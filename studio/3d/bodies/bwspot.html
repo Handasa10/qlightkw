@@ -7,6 +7,8 @@
 //   fin:s         split: spots on the left (x < 0) white, on the right black (the quiz A | B)
 //   deco          modern decor with black accents (black frames, black shelf, black coffee table, black floor lamp)
 //   room          soft daylight fill (ceiling reads clearly with the spots off)
+//   sensor        a ceiling motion sensor (white dome) over the coffee table · cone (its detection cone) · det (its red LED lit)
+//   dark          the spots just switched off by the sensor (a dim night fill only)
 const CH = 2.9, RW = 2.4, RD = 5.2;
 const COL = '#ffd9a8';
 plane(RW * 2, RD, new THREE.MeshStandardMaterial({ map: oakTex, color: '#c9a882', roughness: .55 }), [0, 0, RD / 2], [-Math.PI / 2, 0, 0]);
@@ -62,6 +64,13 @@ function spot(x, z, aim) {
 }
 const SP = [...[-1.65, -.55, .55, 1.65].map(x => spot(x, 1.1, [x, .7, -.1])), ...[-.9, .9].map(x => spot(x, 3.0))];
 const SPX = [-1.65, -.55, .55, 1.65, -.9, .9];
+// ---- ceiling motion sensor ----
+const sensor = new THREE.Group(); sensor.position.set(-.1, CH, 2.4); scene.add(sensor);
+{ const base = new THREE.Mesh(new THREE.CylinderGeometry(.065, .065, .012, 40), trimW); base.position.y = -.006; sensor.add(base);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(.05, 32, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#f2f1ee', roughness: .2, transparent: true, opacity: .96 })); dome.position.y = -.012; sensor.add(dome); }
+const detM = emis('#000', 0); const det = new THREE.Mesh(new THREE.SphereGeometry(.006, 12, 8), detM); det.position.set(.03, CH - .025, 2.4); scene.add(det);
+const coneM = new THREE.MeshBasicMaterial({ color: '#ff9a3c', transparent: true, opacity: .05, depthWrite: false, side: THREE.DoubleSide });
+const cone = new THREE.Mesh(new THREE.ConeGeometry(2.0, CH - .06, 48, 1, true), coneM); cone.position.set(-.1, (CH - .06) / 2, 2.4); scene.add(cone);
 const hemi = new THREE.HemisphereLight('#fff4e6', '#4a3a2c', .1); scene.add(hemi);
 const fill = new THREE.PointLight('#ffe8cc', 0, 12, 1.4); fill.position.set(0, 2.2, 3.4); scene.add(fill);
 const bounce = new THREE.PointLight('#ffdcb4', 0, 7, 1.2); bounce.position.set(0, 1.0, 2.2); scene.add(bounce);
@@ -71,11 +80,13 @@ const VIEWS = {
   u: { pos: [0, 1.15, 4.7], tgt: [0, 2.9, 1.6], fov: 74 },           // low, looking up: the white ceiling and all six spots
   c: { pos: [-.3, 2.5, 1.75], tgt: [-.55, 2.88, 1.1], fov: 32 },      // macro on one spot (x -.55)
   p: { pos: [0, 1.3, 1.65], tgt: [0, 2.9, 1.1], fov: 50 },           // looking up at the pair x -.55 | .55 (with fin:s: A white, B black)
+  s: { pos: [.35, 2.45, 3.05], tgt: [-.1, 2.86, 2.4], fov: 40 },        // macro on the motion sensor
   g: { pos: [.2, 1.15, 3.3], tgt: [-.2, 2.6, 1.3], fov: 58 },         // from the sofa side, looking at the spots (glare)
 };
 window.setState = (st) => {
   const T = st.split('+'), has = k => T.includes(k), val = (k, d) => { const t = T.find(x => x.startsWith(k + ':')); return t ? t.split(':')[1] : d; };
-  const on = has('on'), deco = has('deco'), room = has('room'), fin = val('fin', 'w');
+  const on = has('on'), deco = has('deco'), room = has('room'), fin = val('fin', 'w'), dark = has('dark');
+  sensor.visible = has('sensor') || has('cone'); det.visible = sensor.visible; cone.visible = has('cone'); detM.emissive.set('#ff2a1a'); detM.emissiveIntensity = has('det') ? 6 : 0;
   SP.forEach((p, i) => {
     const blk = fin === 'b' || (fin === 's' && SPX[i] > 0);
     p.trim.material = blk ? trimB : trimW; p.cup.material = blk ? cupB : cupW;
@@ -88,8 +99,8 @@ window.setState = (st) => {
   lamp.visible = deco;
   bounce.intensity = on ? 2.6 : 0;
   ceilM.emissive.set('#fff1de'); ceilM.emissiveIntensity = on ? .16 : 0;
-  hemi.intensity = room ? .5 : on ? .12 : .2;
-  fill.intensity = room ? 1.8 : on ? .35 : .4;
+  hemi.intensity = room ? .5 : on ? .12 : dark ? .07 : .2;
+  fill.intensity = room ? 1.8 : on ? .35 : dark ? .25 : .4;
   scene.environmentIntensity = room ? .3 : .06;
   renderer.toneMappingExposure = 1.0;
 };
