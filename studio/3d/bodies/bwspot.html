@@ -1,0 +1,95 @@
+// ===== Quiz: black or white recessed spots in a white gypsum ceiling (modern living room) =====
+// x -2.4..2.4, floor y=0, white gypsum ceiling at 2.9, back wall z=0 (sofa, two framed prints, a shelf), camera side z=5.
+// Six recessed round spots: a row of four at z 1.1 (washing the back wall) and two at z 3.0.
+// State tokens joined by '+':
+//   on            spots lit (warm 3000 K)
+//   fin:w | fin:b white trim with a white reflector (default) or black trim with a deep black cup
+//   fin:s         split: spots on the left (x < 0) white, on the right black (the quiz A | B)
+//   deco          modern decor with black accents (black frames, black shelf, black coffee table, black floor lamp)
+//   room          soft daylight fill (ceiling reads clearly with the spots off)
+const CH = 2.9, RW = 2.4, RD = 5.2;
+const COL = '#ffd9a8';
+plane(RW * 2, RD, new THREE.MeshStandardMaterial({ map: oakTex, color: '#c9a882', roughness: .55 }), [0, 0, RD / 2], [-Math.PI / 2, 0, 0]);
+const wallM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#ece5da', roughness: .9 });
+box(RW * 2, CH, .1, wallM, -RW, 0, -.1); box(.1, CH, RD + .1, wallM, -RW - .1, 0, -.1); box(.1, CH, RD + .1, wallM, RW, 0, -.1);
+const ceilM = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#fbfaf7', roughness: .95 });
+box(RW * 2 + .2, .1, RD + .1, ceilM, -RW - .1, CH, -.1, { cast: false });
+const skM = new THREE.MeshStandardMaterial({ color: '#f3eee6', roughness: .5 });
+box(RW * 2, .09, .015, skM, -RW, 0, 0);
+// sofa, cushions, rug
+box(2.5, .42, .9, M.fabric, -1.35, 0, .05, { r: .06 }); box(2.5, .48, .22, M.fabric, -1.35, .42, .05, { r: .06 });
+for (const x of [-1.45, 1.03]) box(.22, .6, .9, M.fabric, x, 0, .05, { r: .06 });
+box(.45, .38, .14, M.cushion, -1.0, .42, .3, { r: .05 }); box(.45, .38, .14, M.goldCush, .35, .42, .3, { r: .05 });
+plane(2.8, 1.9, M.rug, [-.1, .005, 1.95], [-Math.PI / 2, 0, 0]);
+// coffee table: oak top on oak legs, or a black top on black legs (deco)
+const ctTop = box(1.1, .05, .6, M.darkWood, -.65, .38, 1.6); const ctLegs = [[-.6, 1.65], [.39, 1.65], [-.6, 2.14], [.39, 2.14]].map(([x, z]) => box(.04, .38, .04, M.darkWood, x, 0, z));
+// two framed prints over the sofa + a wall shelf on the right
+const printTex = (a, b, c) => canvasTex(400, 520, (g, w, h) => { g.fillStyle = a; g.fillRect(0, 0, w, h); g.fillStyle = b; g.beginPath(); g.arc(w * .5, h * .42, w * .26, 0, 7); g.fill(); g.fillStyle = c; g.fillRect(0, h * .72, w, h * .28); });
+const frameW = new THREE.MeshStandardMaterial({ color: '#d8c7ad', roughness: .6 });
+const frames = [], prints = [[-.95, printTex('#efe4d2', '#c78a5a', '#6f8278')], [.0, printTex('#e9e2d6', '#3f5864', '#b99b72')]].map(([x, tex]) => {
+  frames.push(box(.62, .8, .03, frameW, x - .31, 1.25, -.0));
+  return plane(.54, .72, new THREE.MeshStandardMaterial({ map: tex, roughness: .8 }), [x, 1.65, .032], [0, 0, 0]);
+});
+const shelf = box(.9, .035, .25, frameW, 1.25, 1.35, -.0); const shelf2 = box(.9, .035, .25, frameW, 1.25, 1.8, -.0);
+const vase = new THREE.Mesh(new THREE.CylinderGeometry(.06, .05, .22, 24), M.pot); vase.position.set(1.45, 1.495, .12); scene.add(vase);
+const books = [0, 1, 2, 3].map(i => box(.04, .2 + (i % 2) * .04, .16, [M.cushion, M.goldCush, M.fabric, M.darkWood][i], 1.8 + i * .05, 1.835, .04));
+// floor lamp (only with deco): black arc stem + black shade, right of the sofa
+const blackM = new THREE.MeshStandardMaterial({ color: '#121212', roughness: .4, metalness: .4 });
+const lamp = new THREE.Group(); lamp.position.set(1.65, 0, .7); scene.add(lamp);
+{ const base = new THREE.Mesh(new THREE.CylinderGeometry(.14, .14, .03, 32), blackM); base.position.y = .015; lamp.add(base);
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, 1.5, 12), blackM); stem.position.y = .78; lamp.add(stem);
+  const shade = new THREE.Mesh(new THREE.ConeGeometry(.17, .22, 32, 1, true), blackM); shade.position.y = 1.58; lamp.add(shade); }
+// plant left
+const pot = new THREE.Mesh(new THREE.CylinderGeometry(.16, .12, .4, 24), M.pot); pot.position.set(-2.05, .2, .45); scene.add(pot);
+for (let i = 0; i < 11; i++) { const l = new THREE.Mesh(new THREE.SphereGeometry(.12, 10, 8), M.leaf); l.scale.set(.45, 1.6, .25); l.position.set(-2.05 + Math.cos(i * 2.4) * .12, .65 + (i % 4) * .12, .45 + Math.sin(i * 2.4) * .12); l.rotation.z = Math.cos(i * 2.4) * .5; scene.add(l); }
+
+// ---- recessed spots ----
+const glowTex = canvasTex(128, 128, (g, w, h) => { const gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.2, 'rgba(255,240,215,.5)'); gr.addColorStop(.55, 'rgba(255,220,180,.1)'); gr.addColorStop(1, 'rgba(255,220,180,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }, [1, 1], false);
+const trimW = new THREE.MeshStandardMaterial({ color: '#f7f6f3', roughness: .35 });
+const cupW = new THREE.MeshStandardMaterial({ color: '#e4e2de', roughness: .25, metalness: .2, side: THREE.DoubleSide });
+const trimB = new THREE.MeshStandardMaterial({ color: '#131313', roughness: .35, metalness: .3 });
+const cupB = new THREE.MeshStandardMaterial({ color: '#0a0a0a', roughness: .7, side: THREE.DoubleSide });
+function spot(x, z, aim) {
+  const g = new THREE.Group(); g.position.set(x, CH, z); scene.add(g);
+  const trim = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .008, 40), trimW); trim.position.y = -.004; g.add(trim);
+  const cup = new THREE.Mesh(new THREE.CylinderGeometry(.045, .03, .05, 32, 1, true), cupW); cup.position.y = .021; g.add(cup);
+  const ledM = emis('#000', 0);
+  const led = new THREE.Mesh(new THREE.CircleGeometry(.022, 24), ledM); led.rotation.x = Math.PI / 2; led.position.y = .044; g.add(led);
+  const glowM = new THREE.MeshBasicMaterial({ map: glowTex, color: '#ffe4c0', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+  const glow = new THREE.Mesh(new THREE.CircleGeometry(.1, 32), glowM); glow.rotation.x = Math.PI / 2; glow.position.y = -.01; g.add(glow);
+  const s = new THREE.SpotLight(COL, 0, 8, .5, .6, 1.4); s.position.set(x, CH - .05, z); s.target.position.set(...(aim || [x, 0, z])); s.castShadow = true; s.shadow.mapSize.set(512, 512); s.shadow.bias = -.0005; scene.add(s, s.target);
+  return { trim, cup, ledM, glow, glowM, s };
+}
+const SP = [...[-1.65, -.55, .55, 1.65].map(x => spot(x, 1.1, [x, .7, -.1])), ...[-.9, .9].map(x => spot(x, 3.0))];
+const SPX = [-1.65, -.55, .55, 1.65, -.9, .9];
+const hemi = new THREE.HemisphereLight('#fff4e6', '#4a3a2c', .1); scene.add(hemi);
+const fill = new THREE.PointLight('#ffe8cc', 0, 12, 1.4); fill.position.set(0, 2.2, 3.4); scene.add(fill);
+const bounce = new THREE.PointLight('#ffdcb4', 0, 7, 1.2); bounce.position.set(0, 1.0, 2.2); scene.add(bounce);
+
+const VIEWS = {
+  w: { pos: [-.2, 1.6, 5.0], tgt: [.1, 1.8, 0], fov: 70 },            // the living room, ceiling and back wall
+  u: { pos: [0, 1.15, 4.7], tgt: [0, 2.9, 1.6], fov: 74 },           // low, looking up: the white ceiling and all six spots
+  c: { pos: [-.3, 2.5, 1.75], tgt: [-.55, 2.88, 1.1], fov: 32 },      // macro on one spot (x -.55)
+  p: { pos: [0, 1.3, 1.65], tgt: [0, 2.9, 1.1], fov: 50 },           // looking up at the pair x -.55 | .55 (with fin:s: A white, B black)
+  g: { pos: [.2, 1.15, 3.3], tgt: [-.2, 2.6, 1.3], fov: 58 },         // from the sofa side, looking at the spots (glare)
+};
+window.setState = (st) => {
+  const T = st.split('+'), has = k => T.includes(k), val = (k, d) => { const t = T.find(x => x.startsWith(k + ':')); return t ? t.split(':')[1] : d; };
+  const on = has('on'), deco = has('deco'), room = has('room'), fin = val('fin', 'w');
+  SP.forEach((p, i) => {
+    const blk = fin === 'b' || (fin === 's' && SPX[i] > 0);
+    p.trim.material = blk ? trimB : trimW; p.cup.material = blk ? cupB : cupW;
+    p.s.intensity = on ? (i < 4 ? 11 : 9) : 0;
+    p.ledM.emissive.set(COL); p.ledM.emissiveIntensity = on ? 8 : 0;
+    p.glow.visible = on; p.glowM.opacity = blk ? .45 : 1; p.glow.scale.setScalar(blk ? .7 : 1);
+  });
+  const fm = deco ? blackM : frameW; frames.forEach(f => f.material = fm); shelf.material = fm; shelf2.material = fm;
+  ctTop.material = deco ? blackM : M.darkWood; ctLegs.forEach(l => l.material = deco ? blackM : M.darkWood);
+  lamp.visible = deco;
+  bounce.intensity = on ? 2.6 : 0;
+  ceilM.emissive.set('#fff1de'); ceilM.emissiveIntensity = on ? .16 : 0;
+  hemi.intensity = room ? .5 : on ? .12 : .2;
+  fill.intensity = room ? 1.8 : on ? .35 : .4;
+  scene.environmentIntensity = room ? .3 : .06;
+  renderer.toneMappingExposure = 1.0;
+};
