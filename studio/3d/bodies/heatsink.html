@@ -1,0 +1,56 @@
+// ===== Heat sink: an aluminium finned downlight vs a light plastic-bodied one, as product heroes on a dark stage =====
+// Both stand upright (lens down) at y=PY, tipped a little toward the camera: plastic at x=-X, aluminium at x=+X.
+// State tokens joined by '+':  on (lenses lit) · rim (warm rim light) · hotP (heat trapped: plastic body goes translucent, red core) ·
+//   hotA (aluminium fins glow faintly warm: heat leaving) · solo:a / solo:p (hide the other fixture)
+const PY = 1.0, X = .1;
+const backTex = canvasTex(1024, 1024, (g, w, h) => {
+  g.fillStyle = '#0f0d0c'; g.fillRect(0, 0, w, h);
+  const r = g.createRadialGradient(w * .5, h * .55, 10, w * .5, h * .55, w * .55);
+  r.addColorStop(0, 'rgba(255,120,45,.38)'); r.addColorStop(.45, 'rgba(120,52,22,.18)'); r.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = r; g.fillRect(0, 0, w, h);
+});
+plane(9, 5, new THREE.MeshBasicMaterial({ map: backTex }), [0, 1.2, -2.2], [0, 0, 0]);
+plane(9, 6, new THREE.MeshStandardMaterial({ color: '#141110', roughness: .35, metalness: .2 }), [0, 0, 0], [-Math.PI / 2, 0, 0]);
+const white = new THREE.MeshStandardMaterial({ color: '#f1efea', roughness: .38 });
+const alu = new THREE.MeshStandardMaterial({ color: '#b8bcc2', roughness: .3, metalness: .85, emissive: '#ff5a1a', emissiveIntensity: 0 });
+const refl = new THREE.MeshStandardMaterial({ color: '#e9e6df', roughness: .18, metalness: .7, side: THREE.DoubleSide });
+const plastic = new THREE.MeshStandardMaterial({ color: '#efece4', roughness: .45, transparent: true, opacity: 1, side: THREE.DoubleSide });
+const core = emis('#ff3a10', 0);
+const lens = []; const lensMat = () => { const m = emis('#ffd29a', 0); lens.push(m); return m; };
+const lathe = (pts, mat, parent, y = 0, seg = 64) => { const m = new THREE.Mesh(new THREE.LatheGeometry(pts.map(([r, yy]) => new THREE.Vector2(r, yy)), seg), mat); m.position.y = y; m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; };
+const cyl = (r1, r2, h, mat, parent, y, seg = 56, open = false) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, seg, 1, open), mat); m.position.y = y; m.castShadow = true; parent.add(m); return m; };
+const disc = (r, mat, parent, y) => { const m = new THREE.Mesh(new THREE.CircleGeometry(r, 48), mat); m.rotation.x = Math.PI / 2; m.position.y = y; parent.add(m); return m; };
+const bx = (w, h, d, mat, parent, x, y, z, ry = 0) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.rotation.y = ry; m.castShadow = true; parent.add(m); return m; };
+function trim(g) { lathe([[.04, 0], [.07, 0], [.072, .005], [.056, .009], [.05, .009]], white, g); lathe([[.05, .003], [.038, .024], [.028, .04]], refl, g); disc(.028, lensMat(), g, .0395); }
+// aluminium: a solid core and 24 deep radial fins, a top plate
+const GA = new THREE.Group(); GA.position.set(X, PY, 0); scene.add(GA); trim(GA);
+cyl(.052, .052, .036, alu, GA, .009 + .018); cyl(.03, .03, .085, alu, GA, .04 + .0425); cyl(.045, .045, .008, alu, GA, .044);
+for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2, r0 = .03, r1 = .064, rm = (r0 + r1) / 2; bx(r1 - r0, .08, .004, alu, GA, Math.cos(a) * rm, .048 + .04, Math.sin(a) * rm, -a); }
+cyl(.036, .036, .006, alu, GA, .131);
+// plastic: a short closed shell; inside it the LED board + a red-hot core that shows when the shell goes translucent
+const GP = new THREE.Group(); GP.position.set(-X, PY, 0); scene.add(GP); trim(GP);
+cyl(.054, .058, .07, plastic, GP, .009 + .035); disc(.054, plastic, GP, .079);
+cyl(.03, .03, .006, core, GP, .046); const glow = new THREE.Mesh(new THREE.SphereGeometry(.026, 24, 16), core); glow.scale.y = .6; glow.position.y = .058; GP.add(glow);
+const hot = new THREE.PointLight('#ff4a14', 0, .16, 2); hot.position.set(0, .065, 0); GP.add(hot);
+for (const g of [GA, GP]) { g.rotation.x = -.18; g.rotation.y = g === GA ? -.35 : .35; }
+const hemi = new THREE.HemisphereLight('#ffe9d2', '#1c1410', .25); scene.add(hemi);
+const key = new THREE.SpotLight('#fff2e2', 0, 10, .5, .6, 1.2); key.position.set(1.4, 2.6, 2.4); key.target.position.set(0, PY, 0); key.castShadow = true; scene.add(key, key.target);
+const fillL = new THREE.PointLight('#ffd8b4', 0, 8, 1.5); fillL.position.set(-1.8, 1.2, 2.2); scene.add(fillL);
+const rim = new THREE.SpotLight('#ff8a3c', 0, 8, .6, .7, 1.2); rim.position.set(0, 2.4, -1.6); rim.target.position.set(0, PY, 0); scene.add(rim, rim.target);
+
+const VIEWS = {
+  both: { pos: [0, PY + .28, .6], tgt: [0, PY + .05, 0], fov: 54 },   // the two side by side
+  a: { pos: [X + .03, PY + .2, .38], tgt: [X, PY + .06, 0], fov: 36 },  // aluminium close
+  p: { pos: [-X - .03, PY + .2, .38], tgt: [-X, PY + .05, 0], fov: 36 }, // plastic close
+  up: { pos: [0, PY + .48, .36], tgt: [0, PY + .06, 0], fov: 56 },      // from above: the fins vs the shell
+};
+window.setState = (st) => {
+  const T = st.split('+'), has = k => T.includes(k);
+  lens.forEach(m => { m.emissiveIntensity = has('on') ? 7 : 0; });
+  const hp = has('hotP');
+  plastic.opacity = hp ? .42 : 1; plastic.depthWrite = !hp; core.emissiveIntensity = hp ? 9 : 0; hot.intensity = hp ? .9 : 0;
+  alu.emissiveIntensity = has('hotA') ? .06 : 0;
+  GA.visible = !has('solo:p'); GP.visible = !has('solo:a');
+  key.intensity = 9; fillL.intensity = 1.4; rim.intensity = has('rim') ? 14 : 0;
+  hemi.intensity = .25; scene.environmentIntensity = .12; renderer.toneMappingExposure = .95;
+};
