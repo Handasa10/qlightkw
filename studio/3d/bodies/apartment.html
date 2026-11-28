@@ -49,6 +49,10 @@ const VIEWS = {
   w: { pos: [-.35, 1.5, 4.7], tgt: [.55, 1.05, .5], fov: 68 },    // the living room
   s: { pos: [1.25, 1.35, 2.3], tgt: [2.25, 1.05, .8], fov: 56 },   // the plug-in sconce and its cord to the socket
   f: { pos: [-.4, 1.2, 2.5], tgt: [-1.75, 1.0, .5], fov: 58 },     // the floor lamp by the sofa
+  t: { pos: [.95, 1.15, 1.95], tgt: [1.9, .8, .45], fov: 54 },     // the table lamp beside the sofa
+  c: { pos: [.35, 1.3, 4.4], tgt: [0, 2.55, 2.0], fov: 62 },      // looking up at the lone ceiling lamp
+  v: { pos: [1.7, 1.55, 4.6], tgt: [-.6, .95, .5], fov: 66 },     // the room from the right
+  u: { pos: [.7, .95, 4.7], tgt: [-.1, 1.75, 1.2], fov: 72 },     // low, looking up: the lone ceiling lamp over the sofa
 };
 // state tokens joined by '+':  off · ceil (one cold ceiling lamp) · sconce · floor · table · cozy (= sconce+floor+table) · tint:<0..1> (smart bulbs in floor+table lamps change hue)
 window.setState = (state) => {
