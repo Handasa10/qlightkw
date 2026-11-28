@@ -1,0 +1,116 @@
+// ===== Classic villa facade at night: cornices, columns, arches (QUALITY LIGHT original scene) =====
+// Two storeys, front face at z = 0, x -6..6. Three arched bays per floor (x = -3, 0, 3), round columns in front at
+// x = ±1.5, ±4.5 on both floors, a mid cornice at y≈3.9 and a deep top cornice + parapet at y≈7.5.
+// state tokens joined by '+' (value after ':' is 0..1):
+//   day            dusk-blue sky + soft sun: all the details read          (otherwise night)
+//   flood          one wide floodlight from the street: flat, no depth
+//   spots          downlights in the top cornice: hot scallops on top, dark below
+//   cor:<k>        linear light grazing both cornices (k sweeps left → right)
+//   col:<k>        narrow in-ground up-lights on every column (ground floor first, then upper)
+//   arch:<k>       warm light inside each arch
+//   cool           all the good lights in cold white instead of warm (2700–3000K)
+//   win            warm glow behind two windows       all = cor+col+arch+win
+const WARM = '#ffc98e', COOL = '#dfe8ff';
+const NIGHT = new THREE.Color('#0b1838'), DAY = new THREE.Color('#5d7fae');
+scene.background = NIGHT.clone();
+const plasterC = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#efe6d6', roughness: .9 });
+const trimC = new THREE.MeshStandardMaterial({ map: plasterTex, color: '#f6efe2', roughness: .8 });
+const stoneC = new THREE.MeshStandardMaterial({ color: '#cdbfa6', roughness: .85 });
+const pave = new THREE.MeshStandardMaterial({ map: canvasTex(1024, 1024, (g, w, h) => { g.fillStyle = '#5a5650'; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 64) for (let x = (y / 64) % 2 ? -64 : 0; x < w; x += 128) { const c = 78 + R() * 22; g.fillStyle = `rgb(${c},${c - 3},${c - 8})`; g.fillRect(x + 2, y + 2, 124, 60); } }, [10, 10]), roughness: .7 });
+plane(60, 60, pave, [0, 0, 10], [-Math.PI / 2, 0, 0]);
+// ---- front wall with arched openings (extruded shape with holes) ----
+const BAYS = [-3, 0, 3];
+const OPEN = []; // {x, y0, w, r, floor}
+for (const x of BAYS) { OPEN.push({ x, y0: .55, w: 1.9, h: 2.0, floor: 0 }); OPEN.push({ x, y0: 4.55, w: 1.6, h: 1.55, floor: 1 }); }
+const wallS = new THREE.Shape(); wallS.moveTo(-6, 0); wallS.lineTo(6, 0); wallS.lineTo(6, 7.5); wallS.lineTo(-6, 7.5); wallS.lineTo(-6, 0);
+for (const o of OPEN) { const r = o.w / 2, p = new THREE.Path(); p.moveTo(o.x - r, o.y0); p.lineTo(o.x + r, o.y0); p.lineTo(o.x + r, o.y0 + o.h); p.absarc(o.x, o.y0 + o.h, r, 0, Math.PI, false); p.lineTo(o.x - r, o.y0); wallS.holes.push(p); }
+const wallG = new THREE.ExtrudeGeometry(wallS, { depth: .45, bevelEnabled: false, curveSegments: 40 });
+const wall = new THREE.Mesh(wallG, plasterC); wall.position.z = -.45; wall.castShadow = wall.receiveShadow = true; G.add(wall);
+box(12, 7.5, .2, plasterC, -6, 0, -3); box(.2, 7.5, 3, plasterC, -6.2, 0, -3); box(.2, 7.5, 3, plasterC, 6, 0, -3); // body behind
+// glass / door inside each opening, with a thin frame + arched transom bar
+const glassM = new THREE.MeshStandardMaterial({ color: '#0e1422', roughness: .1, metalness: .6 });
+const frameM = new THREE.MeshStandardMaterial({ color: '#2a2622', roughness: .5, metalness: .4 });
+const doorM = new THREE.MeshStandardMaterial({ map: oakTex, color: '#5a3c24', roughness: .55 });
+const WINS = [];
+for (const o of OPEN) {
+  const r = o.w / 2, sh = new THREE.Shape(); sh.moveTo(o.x - r, o.y0); sh.lineTo(o.x + r, o.y0); sh.lineTo(o.x + r, o.y0 + o.h); sh.absarc(o.x, o.y0 + o.h, r, 0, Math.PI, false); sh.lineTo(o.x - r, o.y0);
+  const isDoor = o.floor === 0 && o.x === 0;
+  const m = new THREE.Mesh(new THREE.ShapeGeometry(sh, 40), isDoor ? doorM : glassM.clone()); m.position.z = -.4; G.add(m); if (!isDoor) WINS.push(m);
+  box(.06, o.h + r, .05, frameM, o.x - .03, o.y0, -.39); box(o.w, .06, .05, frameM, o.x - r, o.y0 + o.h, -.39);
+  // projecting arch moulding (half torus) + keystone, and jamb strips
+  const tor = new THREE.Mesh(new THREE.TorusGeometry(r + .07, .07, 10, 40, Math.PI), trimC); tor.position.set(o.x, o.y0 + o.h, .02); tor.castShadow = true; G.add(tor);
+  box(.26, .34, .14, trimC, o.x - .13, o.y0 + o.h + r - .05, 0);
+  for (const s of [-1, 1]) box(.14, o.h, .1, trimC, o.x + s * (r + .07) - .07, o.y0, 0);
+  box(o.w + .5, .12, .22, trimC, o.x - r - .25, o.y0 - .12, 0); // sill
+}
+// upper balconies: black railing in front of the upper openings
+for (const x of BAYS) { const z = .32; box(1.9, .05, .05, frameM, x - .95, 5.45, z); box(1.9, .05, .05, frameM, x - .95, 4.62, z); for (let k = 0; k <= 12; k++) box(.025, .83, .025, frameM, x - .94 + k * .156, 4.62, z + .01); box(2.1, .12, .5, trimC, x - 1.05, 4.5, -.05); }
+// plinth, mid cornice, top cornice + parapet (stepped profiles)
+box(12.3, .5, .2, stoneC, -6.15, 0, -.05);
+function cornice(y, big) { const s = big ? 1.5 : 1; box(12.3, .1 * s, .2 * s, trimC, -6.15, y, 0); box(12.5, .12 * s, .34 * s, trimC, -6.25, y + .1 * s, 0); box(12.7, .14 * s, .5 * s, trimC, -6.35, y + .22 * s, 0); box(12.8, .08 * s, .58 * s, trimC, -6.4, y + .36 * s, 0); }
+cornice(3.7, false); cornice(7.2, true);
+box(12.6, .75, .45, plasterC, -6.3, 7.86, -.1); box(12.8, .1, .55, trimC, -6.4, 8.6, -.12);
+for (let x = -5.6; x <= 5.7; x += .4) box(.16, .5, .16, trimC, x - .08, 7.98, .32); // balusters band in parapet
+// round columns with base + capital, both floors
+const COLX = [-4.5, -1.5, 1.5, 4.5];
+const colM = trimC;
+for (const fl of [0, 1]) for (const x of COLX) {
+  const y0 = fl ? 4.18 : .5, y1 = fl ? 7.2 : 3.7, z = .42;
+  box(.6, .22, .6, colM, x - .3, y0, z - .3); box(.5, .08, .5, colM, x - .25, y0 + .22, z - .25);
+  const c = new THREE.Mesh(new THREE.CylinderGeometry(.18, .21, y1 - y0 - .52, 24), colM); c.position.set(x, (y0 + .3 + y1 - .22) / 2, z); c.castShadow = c.receiveShadow = true; G.add(c);
+  box(.56, .1, .56, colM, x - .28, y1 - .22, z - .28); box(.64, .12, .64, colM, x - .32, y1 - .12, z - .32);
+}
+// planters + shrubs at the base
+for (const x of [-5.4, 5.4, -1.0, 1.0]) { box(.8, .45, .5, stoneC, x - .4, 0, .6); for (let i = 0; i < 5; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(.22, 12, 8), M.leaf); b.position.set(x - .25 + i * .12, .55 + R() * .12, .85); b.scale.y = .8; G.add(b); } }
+// ---- lights ----
+const FX = () => emis('#000', 0);
+// good: column up-lights (narrow) — fixture discs on the ground / on the mid cornice
+const COL = [];
+for (const fl of [0, 1]) for (const x of COLX) {
+  const y0 = fl ? 4.18 : .5, y1 = fl ? 7.2 : 3.7, zf = .82;
+  const f = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .02, 16), FX()); f.position.set(x, fl ? 4.2 : .02, zf); G.add(f);
+  const s = new THREE.SpotLight(WARM, 0, 7, 10 * Math.PI / 180, .35, 1.2); s.position.set(x, (fl ? 4.2 : .02) + .03, zf); s.target.position.set(x, y1, .44);
+  s.castShadow = true; s.shadow.mapSize.set(512, 512); s.shadow.bias = -.0004; scene.add(s, s.target); COL.push({ f, s, fl, x });
+}
+// good: linear grazing light on both cornices (RectAreaLights + an emissive line), pieces so it can sweep
+const COR = [];
+for (const [y, z, dep] of [[3.66, .26, .5], [7.16, .34, .78]]) for (let i = 0; i < 4; i++) {
+  const w = 3.1, x = -6.2 + i * 3.1 + w / 2;
+  const line = box(w, .03, .03, FX(), x - w / 2, y, z, { cast: false });
+  const ra = new THREE.RectAreaLight(WARM, 0, w, .05); ra.position.set(x, y + .02, z + .06); ra.lookAt(x, y + 3, z - .6); scene.add(ra);
+  const ra2 = new THREE.RectAreaLight(WARM, 0, w, .05); ra2.position.set(x, y - .02, z + .06); ra2.lookAt(x, y - 3, z - .9); scene.add(ra2);
+  COR.push({ line, ra, ra2, x });
+}
+// good: light inside each arch (hidden source at the arch springing, glow on the reveal)
+const ARCH = OPEN.map((o) => { const l = new THREE.PointLight(WARM, 0, 2.6, 1.6); l.position.set(o.x, o.y0 + o.h + o.w * .25, -.2); scene.add(l); const strip = new THREE.Mesh(new THREE.TorusGeometry(o.w / 2 - .02, .012, 6, 40, Math.PI), FX()); strip.position.set(o.x, o.y0 + o.h, -.06); G.add(strip); return { l, strip, o }; });
+// bad 1: one floodlight from the street
+const flood = new THREE.SpotLight('#f4f2ec', 0, 60, 26 * Math.PI / 180, .5, 1.0); flood.position.set(1.5, 1.2, 20); flood.target.position.set(0, 4, 0); scene.add(flood, flood.target);
+// bad 2: downlights in the top-cornice soffit: hard scallops at the top, dark lower down
+const SPOT = [-5.3, -3, 0, 3, 5.3].map((x) => { const f = new THREE.Mesh(new THREE.CylinderGeometry(.07, .07, .02, 16), FX()); f.position.set(x, 7.19, .32); G.add(f); const s = new THREE.SpotLight('#fff4e4', 0, 3.6, 34 * Math.PI / 180, .2, 1.6); s.position.set(x, 7.16, .34); s.target.position.set(x, 3, -.05); s.castShadow = true; s.shadow.mapSize.set(512, 512); scene.add(s, s.target); return { f, s }; });
+const sun = new THREE.DirectionalLight('#ffe7c8', 0); sun.position.set(-12, 16, 18); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -2, far: 60 }); scene.add(sun);
+const moon = new THREE.DirectionalLight('#8aa0d8', .1); moon.position.set(10, 14, 20); scene.add(moon);
+const hemi = new THREE.HemisphereLight('#3a4f86', '#0e0c0a', .14); scene.add(hemi);
+const VIEWS = {
+  w: { pos: [0, 3.6, 24], tgt: [0, 4.4, 0], fov: 50 },        // the whole facade, straight on
+  p: { pos: [10.5, 2.6, 15.5], tgt: [-.5, 4.2, 0], fov: 48 },  // three-quarter
+  c: { pos: [1.6, 6.3, 6.2], tgt: [1.2, 7.1, 0], fov: 46 },    // top cornice + upper arch
+  k: { pos: [-2.3, .9, 5.2], tgt: [-3.2, 3.2, 0], fov: 58 },   // looking up a ground-floor column
+  a: { pos: [0, 5.3, 6.4], tgt: [0, 5.6, 0], fov: 44 },        // the central upper arch
+  m: { pos: [0, 2.4, 13], tgt: [0, 4.2, 0], fov: 60 },
+  f: { pos: [0, 3.9, 17.5], tgt: [0, 4.3, 0], fov: 50 },       // the three bays filling the width         // closer straight on (ground + upper)
+};
+const cl = (v) => Math.max(0, Math.min(1, v));
+window.setState = (state) => {
+  const T = Object.fromEntries(state.replace('all', 'cor+col+arch+win').split('+').map((p) => { const [k, v] = p.split(':'); return [k, v === undefined ? 1 : +v]; }));
+  const col = T.cool ? COOL : WARM, day = T.day ?? 0;
+  const co = T.cor ?? 0, cu = T.col ?? 0, ar = T.arch ?? 0;
+  COR.forEach(({ line, ra, ra2, x }) => { const k = cl((co * 1.3 - (x + 6) / 12 * .3) / .4) ; ra.color.set(col); ra2.color.set(col); ra.intensity = 14 * k; ra2.intensity = 5 * k; line.material = k > .02 ? emis(col, 6 * k) : FX(); });
+  COL.forEach(({ f, s, fl }) => { const k = cl((cu * 2 - fl) / 1); s.color.set(col); s.intensity = 70 * k; f.material = k > .02 ? emis(col, 6 * k) : FX(); });
+  ARCH.forEach(({ l, strip }, i) => { const k = cl((ar * 1.25 - i / 6 * .25) / .4); l.color.set(col); l.intensity = 4.5 * k; strip.material = k > .02 ? emis(col, 5 * k) : FX(); });
+  flood.intensity = 105 * (T.flood ?? 0);
+  SPOT.forEach(({ f, s }) => { const k = T.spots ?? 0; s.intensity = 230 * k; f.material = k ? emis('#fff6ea', 10) : FX(); });
+  WINS.forEach((m, i) => { const on = T.win && (i === 1 || i === 4); m.material.emissive = new THREE.Color(on ? '#ffbe7a' : '#000'); m.material.emissiveIntensity = on ? .45 : 0; });
+  sun.intensity = 2.2 * day; hemi.intensity = .1 + 1.1 * day; moon.intensity = .1 * (1 - day);
+  scene.background = NIGHT.clone().lerp(DAY, day);
+  scene.environmentIntensity = .04 + .3 * day; renderer.toneMappingExposure = 1.0;
+};
